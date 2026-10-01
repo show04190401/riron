@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>理論アプリ オフライン版</title>
+<style>
+:root{--bg:#EEF1F5;--surface:#FFFFFF;--ink:#18212E;--muted:#5F6B7B;--line:#DEE3EA;--accent:#23456F;color-scheme:light}
+@media (prefers-color-scheme: dark){:root{--bg:#0F141B;--surface:#171E28;--ink:#E7ECF3;--muted:#9AA6B6;--line:#2A3441;--accent:#8DB2E0;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;line-height:1.75;padding:max(28px,env(safe-area-inset-top)) 16px max(40px,env(safe-area-inset-bottom));-webkit-text-size-adjust:100%}
+.wrap{max-width:560px;margin:0 auto;display:grid;gap:18px}
+h1{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-size:24px;margin:0;letter-spacing:.04em}
+.apps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+a.app{display:grid;justify-items:center;gap:8px;padding:18px 10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;color:var(--ink);text-decoration:none;font-weight:700;box-shadow:0 1px 3px rgba(20,34,54,.06),0 6px 16px -6px rgba(20,34,54,.12)}
+a.app img{width:64px;height:64px;border-radius:14px}
+section{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+h2{font-size:16px;margin:0 0 6px}
+ol{margin:0;padding-left:1.4em}
+li{margin:4px 0}
+p{margin:0;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>理論アプリ オフライン版</h1>
+  <div class="apps">
+    <a class="app" href="sozoku/"><img src="sozoku/icon-180.png" alt="">相続税 理論</a>
+    <a class="app" href="shohi/"><img src="shohi/icon-180.png" alt="">消費税 理論</a>
+  </div>
+  <section>
+    <h2>iPhone・iPadでの使い方</h2>
+    <ol>
+      <li>Safariで上のアプリを開きます。</li>
+      <li>共有ボタン（□に↑）→「ホーム画面に追加」を押します。</li>
+      <li>ホーム画面のアイコンから開き、パスワードを入れます（その端末で初めて開くときだけ）。</li>
+      <li>通信できる場所で一度開いたままにし、見出しの下が「オフライン版（記録はこの端末に保存）」になれば、以後は通信がなくても開けます。</li>
+    </ol>
+  </section>
+  <section>
+    <h2>記録について</h2>
+    <p>記録はそれぞれの端末に保存され、claude.ai版やほかの端末とは自動では同じになりません。設定の「記録の書き出し」でコピーし、移したい側の「記録の読み込み」に貼り付けて「合わせる」を押すと、両方の記録を合わせられます。</p>
+    <p style="margin-top:8px">Safariのタブのままで使うと、しばらく開かなかったときに端末が記録を消すことがあります。ホーム画面のアイコンから使い、ときどき「記録の書き出し」で控えを残してください。</p>
+  </section>
+</div>
+</body>
+</html>

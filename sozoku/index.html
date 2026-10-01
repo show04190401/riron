@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>相続税 理論</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="相続税">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#EEF1F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F141B" media="(prefers-color-scheme: dark)">
+<style>
+:root{--bg:#EEF1F5;--surface:#FFFFFF;--ink:#18212E;--muted:#5F6B7B;--line:#DEE3EA;--accent:#23456F;--on-accent:#FFFFFF;--bad:#A4531D;color-scheme:light}
+@media (prefers-color-scheme: dark){:root{--bg:#0F141B;--surface:#171E28;--ink:#E7ECF3;--muted:#9AA6B6;--line:#2A3441;--accent:#8DB2E0;--on-accent:#0F141B;--bad:#E4A266;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;-webkit-text-size-adjust:100%}
+body{display:grid;place-items:center;min-height:100vh;padding:max(24px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
+.card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px 22px 24px;display:grid;gap:14px;text-align:center;box-shadow:0 1px 3px rgba(20,34,54,.06),0 8px 24px -10px rgba(20,34,54,.18)}
+.ic{width:72px;height:72px;border-radius:16px;justify-self:center}
+h1{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-size:22px;margin:0;letter-spacing:.04em}
+p{margin:0;font-size:14px;line-height:1.7;color:var(--muted)}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);justify-self:center;animation:sp 0.9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.spin{animation:none}}
+form{display:grid;gap:10px;text-align:left}
+label{font-size:13px;font-weight:700}
+input{font:inherit;font-size:17px;letter-spacing:.08em;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 14px;width:100%}
+input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button{font:inherit;font-size:16px;font-weight:700;border:0;border-radius:12px;padding:12px;background:var(--accent);color:var(--on-accent);cursor:pointer}
+button:disabled{opacity:.6}
+.err{color:var(--bad);font-size:13px;min-height:1.2em;margin:0}
+.hint{font-size:13px;text-align:left;background:var(--bg);border-radius:12px;padding:10px 12px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main class="card" id="boot">
+  <img class="ic" src="icon-180.png" alt="">
+  <h1>相続税 理論</h1>
+  <div id="s-load"><div class="spin" aria-hidden="true"></div><p style="margin-top:10px">読み込み中…</p></div>
+  <form id="s-lock" hidden autocomplete="on">
+    <p>この端末で初めて開くときだけ、パスワードを入れてください。</p>
+    <label for="pw">パスワード</label>
+    <input id="pw" name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text" required>
+    <p class="err" id="pw-err" role="alert"></p>
+    <button type="submit" id="pw-go">開く</button>
+  </form>
+  <p class="err" id="s-err" hidden role="alert"></p>
+  <p class="hint" id="s-home" hidden>ホーム画面に追加すると、通信がなくても開けます。Safariの共有ボタン（□に↑）→「ホーム画面に追加」を押し、追加したアイコンから開いてください。</p>
+</main>
+<script>
+(()=>{
+  "use strict";
+  const LS_KEY="riron-offline-key";
+  const $=id=>document.getElementById(id);
+  const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+  const b64e=buf=>{const a=new Uint8Array(buf);let s="";for(let i=0;i<a.length;i+=0x8000)s+=String.fromCharCode.apply(null,a.subarray(i,i+0x8000));return btoa(s);};
+  const standalone=navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches);
+  const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  let hadController=false, opened=false;
+
+  function show(which,msg){
+    $("s-load").hidden=which!=="load"; $("s-lock").hidden=which!=="lock"; $("s-err").hidden=which!=="err";
+    if(which==="err") $("s-err").textContent=msg||"";
+    $("s-home").hidden=!(ios&&!standalone&&which!=="load");
+    if(which==="lock") setTimeout(()=>{ try{$("pw").focus();}catch(e){} },50);
+  }
+  function setSync(t){ const s=document.getElementById("sync"); if(s) s.textContent=t; }
+
+  // 新しい版が届いたら、アプリの下に知らせる（入力中の答えが消えないよう、自動では読み込み直さない）
+  function showUpdate(){
+    if(!opened||document.getElementById("riron-upd")) return;
+    const d=document.createElement("div"); d.id="riron-upd";
+    d.setAttribute("role","status");
+    d.style.cssText="position:fixed;left:0;right:0;margin:0 auto;width:max-content;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;gap:10px;align-items:center;background:var(--ink,#18212E);color:var(--surface,#fff);padding:10px 12px 10px 16px;border-radius:12px;font-size:14px;font-weight:700;box-shadow:0 10px 30px -10px rgba(0,0,0,.45);max-width:calc(100% - 32px)";
+    d.innerHTML='<span style="white-space:nowrap">新しい版があります</span><button type="button" style="white-space:nowrap;font:inherit;font-size:13px;border:0;border-radius:8px;padding:6px 12px;background:var(--surface,#fff);color:var(--ink,#18212E);font-weight:700">読み込み直す</button><button type="button" aria-label="閉じる" style="font:inherit;font-size:16px;border:0;background:transparent;color:inherit;padding:2px 6px">×</button>';
+    const [go,x]=d.querySelectorAll("button"); go.onclick=()=>location.reload(); x.onclick=()=>d.remove();
+    document.body.appendChild(d);
+  }
+
+  if("serviceWorker" in navigator){
+    hadController=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(hadController) showUpdate(); hadController=true; });
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
+
+  async function storedKey(){
+    let s=null; try{ s=localStorage.getItem(LS_KEY); }catch(e){}
+    if(!s) return null;
+    try{ return await crypto.subtle.importKey("pkcs8",b64d(s),{name:"RSA-OAEP",hash:"SHA-256"},false,["decrypt"]); }
+    catch(e){ return null; }
+  }
+  function normPass(p){ return p.normalize("NFKC").toLowerCase().replace(/[\s\-ー－‐―]/g,""); }
+  async function unlock(pass){
+    const r=await fetch("key.json"); if(!r.ok) throw new Error("net");
+    const kj=await r.json();
+    const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(normPass(pass)),"PBKDF2",false,["deriveKey"]);
+    const kek=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b64d(kj.salt),iterations:kj.iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["decrypt"]);
+    let pk;
+    try{ pk=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(kj.iv)},kek,b64d(kj.data)); }
+    catch(e){ throw new Error("pass"); }
+    try{ localStorage.setItem(LS_KEY,b64e(pk)); }catch(e){}
+    return crypto.subtle.importKey("pkcs8",pk,{name:"RSA-OAEP",hash:"SHA-256"},false,["decrypt"]);
+  }
+  async function decryptApp(key){
+    let res;
+    try{ res=await fetch("app.bin"); }catch(e){ throw new Error("net"); }
+    if(!res.ok) throw new Error("net");
+    const buf=new Uint8Array(await res.arrayBuffer());
+    if(buf.length<20||String.fromCharCode(buf[0],buf[1],buf[2],buf[3])!=="RIR1") throw new Error("format");
+    const n=(buf[4]<<8)|buf[5];
+    const wrapped=buf.slice(6,6+n), iv=buf.slice(6+n,18+n), ct=buf.slice(18+n);
+    let raw;
+    try{ raw=await crypto.subtle.decrypt({name:"RSA-OAEP"},key,wrapped); }catch(e){ throw new Error("key"); }
+    const cek=await crypto.subtle.importKey("raw",raw,"AES-GCM",false,["decrypt"]);
+    const gz=await crypto.subtle.decrypt({name:"AES-GCM",iv},cek,ct);
+    if(typeof DecompressionStream==="undefined") throw new Error("old");
+    return await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  }
+  function openHtml(html){
+    opened=true;
+    document.open(); document.write(html); document.close();
+    // オフライン用の保存が済んだかを、アプリの見出しの下に出す
+    if("serviceWorker" in navigator&&window.caches){
+      setSync("オフライン版：この端末に保存しています…");
+      navigator.serviceWorker.ready.then(()=>caches.keys()).then(ks=>Promise.all(ks.map(k=>caches.open(k).then(c=>c.match("app.bin"))))).then(ms=>{
+        setSync(ms.some(Boolean)?"オフライン版（記録はこの端末に保存）":"オフライン版：保存できていません。通信できる場所で開き直してください");
+      }).catch(()=>setSync("オフライン版（記録はこの端末に保存）"));
+    } else setSync("オフライン版：この端末ではオフライン用に保存できません");
+  }
+  function fail(e){
+    const m=e&&e.message;
+    if(m==="net") show("err","読み込めませんでした。最初の1回は通信できる場所で開いてください。");
+    else if(m==="old") show("err","このiOSでは開けません。iOSを最新にしてから開いてください。");
+    else show("err","開けませんでした。時間をおいて開き直してください。");
+  }
+  async function start(){
+    show("load");
+    const key=await storedKey();
+    if(!key){ show("lock"); return; }
+    try{ openHtml(await decryptApp(key)); }
+    catch(e){
+      if(e&&e.message==="key"){ try{ localStorage.removeItem(LS_KEY); }catch(_){} show("lock"); return; }
+      fail(e);
+    }
+  }
+  $("s-lock").addEventListener("submit",async ev=>{
+    ev.preventDefault();
+    const pw=$("pw").value; if(!pw.trim()) return;
+    $("pw-go").disabled=true; $("pw-err").textContent="";
+    try{
+      const key=await unlock(pw);
+      show("load");
+      openHtml(await decryptApp(key));
+    }catch(e){
+      $("pw-go").disabled=false;
+      if(e&&e.message==="pass"){ $("pw-err").textContent="パスワードが違います。"; $("pw").select(); }
+      else fail(e);
+    }
+  });
+  if(!(window.crypto&&crypto.subtle)){ show("err","この画面はSafariで開いてください。"); return; }
+  start();
+})();
+</script>
+</body>
+</html>
