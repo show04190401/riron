@@ -48,9 +48,8 @@ def offline_patch(html, app):
         sys.exit("build: Google Fonts の読み込みが見つかりません")
     # 2) 録音した音声（自然な音声）は使わず、端末の音声で読み上げる
     html = must_sub(r"^const REC=\{.*\};?$", "const REC={};", html, flags=re.M, what="const REC")
-    html = must_sub(r'row\("読み上げの音声",.*?opt\("tts",\[\["rec","自然な音声"\],\["device","端末の音声"\]\]\)\)\+', "", html, what="読み上げの音声の設定")
-    html = must_sub(r'tts:"rec"', 'tts:"device"', html, what="tts の初期値")
-    html = html.replace("「端末の音声」を選んだときに使う声です。", "読み上げに使う声です。")
+    html = must_sub(r'row\("読み上げの音声",.*?opt\("tts",\[\["device","端末の音声"\],\["rec","録音の音声"\]\]\)\)\+', "", html, what="読み上げの音声の設定")
+    # tts の初期値はアプリ側で "device"。録音を外した以上 recOK も成り立たないため、ここでの差し替えは不要
     # 3) オフライン版であることを表示する（起動用ページが準備の状況に合わせて書き換える）
     html = must_sub(r'<span class="sync" id="sync"></span>', '<span class="sync" id="sync">オフライン版</span>', html, what="sync 表示")
     html = must_sub(r'const secC=sec\("記録の管理",\n', 'const secC=sec("記録の管理",\n    row("オフライン版","通信がなくても使えるよう、この端末に保存しているアプリです。記録はこの端末だけに保存されます。claude.ai版と記録を移すときは、下の「記録の書き出し」と「記録の読み込み」を使います。","")+\n', html, what="記録の管理")
