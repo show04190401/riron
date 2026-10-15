@@ -64,7 +64,7 @@ def offline_patch(html, app):
         f'<meta name="theme-color" content="{THEME_LIGHT}" media="(prefers-color-scheme: light)">'
         f'<meta name="theme-color" content="{THEME_DARK}" media="(prefers-color-scheme: dark)">'
     )
-    html = must_sub(r'(<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">)', r"\1" + head, html, what="viewport")
+    html = must_sub(r'(<meta name=viewport content="[^"]*">)', r"\1" + head, html, what="viewport")
     html = html.replace("<html><head>", '<html lang="ja"><head>', 1)
     return html
 
@@ -82,7 +82,7 @@ LOADER = r"""<!doctype html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>__NAME__</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
