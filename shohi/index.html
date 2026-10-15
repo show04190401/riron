@@ -127,8 +127,8 @@ button:disabled{opacity:.6}
     if("serviceWorker" in navigator&&window.caches){
       setSync("オフライン版：この端末に保存しています…");
       navigator.serviceWorker.ready.then(()=>caches.keys()).then(ks=>Promise.all(ks.map(k=>caches.open(k).then(c=>c.match("app.bin"))))).then(ms=>{
-        setSync(ms.some(Boolean)?"オフライン版（記録はこの端末に保存）":"オフライン版：保存できていません。通信できる場所で開き直してください");
-      }).catch(()=>setSync("オフライン版（記録はこの端末に保存）"));
+        setSync(ms.some(Boolean)?"オフライン版":"オフライン版：保存できていません。通信できる場所で開き直してください");
+      }).catch(()=>setSync("オフライン版"));
     } else setSync("オフライン版：この端末ではオフライン用に保存できません");
   }
   function fail(e){
