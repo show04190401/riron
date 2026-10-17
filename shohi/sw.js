@@ -1,8 +1,8 @@
 // オフライン用：アプリのファイルを端末に保存し、通信がなくても開けるようにする
-const VERSION="20261017-3731ae57c2";
+const VERSION="20261017-09f9ef0219";
 const PREFIX="riron-shohi-";
 const CACHE=PREFIX+VERSION;
-const FILES=["./","index.html","app.bin","key.json","manifest.webmanifest","icon2-180.png","icon2-192.png","icon2-512.png"];
+const FILES=["./","index.html","app.bin","key.json","manifest.webmanifest","icon3-180.png","icon3-192.png","icon3-512.png"];
 self.addEventListener("install",e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:"reload"})))).then(()=>self.skipWaiting()));
 });
