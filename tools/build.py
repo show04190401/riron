@@ -29,7 +29,7 @@ APPS = {
     "shohi": {"name": "消費税 理論", "short": "消費税", "id": "shohi-riron", "key": "shohi-drill-v1"},
 }
 THEME_LIGHT, THEME_DARK = "#28A000", "#0F141B"
-STATIC = ["icon-180.png", "icon-192.png", "icon-512.png"]
+STATIC = ["icon2-180.png", "icon2-192.png", "icon2-512.png"]
 
 
 def must_sub(pattern, repl, s, count=1, flags=0, what=""):
@@ -56,7 +56,7 @@ def offline_patch(html, app):
     # 4) ホーム画面に追加したときの名前・アイコン
     head = (
         '<link rel="manifest" href="manifest.webmanifest">'
-        '<link rel="apple-touch-icon" href="icon-180.png">'
+        '<link rel="apple-touch-icon" href="icon2-180.png">'
         '<meta name="apple-mobile-web-app-capable" content="yes">'
         '<meta name="mobile-web-app-capable" content="yes">'
         f'<meta name="apple-mobile-web-app-title" content="{a["short"]}">'
@@ -89,7 +89,7 @@ LOADER = r"""<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>__NAME__</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" href="icon2-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="__SHORT__">
@@ -137,7 +137,7 @@ button:disabled{opacity:.6}
 </head>
 <body>
 <main class="card" id="boot">
-  <img class="ic" src="icon-180.png" alt="">
+  <img class="ic" src="icon2-180.png" alt="">
   <h1>__NAME__</h1>
   <div id="s-load"><div class="spin" aria-hidden="true"></div><p style="margin-top:10px">読み込み中…</p></div>
   <form id="s-lock" hidden autocomplete="on">
@@ -271,7 +271,7 @@ SW = r"""// オフライン用：アプリのファイルを端末に保存し�
 const VERSION="__VERSION__";
 const PREFIX="riron-__APP__-";
 const CACHE=PREFIX+VERSION;
-const FILES=["./","index.html","app.bin","key.json","manifest.webmanifest","icon-180.png","icon-192.png","icon-512.png"];
+const FILES=["./","index.html","app.bin","key.json","manifest.webmanifest","icon2-180.png","icon2-192.png","icon2-512.png"];
 self.addEventListener("install",e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:"reload"})))).then(()=>self.skipWaiting()));
 });
@@ -307,8 +307,8 @@ def build(app, src):
         "name": a["name"], "short_name": a["short"], "lang": "ja",
         "start_url": "./", "scope": "./", "display": "standalone",
         "background_color": THEME_LIGHT, "theme_color": THEME_LIGHT,
-        "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
-                  {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}],
+        "icons": [{"src": "icon2-192.png", "sizes": "192x192", "type": "image/png"},
+                  {"src": "icon2-512.png", "sizes": "512x512", "type": "image/png"}],
     }
     json.dump(manifest, open(os.path.join(out, "manifest.webmanifest"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     shutil.copyfile(os.path.join(TOOLS, "key.json"), os.path.join(out, "key.json"))
