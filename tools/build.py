@@ -28,7 +28,7 @@ APPS = {
     "sozoku": {"name": "相続税 理論", "short": "相続税", "id": "sozoku-riron", "key": "sozoku-drill-v1"},
     "shohi": {"name": "消費税 理論", "short": "消費税", "id": "shohi-riron", "key": "shohi-drill-v1"},
 }
-THEME_LIGHT, THEME_DARK = "#EEF1F5", "#0F141B"
+THEME_LIGHT, THEME_DARK = "#28A000", "#0F141B"
 STATIC = ["icon-180.png", "icon-192.png", "icon-512.png"]
 
 

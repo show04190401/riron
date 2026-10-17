@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="消費税">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#EEF1F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#28A000" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F141B" media="(prefers-color-scheme: dark)">
 <script>
 /* アプリの「画面の色」でライト／ダークを選んでいるときは、端末の設定ではなく、その色を上部の帯に使う。
@@ -22,7 +22,7 @@
     var old=document.querySelectorAll('meta[name="theme-color"]');
     for(var i=0;i<old.length;i++) old[i].parentNode.removeChild(old[i]);
     var m=document.createElement("meta"); m.setAttribute("name","theme-color");
-    m.setAttribute("content",t==="light"?"#EEF1F5":"#0F141B"); document.head.appendChild(m);
+    m.setAttribute("content",t==="light"?"#28A000":"#0F141B"); document.head.appendChild(m);
   }
 }catch(e){}})();
 </script>
