@@ -64,9 +64,13 @@ def offline_patch(html, app):
         f'<meta name="theme-color" content="{THEME_LIGHT}" media="(prefers-color-scheme: light)">'
         f'<meta name="theme-color" content="{THEME_DARK}" media="(prefers-color-scheme: dark)">'
     )
-    html = must_sub(r'(<meta name=viewport content="[^"]*">)', r"\1" + head, html, what="viewport")
+    # ローダーと同じ画面の指定にそろえる（開いた直後に指定が変わると、iPadで一瞬だけ拡大して見えるため）
+    html = must_sub(r'<meta name=viewport content="[^"]*">', lambda m_: VIEWPORT_META + head, html, what="viewport")
     html = html.replace("<html><head>", '<html lang="ja"><head>', 1)
     return html
+
+
+VIEWPORT_META = '<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">'
 
 
 def encrypt(plain_bytes):
