@@ -111,7 +111,7 @@ LOADER = r"""<!doctype html>
 }catch(e){}})();
 </script>
 <style>
-:root{--bg:#EEF1F5;--surface:#FFFFFF;--ink:#18212E;--muted:#5F6B7B;--line:#DEE3EA;--accent:#23456F;--on-accent:#FFFFFF;--bad:#A4531D;color-scheme:light}
+:root{--bg:#D2CAB8;--surface:#FFFFFD;--ink:#191D17;--muted:#5A5F52;--line:#D1CABA;--accent:#28A000;--on-accent:#FFFFFF;--bad:#A4531D;color-scheme:light}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0F141B;--surface:#171E28;--ink:#E7ECF3;--muted:#9AA6B6;--line:#2A3441;--accent:#8DB2E0;--on-accent:#0F141B;--bad:#E4A266;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0F141B;--surface:#171E28;--ink:#E7ECF3;--muted:#9AA6B6;--line:#2A3441;--accent:#8DB2E0;--on-accent:#0F141B;--bad:#E4A266;color-scheme:dark}
 *{box-sizing:border-box}
