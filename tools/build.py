@@ -60,7 +60,7 @@ def offline_patch(html, app):
         '<meta name="apple-mobile-web-app-capable" content="yes">'
         '<meta name="mobile-web-app-capable" content="yes">'
         f'<meta name="apple-mobile-web-app-title" content="{a["short"]}">'
-        '<meta name="apple-mobile-web-app-status-bar-style" content="default">'
+        '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
         f'<meta name="theme-color" content="{THEME_LIGHT}" media="(prefers-color-scheme: light)">'
         f'<meta name="theme-color" content="{THEME_DARK}" media="(prefers-color-scheme: dark)">'
     )
@@ -93,7 +93,7 @@ LOADER = r"""<!doctype html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="__SHORT__">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="__LIGHT__" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="__DARK__" media="(prefers-color-scheme: dark)">
 <script>
