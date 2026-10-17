@@ -50,8 +50,8 @@ def offline_patch(html, app):
     html = must_sub(r"^const REC=\{.*\};?$", "const REC={};", html, flags=re.M, what="const REC")
     html = must_sub(r'row\("読み上げの音声",.*?opt\("tts",\[\["device","端末の音声"\],\["rec","録音の音声"\]\]\)\)\+', "", html, what="読み上げの音声の設定")
     # tts の初期値はアプリ側で "device"。録音を外した以上 recOK も成り立たないため、ここでの差し替えは不要
-    # 3) オフライン版であることを表示する（起動用ページが準備の状況に合わせて書き換える）
-    html = must_sub(r'<span class="sync" id="sync"></span>', '<span class="sync" id="sync">オフライン版</span>', html, what="sync 表示")
+    # 3) 画面上部には「オフライン版」を出さない（設定の「記録の管理」に説明を置く）
+    html = must_sub(r'<span class="sync" id="sync"></span>', '<span class="sync" id="sync"></span>', html, what="sync 表示")
     html = must_sub(r'const secC=sec\("記録の管理",\n', 'const secC=sec("記録の管理",\n    row("オフライン版","通信がなくても使えるよう、この端末に保存しているアプリです。記録はこの端末だけに保存されます。claude.ai版と記録を移すときは、下の「記録の書き出し」と「記録の読み込み」を使います。","")+\n', html, what="記録の管理")
     # 4) ホーム画面に追加したときの名前・アイコン
     head = (
@@ -205,11 +205,10 @@ button:disabled{opacity:.6}
     document.open(); document.write(html); document.close();
     // オフライン用の保存が済んだかを、アプリの見出しの下に出す
     if("serviceWorker" in navigator&&window.caches){
-      setSync("オフライン版：この端末に保存しています…");
       navigator.serviceWorker.ready.then(()=>caches.keys()).then(ks=>Promise.all(ks.map(k=>caches.open(k).then(c=>c.match("app.bin"))))).then(ms=>{
-        setSync(ms.some(Boolean)?"オフライン版":"オフライン版：保存できていません。通信できる場所で開き直してください");
-      }).catch(()=>setSync("オフライン版"));
-    } else setSync("オフライン版：この端末ではオフライン用に保存できません");
+        setSync(ms.some(Boolean)?"":"オフライン用に保存できていません。通信できる場所で開き直してください");
+      }).catch(()=>setSync(""));
+    } else setSync("この端末ではオフライン用に保存できません");
   }
   function fail(e){
     const m=e&&e.message;

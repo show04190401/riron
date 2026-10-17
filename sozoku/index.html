@@ -125,11 +125,10 @@ button:disabled{opacity:.6}
     document.open(); document.write(html); document.close();
     // オフライン用の保存が済んだかを、アプリの見出しの下に出す
     if("serviceWorker" in navigator&&window.caches){
-      setSync("オフライン版：この端末に保存しています…");
       navigator.serviceWorker.ready.then(()=>caches.keys()).then(ks=>Promise.all(ks.map(k=>caches.open(k).then(c=>c.match("app.bin"))))).then(ms=>{
-        setSync(ms.some(Boolean)?"オフライン版":"オフライン版：保存できていません。通信できる場所で開き直してください");
-      }).catch(()=>setSync("オフライン版"));
-    } else setSync("オフライン版：この端末ではオフライン用に保存できません");
+        setSync(ms.some(Boolean)?"":"オフライン用に保存できていません。通信できる場所で開き直してください");
+      }).catch(()=>setSync(""));
+    } else setSync("この端末ではオフライン用に保存できません");
   }
   function fail(e){
     const m=e&&e.message;
