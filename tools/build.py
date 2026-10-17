@@ -25,8 +25,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS = os.path.join(ROOT, "tools")
 
 APPS = {
-    "sozoku": {"name": "相続税 理論", "short": "相続税", "id": "sozoku-riron"},
-    "shohi": {"name": "消費税 理論", "short": "消費税", "id": "shohi-riron"},
+    "sozoku": {"name": "相続税 理論", "short": "相続税", "id": "sozoku-riron", "key": "sozoku-drill-v1"},
+    "shohi": {"name": "消費税 理論", "short": "消費税", "id": "shohi-riron", "key": "shohi-drill-v1"},
 }
 THEME_LIGHT, THEME_DARK = "#EEF1F5", "#0F141B"
 STATIC = ["icon-180.png", "icon-192.png", "icon-512.png"]
@@ -92,9 +92,24 @@ LOADER = r"""<!doctype html>
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="__LIGHT__" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="__DARK__" media="(prefers-color-scheme: dark)">
+<script>
+/* アプリの「画面の色」でライト／ダークを選んでいるときは、端末の設定ではなく、その色を上部の帯に使う。
+   端末は起動したときに読んだ色で帯を塗るため、アプリが開く前（ここ）で決めておく */
+(function(){try{
+  var s=JSON.parse(localStorage.getItem("__KEY__")||"null"), t=s&&s.settings&&s.settings.theme;
+  if(t==="light"||t==="dark"){
+    document.documentElement.setAttribute("data-theme",t);
+    var old=document.querySelectorAll('meta[name="theme-color"]');
+    for(var i=0;i<old.length;i++) old[i].parentNode.removeChild(old[i]);
+    var m=document.createElement("meta"); m.setAttribute("name","theme-color");
+    m.setAttribute("content",t==="light"?"__LIGHT__":"__DARK__"); document.head.appendChild(m);
+  }
+}catch(e){}})();
+</script>
 <style>
 :root{--bg:#EEF1F5;--surface:#FFFFFF;--ink:#18212E;--muted:#5F6B7B;--line:#DEE3EA;--accent:#23456F;--on-accent:#FFFFFF;--bad:#A4531D;color-scheme:light}
-@media (prefers-color-scheme: dark){:root{--bg:#0F141B;--surface:#171E28;--ink:#E7ECF3;--muted:#9AA6B6;--line:#2A3441;--accent:#8DB2E0;--on-accent:#0F141B;--bad:#E4A266;color-scheme:dark}}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0F141B;--surface:#171E28;--ink:#E7ECF3;--muted:#9AA6B6;--line:#2A3441;--accent:#8DB2E0;--on-accent:#0F141B;--bad:#E4A266;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F141B;--surface:#171E28;--ink:#E7ECF3;--muted:#9AA6B6;--line:#2A3441;--accent:#8DB2E0;--on-accent:#0F141B;--bad:#E4A266;color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;-webkit-text-size-adjust:100%}
 body{display:grid;place-items:center;min-height:100vh;padding:max(24px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
@@ -281,7 +296,7 @@ def build(app, src):
     if f'app:"{a["id"]}"' not in html:
         sys.exit(f"build: {src} は {a['name']} のアプリではないようです")
     html = offline_patch(html, app)
-    loader =(LOADER.replace("__NAME__", a["name"]).replace("__SHORT__", a["short"])
+    loader =(LOADER.replace("__NAME__", a["name"]).replace("__SHORT__", a["short"]).replace("__KEY__", a["key"])
               .replace("__LIGHT__", THEME_LIGHT).replace("__DARK__", THEME_DARK))
     open(os.path.join(out, "index.html"), "w", encoding="utf-8").write(loader)
     manifest = {
