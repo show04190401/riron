@@ -66,7 +66,7 @@ def offline_patch(html, app):
     )
     # ローダーと同じ画面の指定にそろえる（開いた直後に指定が変わると、iPadで一瞬だけ拡大して見えるため）
     html = must_sub(r'<meta name=viewport content="[^"]*">', lambda m_: VIEWPORT_META + head, html, what="viewport")
-    html = html.replace("<html><head>", '<html lang="ja"><head>', 1)
+    html = html.replace("<html><head>", '<html lang="ja" class="vpwait"><head><style>html.vpwait{visibility:hidden;animation:vpshow 0s 1.2s forwards}@keyframes vpshow{to{visibility:visible}}</style>', 1)
     return html
 
 
