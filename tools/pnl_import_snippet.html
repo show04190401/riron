@@ -1,0 +1,35 @@
+<details class="card" id="imp-card" style="max-width:980px;margin:14px auto 0">
+  <summary>データの取り込み</summary>
+  <p class="hint" style="margin-top:8px">Claudeで受け取った取り込みコード（PNL1: で始まる文字列）を貼り付けて「取り込む」を押してください。この端末に入っている記録は、取り込んだ内容に置き換わります。</p>
+  <textarea id="imp-code" rows="4" style="width:100%;margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);color:var(--fg);font:13px var(--font-num)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+  <button class="btn" id="imp-btn" type="button">取り込む</button>
+  <p id="imp-msg" class="msg" role="status"></p>
+</details>
+<script>
+(function () {
+  var KEY = 'pnl-notebook-v1';
+  function b64(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  async function decode(code) {
+    code = code.replace(/\s+/g, '');
+    if (code.indexOf('PNL1:') !== 0) throw new Error('code');
+    var u = b64(code.slice(5));
+    var txt = await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+    var o = JSON.parse(txt);
+    if (!o || typeof o !== 'object' || !o.entries || !o.cash) throw new Error('shape');
+    return o;
+  }
+  function m(t, err) { var e = document.getElementById('imp-msg'); e.textContent = t; e.className = 'msg' + (err ? ' err' : ''); }
+  async function run(code, ask) {
+    try {
+      var o = await decode(code), n = Object.keys(o.entries).length;
+      if (ask && !confirm('損益 ' + n + '日分と資金繰りのデータを取り込みます。この端末の記録は置き換わります。よろしいですか？')) return;
+      localStorage.setItem(KEY, JSON.stringify(o));
+      if (location.hash) history.replaceState(null, '', location.pathname);
+      location.reload();
+    } catch (e) { m('取り込めませんでした。コードを最初から最後まで、すべて貼り付けてください。', true); document.getElementById('imp-card').open = true; }
+  }
+  document.getElementById('imp-btn').addEventListener('click', function () { run(document.getElementById('imp-code').value, true); });
+  var h = decodeURIComponent(location.hash.slice(1));
+  if (h.indexOf('import=') === 0) run(h.slice(7), true);
+})();
+</script>
