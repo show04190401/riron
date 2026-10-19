@@ -30,3 +30,15 @@ python3 tools/build.py shohi  消費税アプリ.html
 
 鍵が変わるため、`build.py` は必ず両方のアプリで実行してください。すでに端末に入れてある
 アプリは、通信できるときに新しい版を受け取ったあと、もう一度パスワードを聞いてきます。
+
+## 収支ノート（pnl/）
+
+株の損益と資金繰りの記録アプリ。`pnl/` をiPhoneのホーム画面に追加して使います。データは端末内（Safari）に保存され、Claude上の「収支ノート」とは別です。
+
+作り直し方（Claude上の収支ノートのHTMLから）:
+
+```
+python3 tools/build_pnl.py 収支ノート.html pnl/index.html
+```
+
+`pnl/sw.js` の `CACHE` の版（`v1` など）を上げると、端末に新しい版が届きます。

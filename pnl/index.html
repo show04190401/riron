@@ -1,0 +1,1946 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>収支ノート</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="収支ノート">
+<meta name="theme-color" content="#EDF0F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D141C" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* Layout: ledger-style single column; from 820px the entry form and goal settings sit in a side rail beside the summaries. */
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --surface-2:#F4F6F8; --line:#D6DCE3;
+  --fg:#14202D; --muted:#5A6777;
+  --gold:#8F6410; --gold-fill:#D9A441; --gold-soft:#F6EBD2;
+  --pos:#1E7F4F; --pos-soft:#E3F3EA;
+  --neg:#C42F25; --neg-soft:#FBE8E6;
+  --area:rgba(20,32,45,.07);
+  --hero-bg:#14202D; --hero-fg:#F2F5F8; --hero-muted:#A9B5C3; --hero-line:rgba(255,255,255,.16);
+  --pos-hero:#6FE0A8; --neg-hero:#FF8F84;
+  --btn-bg:#14202D; --btn-fg:#FFFFFF;
+  --font-ui:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
+  --font-num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D141C; --surface:#151F2A; --surface-2:#1B2733; --line:#2A3846;
+    --fg:#E7ECF1; --muted:#97A5B4;
+    --gold:#E4B54A; --gold-fill:#D9A441; --gold-soft:#362C14;
+    --pos:#5FD39A; --pos-soft:#17352A;
+    --neg:#FF7F73; --neg-soft:#3B1F1D;
+    --area:rgba(231,236,241,.08);
+    --hero-bg:#223246; --hero-fg:#F2F5F8; --hero-muted:#AEBBC9; --hero-line:rgba(255,255,255,.16);
+    --btn-bg:#E7ECF1; --btn-fg:#0D141C;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D141C; --surface:#151F2A; --surface-2:#1B2733; --line:#2A3846;
+  --fg:#E7ECF1; --muted:#97A5B4;
+  --gold:#E4B54A; --gold-fill:#D9A441; --gold-soft:#362C14;
+  --pos:#5FD39A; --pos-soft:#17352A;
+  --neg:#FF7F73; --neg-soft:#3B1F1D;
+  --area:rgba(231,236,241,.08);
+  --hero-bg:#223246; --hero-fg:#F2F5F8; --hero-muted:#AEBBC9; --hero-line:rgba(255,255,255,.16);
+  --btn-bg:#E7ECF1; --btn-fg:#0D141C;
+  color-scheme:dark;
+}
+
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:var(--font-ui); font-size:15px; line-height:1.6;
+  padding-block:max(20px, env(safe-area-inset-top, 0px)) calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+h1,h2,p,dl,dd{margin:0}
+button,input{font:inherit;color:inherit}
+button,select,input,summary,[data-cday]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.wrap{max-width:980px;margin:0 auto}
+
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:8px 16px;flex-wrap:wrap;margin-bottom:14px}
+h1{font-size:22px;font-weight:700;letter-spacing:.02em}
+.sub{color:var(--muted);font-size:13px}
+.savestate{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.savestate::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--gold-fill);flex:none}
+.note{background:var(--gold-soft);border:1px solid var(--gold-fill);border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+
+.layout{
+  display:grid;gap:14px;grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"hero" "stats" "pace" "daily" "form" "history" "settings";
+}
+#hero{grid-area:hero} #stats{grid-area:stats} #pace{grid-area:pace} #chart-daily{grid-area:daily} #form-card{grid-area:form} #history{grid-area:history} #settings{grid-area:settings}
+@media (min-width:820px){
+  .layout{grid-template-columns:minmax(0,1fr) 340px;grid-template-areas:"hero form" "stats form" "pace form" "daily form" "history settings";align-items:start}
+  #form-card{position:sticky;top:calc(env(safe-area-inset-top, 0px) + 16px)}
+}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0;overflow:hidden}
+h2{font-size:15px;font-weight:700;letter-spacing:.02em}
+
+/* Hero */
+.hero{background:var(--hero-bg);color:var(--hero-fg);border-color:transparent;padding:20px}
+.recbtn{margin-left:auto;min-height:36px;padding:0 18px;border-radius:999px;border:1px solid var(--hero-line);background:transparent;color:var(--hero-fg);font:700 14px var(--font-ui);cursor:pointer}
+.eyebrow{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--hero-muted);letter-spacing:.04em}
+.big{font:600 40px/1.15 var(--font-num);margin:6px 0 14px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.big small{font:500 14px var(--font-ui);color:var(--hero-muted);margin-left:8px;letter-spacing:0}
+.bar{height:8px;background:var(--hero-line);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--gold-fill);border-radius:99px;transition:width .5s}
+@media (prefers-reduced-motion:reduce){.bar>i{transition:none}}
+.hero .mrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid var(--hero-line);font-size:14px;color:var(--hero-muted)}
+.hero .mrow b{font:600 20px var(--font-num);font-variant-numeric:tabular-nums}
+.hero .mrow b.flat{color:var(--hero-muted)}
+.barlab{display:flex;justify-content:space-between;font:12px var(--font-num);color:var(--hero-muted);margin-top:6px}
+.meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px;margin-top:18px;padding-top:16px;border-top:1px solid var(--hero-line)}
+@media (min-width:620px){.meta{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.meta dt{font-size:12px;color:var(--hero-muted)}
+.meta dd{font:600 17px var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.meta dd small{display:block;font:400 12px var(--font-ui);color:var(--hero-muted);margin-top:1px}
+.hero .pos{color:var(--pos-hero)} .hero .neg{color:var(--neg-hero)}
+.proj{margin-top:16px;font-size:13.5px;line-height:1.7}
+.proj small{display:block;color:var(--hero-muted);font-size:12px;margin-top:2px}
+.pill{font-size:12px;padding:2px 10px;border-radius:99px;border:1px solid var(--hero-line);white-space:nowrap}
+.pill.ok{background:var(--gold-fill);color:#2B1D00;border-color:transparent;font-weight:700}
+.linkbtn{background:none;border:0;padding:6px 0;color:var(--hero-fg);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:13px;min-height:36px}
+.meta.p4{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px}
+.meta.p4 dd{font-size:16px}
+@media (min-width:620px){.meta.p4{grid-template-columns:repeat(4,minmax(0,1fr))}}
+details.more{margin-top:14px}
+details.more>summary{cursor:pointer;color:var(--hero-muted);font-size:13px;min-height:36px;display:flex;align-items:center;list-style:none}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::after{content:"＋";margin-left:8px}
+details.more[open]>summary::after{content:"－"}
+details.more .meta{margin-top:6px}
+
+.pace-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0 0}
+.pace-meta dt{font-size:12px;color:var(--muted)}
+.pace-meta dd{font:600 15px var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.pace-meta dd small{display:block;font:400 12px var(--font-ui);color:var(--muted);margin-top:1px}
+.pace-meta+.charthead{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+@media (min-width:520px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.stat{background:var(--surface);padding:12px 14px;min-width:0}
+.stat .lab{font-size:12px;color:var(--muted);letter-spacing:.06em}
+.stat .val{font:600 20px/1.35 var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stat .sub{font-size:12px;color:var(--muted)}
+.pos{color:var(--pos)} .neg{color:var(--neg)} .flat{color:var(--muted)}
+
+/* Forms */
+.field{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;margin-top:14px;min-width:0}
+.field>label,.field>.lab{font-size:13px;font-weight:500;color:var(--muted)}
+input[type=text],input[type=date],input[type=month],select{
+  display:block;width:100%;max-width:100%;min-width:0;min-height:44px;padding:8px 12px;background:var(--surface-2);color:var(--fg);-webkit-appearance:none;appearance:none;
+  border:1px solid var(--line);border-radius:9px;font-family:var(--font-ui);font-size:16px;
+}
+.amt{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding-left:12px}
+.amt span{font:500 20px var(--font-num);color:var(--muted)}
+.amt input{border:0;background:transparent;font:600 22px var(--font-num);flex:1 1 0;width:auto;min-width:0;min-height:48px;padding-left:0}
+.amt:focus-within{outline:2px solid var(--gold);outline-offset:2px}
+.amt input:focus-visible{outline:none}
+.hint{font-size:12px;color:var(--muted)}
+.signseg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;position:relative}
+.signseg input{position:absolute;width:1px;height:1px;opacity:0}
+.signseg label{display:flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);font-weight:700;cursor:pointer;color:var(--muted)}
+#sign-profit:checked+label{background:var(--pos-soft);border-color:var(--pos);color:var(--pos)}
+#sign-loss:checked+label{background:var(--neg-soft);border-color:var(--neg);color:var(--neg)}
+.signseg input:focus-visible+label{outline:2px solid var(--gold);outline-offset:2px}
+.btn{width:100%;min-height:48px;margin-top:16px;border-radius:10px;border:1px solid transparent;background:var(--btn-bg);color:var(--btn-fg);font-weight:700;font-size:15px;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:default}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted);margin-top:8px;font-weight:500}
+.btn.ghost.armed{border-color:var(--gold);color:var(--fg);background:var(--gold-soft)}
+.msg{min-height:1.4em;margin-top:10px;font-size:13px;color:var(--muted)}
+.msg.err{color:var(--fg);background:var(--gold-soft);border-radius:8px;padding:6px 10px}
+details.card>summary{cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:32px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:"＋";color:var(--muted);font-weight:400}
+details.card[open]>summary::after{content:"－"}
+.check{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:14px;min-height:36px}
+.check input{width:20px;height:20px;accent-color:var(--gold)}
+
+/* Charts */
+.charthead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.legend{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:20px;height:0;border-top:2.5px solid var(--fg)}
+.sw.dash{border-top:2.5px dashed var(--gold-fill)}
+.chartbox{margin-top:8px;overflow:hidden}
+.chartbox+.charthead{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+svg{display:block;max-width:100%}
+.grid{stroke:var(--line);stroke-width:1}
+.grid.zero{stroke:var(--muted);stroke-opacity:.65}
+.ax{fill:var(--muted);font:12px var(--font-num)}
+.pace{stroke:var(--gold-fill);stroke-width:2;stroke-dasharray:6 5;fill:none}
+.cumline{stroke:var(--fg);stroke-width:2.25;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.cumarea{fill:var(--area)}
+.dot{fill:var(--fg)}
+.dot.end.pos{fill:var(--pos)} .dot.end.neg{fill:var(--neg)} .dot.end{stroke:var(--surface);stroke-width:2}
+.dot.tgt{fill:var(--gold-fill);stroke:var(--surface);stroke-width:2}
+.todayline{stroke:var(--muted);stroke-width:1;stroke-dasharray:2 3}
+.lbl{font:600 12px var(--font-num);fill:var(--fg);paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.lbl.gold{fill:var(--gold)} .lbl.mut{fill:var(--muted);font-weight:500}
+.bar-pos{fill:var(--pos)} .bar-neg{fill:var(--neg)}
+
+/* History */
+.histhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.seg{display:inline-grid;grid-auto-flow:column;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--muted);padding:6px 16px;border-radius:7px;font-weight:500;font-size:13.5px;min-height:36px;cursor:pointer}
+.seg button[aria-selected=true]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.table{margin-top:10px}
+.row{display:grid;align-items:center;gap:2px 10px;padding:10px 0;border-top:1px solid var(--line)}
+.row.head{border-top:0;padding:4px 0;color:var(--muted);font-size:12px}
+.r4{grid-template-columns:4.2rem minmax(0,1fr) minmax(0,1fr) 2.8rem}
+.r3{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr)}
+.row .n{font:500 14.5px var(--font-num);text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.row.head .n{font:400 12px var(--font-ui)}
+.row .d{font-size:14px;font-weight:500}
+.row .d small{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.subs{grid-column:1/-1;margin-top:2px}
+.subl{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;font-size:13px;color:var(--muted);padding:2px 0}
+.subl .n{font:500 13.5px var(--font-num);color:inherit}
+.subl .n.pos{color:var(--pos)}.subl .n.neg{color:var(--neg)}
+.memo{grid-column:1/-1;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.lnk{background:none;border:0;color:var(--gold);font-size:14px;font-weight:700;cursor:pointer;min-height:44px;min-width:40px;text-align:right;padding:0 2px}
+.more{width:100%;margin-top:10px;min-height:44px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;color:var(--muted);cursor:pointer}
+.empty{color:var(--muted);padding:16px 0}
+.foot{margin-top:18px;font-size:12px;color:var(--muted)}
+
+/* View tabs */
+.seg.tabs{display:grid;grid-auto-flow:row;grid-template-columns:minmax(0,1fr) minmax(0,1fr);max-width:340px;margin-bottom:14px}
+.seg.tabs button{padding:8px 12px;min-height:42px;font-size:14.5px;font-weight:700}
+
+/* History */
+.sumline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 0}
+.sumline div{background:var(--surface-2);border-radius:9px;padding:8px 10px;min-width:0}
+.sumline dt{font-size:11.5px;color:var(--muted)}
+.sumline dd{margin:0;font:600 14px var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.mhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:16px 0 6px;font-weight:700;font-size:14px}
+.mhead small{color:var(--muted);font-weight:400;font-size:12px;margin-left:8px}
+.mhead .n{font:600 14px var(--font-num);font-variant-numeric:tabular-nums}
+.row.wk{border-top:2px solid var(--line)}
+.row .n.pcell{font-weight:600;font-size:15px}
+.row .n.cumc{color:var(--muted)}
+.mag{display:block;height:4px;border-radius:2px;margin:4px 0 0 auto;min-width:2px;max-width:100%}
+.mag.pos{background:var(--pos)} .mag.neg{background:var(--neg)}
+
+/* Cash flow (daily) */
+#cash-grid{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);grid-template-areas:"chero" "ctable" "cloans" "clist" "cform"}
+#c-hero{grid-area:chero} #c-table{grid-area:ctable} #c-loans{grid-area:cloans} #c-list{grid-area:clist} #c-form{grid-area:cform}
+@media (min-width:820px){
+  #cash-grid{grid-template-columns:minmax(0,1fr) 340px;grid-template-areas:"chero cform" "ctable cform" "cloans cform" "clist cform";align-items:start}
+}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:32px}
+.hero .flat{color:var(--hero-muted)}
+.meta.c3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.meta.c3 dd{font-size:15px}
+.meta.c2{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.meta.c2 dd{font-size:15px}
+.alert{margin-top:14px;padding:10px 12px;border-radius:9px;background:rgba(255,143,132,.16);border:1px solid var(--neg-hero);font-size:13px;line-height:1.55}
+.cfhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.stickytabs{position:sticky;top:0;z-index:8;background:var(--bg);padding:6px 0 0}
+.stickytabs .seg.tabs{margin-bottom:8px}
+.actrow{display:flex;gap:8px;margin-bottom:12px;justify-content:flex-end}
+.actrow:empty{display:none}
+.addbtn{min-height:42px;padding:0 26px;border-radius:999px;border:0;background:var(--btn-bg);color:var(--btn-fg);font:700 15px var(--font-ui);cursor:pointer;white-space:nowrap}
+.fold{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font:inherit;color:inherit;min-height:32px}
+.fold i{font-style:normal;color:var(--muted);font-weight:400}
+.fold:focus-visible{outline:2px solid var(--gold-fill);outline-offset:2px}
+.card.collapsed > :not(.cfhead){display:none!important}
+.cfnav{position:sticky;top:var(--tabh,56px);z-index:7;background:var(--bg);padding:6px 0 8px;margin-bottom:6px;box-shadow:0 1px 0 var(--line);display:flex;justify-content:center}
+.cfbot{justify-content:flex-end;margin-top:12px}
+#c-table{overflow:visible}
+.ltabs{display:flex;gap:6px;flex-wrap:wrap}
+.ltabs button{min-height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);font-weight:500;font-size:14px;cursor:pointer}
+.ltabs button[aria-selected=true]{background:var(--btn-bg);color:var(--btn-fg);border-color:transparent;font-weight:700}
+.muted{color:var(--muted,var(--fg-2,#888))}
+.subh{font:700 13px var(--font-ui);margin:18px 0 2px;color:var(--fg)}
+.mnav{display:flex;align-items:center;gap:6px}
+.mnav button{min-width:40px;min-height:40px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:9px;cursor:pointer;font-size:17px;line-height:1}
+.mnav button:disabled{opacity:.35;cursor:default}
+.mnav .mlab{font-weight:700;font-size:15px;flex:none;width:7em;text-align:center;white-space:nowrap}
+.mnav .tdy{flex:none;width:56px;padding:0}
+.mnav button{flex:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.top:has(>div>.sr){margin:0;min-height:0}
+table.cfd{table-layout:fixed;width:500px;min-width:500px}
+table.cfd th:nth-child(1){width:96px}table.cfd th:nth-child(2){width:56px}table.cfd th:nth-child(3){width:80px}table.cfd th:nth-child(4){width:92px}table.cfd th:nth-child(5){width:88px}table.cfd th:nth-child(6){width:88px}
+.mnav .tdy{font-size:13px}
+.cf-wrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:10px;-webkit-overflow-scrolling:touch}
+table.cf{border-collapse:separate;border-spacing:0;width:100%;min-width:max-content;font-size:13px}
+.cf th,.cf td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.cf td{font:500 13px var(--font-num);padding:3px 10px}
+.cf thead th{background:var(--surface-2);font-weight:500;font-size:12px;color:var(--muted);vertical-align:bottom}
+.cf thead th.grp{text-align:center;letter-spacing:.06em}
+.cf thead th.note,.cf td.note{text-align:left}
+.cf td.note{font:400 12px var(--font-ui);color:var(--muted);max-width:14em;overflow:hidden;text-overflow:ellipsis}
+.cf tbody tr:last-child td{border-bottom:0}
+.cf th.rl,.cf td.rl{position:sticky;left:0;z-index:2;text-align:left;font:500 13px var(--font-ui);background:var(--surface);min-width:6.6em;border-right:1px solid var(--line)}
+.cf thead th.rl{background:var(--surface-2);z-index:3}
+.cf tr.wkend td{background:var(--surface-2)}
+.cf tr.today td{background:var(--gold-soft)}
+.cf tr.open td{color:var(--muted)}
+.cf tr.open td.rl,.cf tr.tot td.rl{font-weight:700}
+.cf tr.tot td{border-top:2px solid var(--fg);font-weight:700}
+.cf td.zero{color:var(--muted);font-weight:400}
+.cf td.pos{color:var(--pos)} .cf td.neg{color:var(--neg)}
+.cf tr td.short{background:var(--neg-soft)}
+.cf .mth{background:none;border:0;padding:0;color:inherit;font:600 13px var(--font-ui);cursor:pointer;text-align:left;min-height:30px;white-space:nowrap}
+.r5{grid-template-columns:4.2rem minmax(0,1fr) auto auto}
+.r3b{grid-template-columns:minmax(0,1fr) auto auto}
+.loanbox{border-top:1px solid var(--line)}
+.loanbox .row{border-top:0}
+.loanbox .row.xl{border-top:1px dashed var(--line);padding:6px 0}
+.loanbox details.inner{margin:0 0 12px;padding-top:6px;border-top:0}
+.cf-wrap.sch{max-height:340px;overflow:auto;overscroll-behavior:contain}
+.cf-wrap.sch table.cf{min-width:100%;width:100%}
+.cf-wrap.sch .cf th{padding:8px 10px;font-size:12px}
+.cf-wrap.sch .cf td{padding:9px 10px;font:600 14px var(--font-num)}
+.cf-wrap.sch .cf th.rl,.cf-wrap.sch .cf td.rl{min-width:0;font:600 14px var(--font-ui);white-space:nowrap}
+.cf-wrap.sch .cf td small{display:block;font:400 11.5px var(--font-ui);color:var(--muted);margin-top:1px;white-space:nowrap}
+.cf-wrap.sch .cf td.pc small .lint{font:500 11.5px var(--font-num);padding:4px 2px 2px}
+.cf-wrap.sch .cf td.pc{text-align:right}
+.cf-wrap.sch .cf td.bc{font-weight:500;color:var(--muted)}
+.cf-wrap.sch .cf tr.sel td,.cf-wrap.sch .cf tr.today td{background:transparent}
+.cf-wrap.sch .cf tr.sel td.rl{box-shadow:none}
+.cf-wrap.sch{max-height:380px}
+.cf-wrap.sch table.cf{table-layout:fixed;min-width:0!important}
+.cf-wrap.sch .cf th.rl,.cf-wrap.sch .cf td.rl{width:23%}
+.cf-wrap.sch .cf th:nth-child(2),.cf-wrap.sch .cf td.pc{width:43%}
+.cf-wrap.sch .cf th:nth-child(3),.cf-wrap.sch .cf td.bc{width:34%}
+.cf-wrap.sch .cf th,.cf-wrap.sch .cf td{padding-left:7px;padding-right:7px}
+.cf-wrap.sch .cf td.pc small{white-space:nowrap;line-height:1.55}
+.cf-wrap.sch .cf td.pc small span{display:block}
+.cf-wrap.sch .cf th{white-space:normal;line-height:1.3}
+.cf-wrap.sch .cf thead th{position:sticky;top:0;z-index:3}
+.cf-wrap.sch .cf thead th.rl{z-index:4}
+.cf tr.paid td{color:var(--muted)}
+.cf-wrap.sch .cf tr.prevm td,.cf-wrap.sch .cf tr.prevm td.rl{background:var(--surface-2);color:var(--muted);font-weight:500}
+.cf-wrap.sch .cf tr.prevm td.pc{font-weight:500}
+.cf-wrap.sch .cf tr.prevm td .lint.ov{color:var(--muted);border-bottom-color:var(--muted)}
+.cf-wrap.sch .cf tr.prevm td,.cf-wrap.sch .cf tr.prevm.sel td,.cf-wrap.sch .cf tr.prevm.today td{background:var(--surface-2)}
+.cf tbody tr.lined td{white-space:normal;text-align:left;background:var(--gold-soft)}
+.lint{background:none;border:0;border-bottom:1px dotted var(--muted);padding:0 0 1px;color:inherit;font:inherit;cursor:pointer}
+.lname{background:none;border:0;padding:6px 0;margin:-6px 0;font:inherit;font-weight:700;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:36px;text-align:left}
+.lname i{font-style:normal;color:var(--muted);font-size:12px}
+.loanbox .schbox{margin:0 0 12px;padding-top:6px}
+.cf-wrap.sch .cf tr.sel td{background:transparent}
+.lint.ov{color:var(--gold);font-weight:700;border-bottom-color:var(--gold)}
+.lint-ed{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;font:400 13px var(--font-ui)}
+.lint-ed input{width:8.5em;min-height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);text-align:right;font:500 14px var(--font-num)}
+.lint-ed .lnk{min-height:38px}
+.acts{display:flex;gap:14px;justify-content:flex-end;align-items:center}
+.cf tbody tr[data-cday]{cursor:pointer}
+.cf tr.sel td{font-weight:700}
+.cf tr.sel td.rl{box-shadow:inset 3px 0 0 var(--gold-fill)}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50}
+.sheet{position:fixed;z-index:51;left:0;right:0;bottom:0;max-height:88vh;overflow:auto;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:16px 16px max(20px,env(safe-area-inset-bottom));max-width:620px;margin:0 auto}
+@media (min-width:820px){.sheet{top:50%;bottom:auto;transform:translateY(-50%);border-radius:16px}}
+.sh-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:6px}
+.sh-head h2{font-size:17px;text-align:center}
+.sh-head button{min-width:40px;min-height:40px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:9px;cursor:pointer;font-size:17px;line-height:1}
+.sh-head button:disabled{opacity:.35;cursor:default}
+.sh-head .sh-x{margin-left:6px}
+.sh-sum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0 4px}
+.sh-sum dt{font-size:12px;color:var(--muted)}
+.sh-sum dd{font:700 15px var(--font-num)}
+.dline{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.dline small{display:block;font-size:12px;color:var(--muted)}
+.dl-n{font:600 14px var(--font-num);text-align:right}
+.dl-n .pos{color:var(--pos)} .dl-n .neg{color:var(--neg)}
+.lnk.armed{color:var(--neg)}
+.pbar{display:block;height:5px;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;overflow:hidden;margin-top:7px}
+.pbar i{display:block;height:100%;background:var(--gold-fill)}
+.row .n small{display:block;font:400 11px var(--font-ui);color:var(--muted)}
+details.inner{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+details.inner>summary{cursor:pointer;font-weight:700;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:36px}
+details.inner>summary::-webkit-details-marker{display:none}
+details.inner>summary::after{content:"＋";color:var(--muted);font-weight:400}
+details.inner[open]>summary::after{content:"－"}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 class="sr">収支ノート</h1>
+    </div>
+  </header>
+  <div class="stickytabs" id="stickytabs"><div class="seg tabs" role="tablist" aria-label="表示の切り替え">
+    <button type="button" role="tab" id="tab-pnl" data-view="pnl" aria-selected="true">損益</button>
+    <button type="button" role="tab" id="tab-cash" data-view="cash" aria-selected="false">資金繰り</button>
+  </div></div>
+  <div id="banner" class="note" hidden></div>
+
+  <div class="layout" id="view-pnl">
+
+
+    <section class="card hero" id="hero" aria-live="polite"></section>
+    <section class="stats" id="stats" aria-label="期間別の損益"></section>
+    <section class="card" id="pace"></section>
+    <section class="card" id="chart-daily"></section>
+      <section class="card" id="form-card" hidden>
+        <h2>損益を記録</h2>
+        <form id="entry-form" novalidate>
+          <div class="field">
+            <label for="f-date">日付</label>
+            <input type="date" id="f-date">
+          </div>
+          <div class="field">
+            <label for="f-cat">区分</label>
+            <select id="f-cat"><option value="stock">株式</option><option value="p">P</option><option value="other">その他</option></select>
+          </div>
+          <div class="field">
+            <span class="lab" id="lab-sign">結果</span>
+            <div class="signseg" role="radiogroup" aria-labelledby="lab-sign">
+              <input type="radio" name="sign" id="sign-profit" value="profit" checked><label for="sign-profit">利益 ＋</label>
+              <input type="radio" name="sign" id="sign-loss" value="loss"><label for="sign-loss">損失 －</label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-amount">金額（円）</label>
+            <div class="amt"><span>¥</span><input id="f-amount" type="text" inputmode="numeric" autocomplete="off"></div>
+            <p class="hint">▲5,000 や -5,000 と入力しても損失として記録します。</p>
+          </div>
+          <div class="field">
+            <label for="f-memo">メモ（任意）</label>
+            <input id="f-memo" type="text" maxlength="60" autocomplete="off">
+          </div>
+          <button class="btn" id="f-submit" type="submit">記録する</button>
+          <button class="btn ghost" id="f-delete" type="button" hidden>この記録を削除</button>
+          <button class="btn ghost" id="f-cancel" type="button" hidden>編集をやめる</button>
+          <p id="f-msg" class="msg" role="status"></p>
+        </form>
+      </section>
+    <section class="card" id="history"></section>
+      <details class="card" id="settings">
+        <summary>目標の設定</summary>
+        <form id="settings-form" novalidate>
+          <div class="field">
+            <label for="s-amount">目標利益（円）</label>
+            <div class="amt"><span>¥</span><input id="s-amount" type="text" inputmode="numeric" autocomplete="off"></div>
+          </div>
+          <div class="field">
+            <label for="s-date">目標日</label>
+            <input type="date" id="s-date">
+          </div>
+          <div class="field">
+            <label for="s-from">この日からの損益で数える（任意）</label>
+            <input type="date" id="s-from">
+            <p class="hint">新しい目標に切り替えるときに、その開始日を入れます。たとえば 10/23 を入れると、10/23以降の損益だけで目標の達成度とペースを計算します。空欄なら、すべての記録で数えます。</p>
+          </div>
+          <label class="check" hidden><input type="checkbox" id="s-hol" checked>祝日・年末年始を営業日に数えない</label>
+          <p class="hint" hidden>祝日データは2026〜2027年分です。それ以降は土日だけを除いて数えます。</p>
+          <button class="btn" type="submit">目標を保存</button>
+          <p id="s-msg" class="msg" role="status"></p>
+        </form>
+        <div id="goal-hist"></div>
+      </details>
+  </div>
+
+  <div id="view-cash" hidden>
+    <div class="cfnav" id="c-nav"></div>
+    <div class="actrow" id="c-acts"></div>
+    <div id="cash-grid">
+    <section class="card hero" id="c-hero" aria-live="polite"></section>
+    <section class="card" id="c-table"></section>
+    <section class="card" id="c-loans" hidden></section>
+    <section class="card" id="c-list"></section>
+    <section class="card" id="c-form" hidden>
+      <h2 id="c-form-h" hidden>記録を追加</h2>
+      <select id="mode-sel" hidden style="margin-bottom:14px" aria-label="記録の種類"><option value="one">記録</option><option value="rec">定期（毎月くり返す）</option></select>
+      <form id="ci-form" novalidate hidden>
+        <div class="field">
+          <label for="ci-date">日付</label>
+          <input type="date" id="ci-date">
+        </div>
+        <div class="field">
+          <label for="ci-cat">区分</label>
+          <select id="ci-cat"></select>
+        </div>
+        <div class="field" id="ci-loan-wrap" hidden>
+          <label>借入</label>
+          <div id="ci-loan-tabs" role="tablist" aria-label="どの借入の返済か"></div>
+        </div>
+        <div id="ci-rest">
+        <div class="field">
+          <label for="ci-amount">金額（円）</label>
+          <div class="amt"><span>¥</span><input id="ci-amount" type="text" inputmode="numeric" autocomplete="off"></div>
+        </div>
+        <div class="field" id="ci-int-wrap" hidden>
+          <label for="ci-incl">金額と利息</label>
+          <select id="ci-incl"><option value="in">利息を含む</option><option value="ex">利息を含まない（利息は別）</option></select>
+          <label for="ci-interest" style="margin-top:10px">利息（円・任意。「含まない」で空欄・0円なら、前回返済日からの日割り計算）</label>
+          <div class="amt"><span>¥</span><input id="ci-interest" type="text" inputmode="numeric" autocomplete="off"></div>
+          <p class="hint" id="ci-int-hint"></p>
+        </div>
+        <div class="field">
+          <label for="ci-memo">摘要（任意）</label>
+          <input id="ci-memo" type="text" maxlength="60" autocomplete="off">
+        </div>
+        <p class="hint">損益は、損益タブの記録から自動で入ります。</p>
+        <button class="btn" id="ci-submit" type="submit">追加する</button>
+        <button class="btn ghost" id="ci-cancel" type="button" hidden>編集をやめる</button>
+        <p id="ci-msg" class="msg" role="status"></p>
+        </div>
+      </form>
+      <div id="c-rec-box" hidden>
+        <h2 style="margin-top:6px">定期の登録</h2>
+        <p class="hint" style="margin-top:8px">毎月決まった日に、自動で入ります。給与、家賃、保険料などを登録してください。借入の登録と毎月の返済は、区分「返済」を選んで行います。</p>
+        <form id="cr-form" novalidate>
+          <div class="field">
+            <label>区分</label>
+            <select id="cr-cat"></select>
+          </div>
+          <div class="field" id="cr-loan-wrap" hidden>
+            <label>借入</label>
+            <div id="cr-loan-tabs" role="tablist" aria-label="借入"></div>
+          </div>
+          <div id="cr-rest">
+          <div class="field">
+            <label for="cr-name">名称</label>
+            <input id="cr-name" type="text" maxlength="30" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="cr-amount">金額（円）</label>
+            <div class="amt"><span>¥</span><input id="cr-amount" type="text" inputmode="numeric" autocomplete="off"></div>
+          </div>
+          <div class="field">
+            <label for="cr-day">毎月の日（1〜31）</label>
+            <input id="cr-day" type="text" inputmode="numeric" autocomplete="off">
+            <p class="hint">29〜31日は、その日がない月は月末になります。</p>
+          </div>
+          <div class="field">
+            <label for="cr-from">開始月（任意）</label>
+            <input type="month" id="cr-from">
+          </div>
+          <button class="btn" id="cr-submit" type="submit">定期に追加</button>
+          <button class="btn ghost" id="cr-cancel" type="button" hidden>編集をやめる</button>
+          <p id="cr-msg" class="msg" role="status"></p>
+          </div>
+        </form>
+      <div id="cl-wrap" hidden>
+        <p class="hint">借入は支出として扱います。毎月返済するものは、返済額と返済日を入れてください。毎月の返済日に、返済額が支出として現金から引かれ、借入残高が減ります。定期返済のない借入は、返済額と返済日を空欄のまま追加できます。</p>
+        <form id="cl-form" novalidate>
+          <div class="field">
+            <label for="cl-name">名称</label>
+            <input id="cl-name" type="text" maxlength="30" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="cl-balance">借入残高（開始日の時点・円）</label>
+            <div class="amt"><span>¥</span><input id="cl-balance" type="text" inputmode="numeric" autocomplete="off"></div>
+          </div>
+          <div class="field">
+            <label for="cl-pay">毎月の返済額（円。定期返済がなければ空欄）</label>
+            <div class="amt"><span>¥</span><input id="cl-pay" type="text" inputmode="numeric" autocomplete="off"></div>
+          </div>
+          <div class="field">
+            <label for="cl-incl">返済額と利息</label>
+            <select id="cl-incl"><option value="in">利息を含む</option><option value="ex">利息を含まない（利息は別）</option></select>
+          </div>
+          <div class="field">
+            <label for="cl-via">支払方法</label>
+            <select id="cl-via"><option value="">現金から直接</option><option value="rak">楽天カードで支払う</option></select>
+            <p class="hint">カード払いを選ぶと、返済分（元本・利息）は「記録」で登録したカードの支払額にすでに含まれているものとして、二重に引かず、借入残高だけを減らします。</p>
+          </div>
+          <div class="field">
+            <label for="cl-rate">年利（％・任意）</label>
+            <input id="cl-rate" type="text" inputmode="decimal" autocomplete="off">
+            <p class="hint">毎月の利息は、「返済前の残高 × 年利 ÷ 365 × 前回の返済日からの日数」（1円未満は切り捨て）で日割り計算します。入力すると、利息を除いた元本の分だけ借入残高が減ります。空欄なら、返済額の全額が残高を減らします。</p>
+          </div>
+          <div class="field">
+            <label for="cl-day">毎月の返済日（1〜31。定期返済がなければ空欄）</label>
+            <input id="cl-day" type="text" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="cl-from">最初の返済月（任意）</label>
+            <input type="month" id="cl-from">
+          </div>
+          <button class="btn" id="cl-submit" type="submit">借入を追加</button>
+          <button class="btn ghost" id="cl-cancel" type="button" hidden>編集をやめる</button>
+          <p id="cl-msg" class="msg" role="status"></p>
+        </form>
+      </div>
+
+
+<h3 class="subh">登録済みの定期</h3>
+        <div id="c-rec-list"></div>
+      </div>
+    </section>
+    </div>
+  </div>
+</div>
+
+<div id="c-day" hidden></div>
+<script>
+(function () {
+  'use strict';
+  var TZ = 'Asia/Tokyo', DAY = 86400000, WD = ['日', '月', '火', '水', '木', '金', '土'];
+  var HOL = new Set((
+    '2026-01-01 2026-01-12 2026-02-11 2026-02-23 2026-03-20 2026-04-29 2026-05-03 2026-05-04 2026-05-05 2026-05-06 ' +
+    '2026-07-20 2026-08-11 2026-09-21 2026-09-22 2026-09-23 2026-10-12 2026-11-03 2026-11-23 2026-12-31 ' +
+    '2027-01-01 2027-01-02 2027-01-03 2027-01-11 2027-02-11 2027-02-23 2027-03-22 2027-04-29 2027-05-03 2027-05-04 ' +
+    '2027-05-05 2027-07-19 2027-08-11 2027-09-20 2027-09-23 2027-10-11 2027-11-03 2027-11-23 2027-12-31'
+  ).split(' '));
+  var DEFAULTS = { targetAmount: 300000, targetDate: '2026-12-30', excludeHolidays: true };
+  var DEMO = {
+    '2026-10-01': { pnl: 12400, memo: '月初の押し目買いが成功' },
+    '2026-10-02': { pnl: -8200, memo: '' },
+    '2026-10-05': { pnl: 21600, memo: '決算後のギャップアップ' },
+    '2026-10-06': { pnl: 5300, memo: '' },
+    '2026-10-07': { pnl: -14800, memo: '損切りが遅れた' },
+    '2026-10-08': { pnl: 9700, memo: '' },
+    '2026-10-09': { pnl: 18200, memo: '' },
+    '2026-10-13': { pnl: -6500, memo: '' },
+    '2026-10-14': { pnl: 11900, memo: '' },
+    '2026-10-15': { pnl: -3100, memo: '' },
+    '2026-10-16': { pnl: 15800, memo: '週末前に一部利確' }
+  };
+
+  var CATS = [['oout', '支出', 'out'], ['rep', '返済', 'out'], ['rak', '楽天カード', 'out'], ['amz', 'Amazonカード', 'out'], ['oin', '収入', 'in'], ['sal', '給与等', 'in']];
+  var CASH_START = '2026-10-01';
+  var LEGACY = { dep: 'oin', wd: 'oout', tax: 'oout' };
+  var CAT_LABEL = {}, CAT_OUT = {};
+  CATS.forEach(function (c) { CAT_LABEL[c[0]] = c[1]; CAT_OUT[c[0]] = c[2] === 'out'; });
+  var DEMO_CASH = {
+    startDate: '2026-10-01', opening: 1000000,
+    items: { '2026-10-30': [{ id: 'd1', cat: 'oout', amount: 30000, memo: '' }] },
+    recurring: [
+      { id: 'r1', name: '給与', cat: 'sal', amount: 250000, day: 25, from: '' },
+      { id: 'r2', name: '生活費', cat: 'oout', amount: 120000, day: 27, from: '' }
+    ],
+    loans: [{ id: 'l1', name: 'ローン', balance: 1200000, rate: 1.5, payment: 30000, day: 20, from: '' }]
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var nf = new Intl.NumberFormat('ja-JP');
+  var yen = function (n) { return '¥' + nf.format(Math.abs(Math.round(n))); };
+  var sgn = function (n) { return n > 0 ? '+' + yen(n) : n < 0 ? '−' + yen(n) : yen(0); };
+  var cls = function (n) { return n > 0 ? 'pos' : n < 0 ? 'neg' : 'flat'; };
+
+  /* ---------- dates (all in Tokyo calendar days) ---------- */
+  var todayStr = function () {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  };
+  var pd = function (s) { var p = s.split('-').map(Number); return Date.UTC(p[0], p[1] - 1, p[2]); };
+  var fd = function (ms) { return new Date(ms).toISOString().slice(0, 10); };
+  var addDays = function (s, n) { return fd(pd(s) + n * DAY); };
+  var dow = function (s) { return new Date(pd(s)).getUTCDay(); };
+  var mondayOf = function (s) { return addDays(s, -((dow(s) + 6) % 7)); };
+  var md = function (s) { var p = s.split('-'); return (+p[1]) + '/' + (+p[2]); };
+  var daysBetween = function (a, b) { return Math.round((pd(b) - pd(a)) / DAY); };
+  var isBiz = function (s, ex) { var w = dow(s); if (w === 0 || w === 6) return false; return !(ex && HOL.has(s)); };
+  function bizDays(from, to, ex) {
+    var n = 0, end = pd(to);
+    for (var t = pd(from); t <= end; t += DAY) { if (isBiz(fd(t), ex)) n++; }
+    return n;
+  }
+  var dateJp = function (s) { return s.replace(/-/g, '/') + '（' + WD[dow(s)] + '）'; };
+  var curMonth = function () { return todayStr().slice(0, 7); };
+  var addMonths = function (m, n) {
+    var y = +m.slice(0, 4), mo = +m.slice(5, 7) - 1 + n;
+    y += Math.floor(mo / 12); mo = ((mo % 12) + 12) % 12;
+    return y + '-' + String(mo + 1).padStart(2, '0');
+  };
+  var monthsBetween = function (a, b) { return (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7)); };
+  var ym = function (m) { return m.replace('-', '/'); };
+  var daysInMonth = function (m) { return new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate(); };
+  var endOfMonth = function (m) { return m + '-' + String(daysInMonth(m)).padStart(2, '0'); };
+
+  /* ---------- state ---------- */
+  var state = {
+    entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', history: [], excludeHolidays: true, saved: false },
+    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'pnl', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: {}, pEdit: null, formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
+    kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
+  };
+  var backend = null;
+
+  function view() {
+    var real = Object.keys(state.entries).length > 0;
+    return { demo: !real, entries: real ? state.entries : DEMO };
+  }
+  function compute(entries) {
+    var dates = Object.keys(entries).sort(), run = 0, cum = {};
+    dates.forEach(function (d) { run += entries[d].pnl; cum[d] = run; });
+    return { dates: dates, cum: cum, total: run };
+  }
+
+  /* ---------- storage ---------- */
+  var LS_KEY = 'pnl-notebook-v1';
+  function lsLoad() { try { var j = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); return j && typeof j === 'object' ? j : null; } catch (e) { return null; } }
+  function lsSave() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ entries: state.entries, settings: state.settings, cash: state.cash })); state.memOnly = false; return true; }
+    catch (e) { state.memOnly = true; return false; }
+  }
+  var PCAT = { stock: '株式', p: 'P', other: 'その他' };
+  var pLabel = function (it) { var c = PCAT[it.cat] || '', m = it.memo || ''; return c && m ? c + '・' + m : c || m; };
+  function mkDay(items) {
+    var sum = 0, memos = [];
+    items.forEach(function (it) { sum += it.pnl; if (pLabel(it)) memos.push(pLabel(it)); });
+    return { pnl: sum, memo: memos.join(' / '), items: items };
+  }
+  function normDay(e) {
+    if (!e || typeof e !== 'object') return null;
+    var items = [];
+    if (Array.isArray(e.items)) e.items.slice(0, 50).forEach(function (it, i) {
+      if (it && typeof it.pnl === 'number' && isFinite(it.pnl)) items.push({ id: typeof it.id === 'string' && it.id ? it.id : 'p' + i, pnl: it.pnl, memo: typeof it.memo === 'string' ? it.memo.slice(0, 60) : '', cat: PCAT[it.cat] ? it.cat : '' });
+    });
+    if (!items.length && typeof e.pnl === 'number' && isFinite(e.pnl)) items.push({ id: 'p0', pnl: e.pnl, memo: typeof e.memo === 'string' ? e.memo.slice(0, 60) : '', cat: '' });
+    return items.length ? mkDay(items) : null;
+  }
+  var itemsOf = function (e) { return e ? (e.items || [{ id: 'p0', pnl: e.pnl, memo: e.memo || '', cat: '' }]) : []; };
+  function cleanSettings(s) {
+    var o = { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', excludeHolidays: true, saved: true };
+    if (s && typeof s.targetFrom === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.targetFrom)) o.targetFrom = s.targetFrom;
+    o.history = [];
+    var rd = /^\d{4}-\d{2}-\d{2}$/;
+    if (s && Array.isArray(s.history)) s.history.slice(0, 50).forEach(function (g, i) {
+      if (g && rd.test(g.end) && rd.test(g.date) && typeof g.amount === 'number' && g.amount > 0) o.history.push({ id: typeof g.id === 'string' && g.id ? g.id : 'g' + i, from: typeof g.from === 'string' && rd.test(g.from) ? g.from : '', end: g.end, date: g.date, amount: g.amount });
+    });
+    if (s && typeof s.targetAmount === 'number' && s.targetAmount > 0) o.targetAmount = s.targetAmount;
+    if (s && typeof s.targetDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.targetDate)) o.targetDate = s.targetDate;
+    if (s && typeof s.excludeHolidays === 'boolean') o.excludeHolidays = s.excludeHolidays;
+    return o;
+  }
+  function cleanCash(v) {
+    var o = { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: true, startFix: true };
+    var re = /^\d{4}-\d{2}-\d{2}$/, rm = /^\d{4}-\d{2}$/;
+    var item = function (it, i) {
+      if (it && LEGACY[it.cat]) it = Object.assign({}, it, { cat: LEGACY[it.cat] });
+      if (!it || it.cat === 'rep' || !CAT_LABEL[it.cat] || typeof it.amount !== 'number' || !isFinite(it.amount) || it.amount <= 0) return null;
+      return { id: typeof it.id === 'string' && it.id ? it.id : 'x' + i, cat: it.cat, amount: it.amount, memo: typeof it.memo === 'string' ? it.memo.slice(0, 60) : '' };
+    };
+    if (v) {
+      if (typeof v.startDate === 'string' && re.test(v.startDate)) o.startDate = v.startDate;
+      else if (typeof v.startMonth === 'string' && rm.test(v.startMonth)) o.startDate = v.startMonth + '-01';
+      if (v.startFix !== true && o.startDate && o.startDate > CASH_START) o.startDate = CASH_START;
+      if (typeof v.opening === 'number' && isFinite(v.opening) && v.opening >= 0) o.opening = v.opening;
+      if (v.items && typeof v.items === 'object') {
+        Object.keys(v.items).forEach(function (d) {
+          if (!re.test(d) || !Array.isArray(v.items[d])) return;
+          var arr = v.items[d].map(item).filter(Boolean);
+          if (arr.length) o.items[d] = arr;
+        });
+      }
+      if (Array.isArray(v.recurring)) {
+        o.recurring = v.recurring.map(function (r, i) {
+          if (r && LEGACY[r.cat]) r = Object.assign({}, r, { cat: LEGACY[r.cat] });
+          if (!r || !CAT_LABEL[r.cat] || typeof r.amount !== 'number' || !(r.amount > 0) || !Number.isInteger(r.day) || r.day < 1 || r.day > 31) return null;
+          return { id: typeof r.id === 'string' && r.id ? r.id : 'r' + i, name: (typeof r.name === 'string' && r.name.trim() ? r.name.trim() : CAT_LABEL[r.cat]).slice(0, 30), cat: r.cat, amount: r.amount, day: r.day, from: typeof r.from === 'string' && rm.test(r.from) ? r.from : '' };
+        }).filter(Boolean).slice(0, 30);
+      }
+      if (Array.isArray(v.loans)) {
+        o.loans = v.loans.map(function (l, i) {
+          if (!l || typeof l.balance !== 'number' || !(l.balance > 0) || typeof l.payment !== 'number' || !(l.payment >= 0) || (l.payment > 0 && (!Number.isInteger(l.day) || l.day < 1 || l.day > 31))) return null;
+          var lday = Number.isInteger(l.day) && l.day >= 1 && l.day <= 31 ? l.day : 1;
+          var rate = typeof l.rate === 'number' && isFinite(l.rate) && l.rate >= 0 && l.rate <= 100 ? l.rate : 0;
+          var ints = {};
+          if (l.ints && typeof l.ints === 'object') Object.keys(l.ints).slice(0, 720).forEach(function (k) { var x = l.ints[k]; if (rm.test(k) && typeof x === 'number' && isFinite(x) && x >= 0) ints[k] = Math.round(x); });
+          var pays = {};
+          if (l.pays && typeof l.pays === 'object') Object.keys(l.pays).slice(0, 720).forEach(function (k) { var x = l.pays[k]; if (rm.test(k) && typeof x === 'number' && isFinite(x) && x > 0) pays[k] = Math.round(x); });
+          var extras = [];
+          if (Array.isArray(l.extras)) l.extras.slice(0, 60).forEach(function (x, j) { if (x && typeof x.date === 'string' && re.test(x.date) && typeof x.amount === 'number' && isFinite(x.amount) && x.amount > 0) extras.push({ id: typeof x.id === 'string' && x.id ? x.id : 'x' + i + '_' + j, date: x.date, amount: Math.round(x.amount), interest: typeof x.interest === 'number' && x.interest > 0 ? Math.round(Math.min(x.interest, x.amount)) : 0 }); });
+          return { extras: extras, ints: ints, pays: pays, id: typeof l.id === 'string' && l.id ? l.id : 'l' + i, name: (typeof l.name === 'string' && l.name.trim() ? l.name.trim() : '借入').slice(0, 30), balance: l.balance, rate: rate, payment: l.payment, excl: l.excl === true, via: l.via === 'rak' || l.via === 'amz' ? l.via : '', day: lday, from: typeof l.from === 'string' && rm.test(l.from) ? l.from : '' };
+        }).filter(Boolean).slice(0, 20);
+      }
+      if (v.months && typeof v.months === 'object') {
+        Object.keys(v.months).forEach(function (m) {
+          var r = v.months[m];
+          if (!rm.test(m) || !r || typeof r !== 'object') return;
+          ['dep', 'oin', 'wd', 'tax', 'oout'].forEach(function (k) {
+            if (typeof r[k] === 'number' && r[k] > 0) { var d = m + '-01'; (o.items[d] = o.items[d] || []).push({ id: 'm' + m + k, cat: LEGACY[k] || k, amount: r[k], memo: '月次入力から移行' }); }
+          });
+        });
+      }
+    }
+    return o;
+  }
+  function startLocal() {
+    if (state.kind !== 'pending') return;
+    state.kind = 'local';
+    var j = lsLoad();
+    if (j) {
+      if (j.entries && typeof j.entries === 'object') {
+        Object.keys(j.entries).forEach(function (d) {
+          var e = j.entries[d];
+          var nd = /^\d{4}-\d{2}-\d{2}$/.test(d) ? normDay(e) : null; if (nd) state.entries[d] = nd;
+        });
+      }
+      if (j.settings) state.settings = cleanSettings(j.settings);
+      if (j.cash && j.cash.saved) state.cash = cleanCash(j.cash);
+    }
+    backend = {
+      saveDay: function (date, items) { state.entries[date] = mkDay(items); lsSave(); state.loaded = true; render(); return Promise.resolve(); },
+      removeEntry: function (date) { delete state.entries[date]; lsSave(); render(); return Promise.resolve(); },
+      saveSettings: function (s) { state.settings = cleanSettings(s); lsSave(); render(); return Promise.resolve(); },
+      saveCash: function (cs) { state.cash = cleanCash(cs); lsSave(); render(); return Promise.resolve(); }
+    };
+    state.loaded = true;
+    render();
+  }
+  function startDb(db, uid) {
+    if (state.kind === 'db') return;
+    state.kind = 'db';
+    state.entries = {};
+    var col = db.collection('data/users/' + uid);
+    backend = {
+      saveDay: function (date, items) { var d = mkDay(items); return col.doc('d-' + date).set({ date: date, pnl: d.pnl, memo: d.memo, items: items }); },
+      removeEntry: function (date) { return col.doc('d-' + date).delete(); },
+      saveSettings: function (s) { return col.doc('settings').set({ targetAmount: s.targetAmount, targetDate: s.targetDate, targetFrom: s.targetFrom || '', history: s.history || [], excludeHolidays: s.excludeHolidays }); },
+      saveCash: function (cs) { return col.doc('cashflow').set({ startDate: cs.startDate, opening: cs.opening, items: cs.items, recurring: cs.recurring, loans: cs.loans || [], startFix: true }); }
+    };
+    col.onSnapshot(function (snap) {
+      var e = {}, s = null, cs = null;
+      snap.docs.forEach(function (d) {
+        var v = d.data();
+        if (!v) return;
+        if (d.id === 'settings') s = v;
+        else if (d.id === 'cashflow') cs = v;
+        else if (d.id.indexOf('d-') === 0 && typeof v.pnl === 'number' && typeof v.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.date)) {
+          e[v.date] = normDay(v) || { pnl: v.pnl, memo: '' };
+        }
+      });
+      state.entries = e;
+      if (s) state.settings = cleanSettings(s);
+      if (cs) state.cash = cleanCash(cs);
+      state.dbError = false; state.loaded = true;
+      render();
+    }, function () { state.dbError = true; state.loaded = true; render(); });
+  }
+  function waitForClaude(ms) {
+    return new Promise(function (resolve) {
+      var t0 = Date.now();
+      (function tick() {
+        if (window.claude && typeof window.claude.use === 'function') return resolve(true);
+        if (Date.now() - t0 > ms) return resolve(false);
+        setTimeout(tick, 100);
+      })();
+    });
+  }
+  async function initStorage() {
+    var db = null, uid = null;
+    try {
+      if (await waitForClaude(0)) {
+        var res = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+        if (res[0] && res[1]) { uid = await res[1].id(); if (uid) db = res[0]; }
+      }
+    } catch (e) { db = null; }
+    if (db && uid) startDb(db, uid); else startLocal();
+  }
+
+  /* ---------- number input ---------- */
+  function parseAmount(raw) {
+    var z = String(raw).replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/[，,\s¥￥円]/g, '');
+    var neg = /^[-−ー‐▲△]/.test(z);
+    var digits = z.replace(/[^0-9]/g, '');
+    return { neg: neg, value: digits ? parseInt(digits, 10) : NaN };
+  }
+
+  /* ---------- chart helpers ---------- */
+  function niceStep(raw) {
+    var p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+    var n = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+    return n * p;
+  }
+  function yTicks(lo, hi) {
+    var step = niceStep((hi - lo) / 4), min = Math.floor(lo / step) * step, max = Math.ceil(hi / step) * step, ticks = [];
+    for (var x = min; x <= max + step * 0.01; x += step) ticks.push(Math.round(x * 100) / 100);
+    return { ticks: ticks, min: min, max: max };
+  }
+  function axis(v) {
+    if (v === 0) return '0';
+    var a = Math.abs(v), s = v < 0 ? '−' : '';
+    if (a >= 10000) { var x = a / 10000; return s + (Number.isInteger(x) ? x : Math.round(x * 10) / 10) + '万'; }
+    return s + nf.format(a);
+  }
+
+  function chartCum(c, w) {
+    var s = state.settings, t = todayStr();
+    var W = w, H = 250, ml = W < 360 ? 44 : 54, mr = 16, mt = 20, mb = 30, pw = W - ml - mr, ph = H - mt - mb;
+    var d0 = c.dates[0], last = c.dates[c.dates.length - 1];
+    var dEnd = pd(s.targetDate) > pd(last) ? s.targetDate : last;
+    var span = Math.max(1, daysBetween(d0, dEnd));
+    var vals = c.dates.map(function (d) { return c.cum[d]; });
+    var yt = yTicks(Math.min.apply(null, [0].concat(vals)), Math.max.apply(null, [s.targetAmount].concat(vals)));
+    var X = function (d) { return ml + daysBetween(d0, d) / span * pw; };
+    var Y = function (v) { return mt + (1 - (v - yt.min) / (yt.max - yt.min)) * ph; };
+    var g = '';
+    yt.ticks.forEach(function (tv) {
+      var y = Y(tv);
+      g += '<line class="grid' + (tv === 0 ? ' zero' : '') + '" x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y + '" y2="' + y + '"/>' +
+           '<text class="ax" x="' + (ml - 8) + '" y="' + (y + 4) + '" text-anchor="end">' + axis(tv) + '</text>';
+    });
+    var seen = {};
+    for (var i = 0; i <= 4; i++) {
+      var dd = addDays(d0, Math.round(span * i / 4));
+      if (seen[dd]) continue; seen[dd] = 1;
+      g += '<text class="ax" x="' + X(dd) + '" y="' + (H - 8) + '" text-anchor="' + (i === 0 ? 'start' : i === 4 ? 'end' : 'middle') + '">' + md(dd) + '</text>';
+    }
+    if (pd(t) >= pd(d0) && pd(t) <= pd(dEnd)) {
+      var tx = X(t);
+      g += '<line class="todayline" x1="' + tx + '" x2="' + tx + '" y1="' + mt + '" y2="' + (H - mb) + '"/>' +
+           '<text class="lbl mut" x="' + tx + '" y="' + (mt - 6) + '" text-anchor="' + (tx > W - 40 ? 'end' : 'middle') + '">今日</text>';
+    }
+    var xT = X(s.targetDate), yT = Y(s.targetAmount);
+    g += '<line class="pace" x1="' + X(d0) + '" y1="' + Y(0) + '" x2="' + xT + '" y2="' + yT + '"/>' +
+         '<circle class="dot tgt" cx="' + xT + '" cy="' + yT + '" r="5"/>' +
+         '<text class="lbl gold" x="' + (xT - 8) + '" y="' + (yT - 9) + '" text-anchor="end">目標 ' + yen(s.targetAmount) + '</text>';
+    var pts = c.dates.map(function (d) { return X(d).toFixed(1) + ' ' + Y(c.cum[d]).toFixed(1); });
+    g += '<path class="cumarea" d="M' + X(d0).toFixed(1) + ' ' + Y(0).toFixed(1) + ' L' + pts.join(' L') + ' L' + X(last).toFixed(1) + ' ' + Y(0).toFixed(1) + ' Z"/>' +
+         '<path class="cumline" d="M' + pts.join(' L') + '"/>';
+    if (c.dates.length <= 40) c.dates.forEach(function (d) { g += '<circle class="dot" cx="' + X(d) + '" cy="' + Y(c.cum[d]) + '" r="2.5"/>'; });
+    var ex = X(last), ey = Y(c.total);
+    g += '<circle class="dot end ' + cls(c.total) + '" cx="' + ex + '" cy="' + ey + '" r="5.5"/>' +
+         '<text class="lbl" x="' + (ex + (ex > W - 90 ? -9 : 9)) + '" y="' + (ey + (ey < mt + 22 ? 20 : -10)) + '" text-anchor="' + (ex > W - 90 ? 'end' : 'start') + '">' + sgn(c.total) + '</text>';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="累積損益の推移。現在' + sgn(c.total) + '、目標' + yen(s.targetAmount) + '。">' + g + '</svg>';
+  }
+
+  function chartDaily(c, v, w) {
+    var list = c.dates.slice(-30), n = list.length;
+    var W = w, H = 170, ml = W < 360 ? 44 : 54, mr = 16, mt = 12, mb = 26, pw = W - ml - mr, ph = H - mt - mb;
+    var vals = list.map(function (d) { return v.entries[d].pnl; });
+    var lo = Math.min.apply(null, [0].concat(vals)), hi = Math.max.apply(null, [0].concat(vals));
+    if (hi === lo) hi = lo + 1000;
+    var yt = yTicks(lo, hi);
+    var Y = function (x) { return mt + (1 - (x - yt.min) / (yt.max - yt.min)) * ph; };
+    var g = '';
+    yt.ticks.forEach(function (tv) {
+      var y = Y(tv);
+      g += '<line class="grid' + (tv === 0 ? ' zero' : '') + '" x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y + '" y2="' + y + '"/>' +
+           '<text class="ax" x="' + (ml - 8) + '" y="' + (y + 4) + '" text-anchor="end">' + axis(tv) + '</text>';
+    });
+    var slot = pw / n, bw = Math.max(3, Math.min(22, slot * 0.66)), y0 = Y(0);
+    list.forEach(function (d, i) {
+      var val = v.entries[d].pnl, x = ml + slot * i + (slot - bw) / 2, yy = Y(val);
+      var top = val >= 0 ? yy : y0, hh = Math.max(1, Math.abs(yy - y0));
+      g += '<rect class="' + (val >= 0 ? 'bar-pos' : 'bar-neg') + '" x="' + x.toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hh.toFixed(1) + '" rx="2"/>';
+    });
+    var idx = n >= 3 ? [0, Math.floor((n - 1) / 2), n - 1] : n === 2 ? [0, 1] : [0];
+    idx.forEach(function (i, k) {
+      var x = ml + slot * i + slot / 2;
+      g += '<text class="ax" x="' + x + '" y="' + (H - 7) + '" text-anchor="' + (k === 0 && idx.length > 1 ? 'start' : (k === idx.length - 1 && idx.length > 1 ? 'end' : 'middle')) + '">' + md(list[i]) + '</text>';
+    });
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="日々の損益の棒グラフ。直近' + n + '日分。">' + g + '</svg>';
+  }
+
+  /* ---------- renderers ---------- */
+  function renderSaveState() {}
+
+  function gset(c, v) {
+    var f = state.settings.targetFrom;
+    if (!f) return { c: c, v: v };
+    var e = {};
+    Object.keys(v.entries).forEach(function (d) { if (d >= f) e[d] = v.entries[d]; });
+    return { c: compute(e), v: { demo: v.demo, entries: e } };
+  }
+  function goal(c, v) {
+    var s = state.settings, t = todayStr();
+    var remaining = s.targetAmount - c.total;
+    var daysLeft = daysBetween(t, s.targetDate);
+    var from = v.entries[t] ? addDays(t, 1) : t;
+    var biz = daysLeft < 0 ? 0 : Math.max(0, daysBetween(from, s.targetDate) + 1);
+    var n = c.dates.length;
+    return {
+      target: s.targetAmount, total: c.total, remaining: remaining, daysLeft: daysLeft, biz: biz, n: n,
+      need: remaining > 0 && biz > 0 ? Math.ceil(remaining / biz) : null,
+      avg: n ? c.total / n : null,
+      pct: s.targetAmount > 0 ? Math.max(0, Math.min(100, c.total / s.targetAmount * 100)) : 0,
+      done: remaining <= 0
+    };
+  }
+
+  function renderHero(c, v) {
+    var g = goal.apply(null, (function (x) { return [x.c, x.v]; })(gset(c, v)));
+    var eyebrow = g.done ? '目標を達成しました' : g.daysLeft < 0 ? '目標日を過ぎました・未達' : '目標利益まで残り';
+    var big = g.done ? yen(-g.remaining) + '<small>超過</small>' : yen(g.remaining);
+    var mk = todayStr().slice(0, 7), mSum = 0;
+    c.dates.forEach(function (d) { if (d.slice(0, 7) === mk) mSum += v.entries[d].pnl; });
+    $('hero').innerHTML =
+      '<div class="eyebrow"><span>' + eyebrow + '</span><button type="button" class="recbtn" data-openrec aria-controls="form-card" aria-expanded="' + !$('form-card').hidden + '">記録</button></div>' +
+      '<div class="big">' + big + '</div>' +
+      '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + g.pct.toFixed(1) + '" aria-label="目標達成率"><i style="width:' + g.pct.toFixed(1) + '%"></i></div>' +
+      '<div class="barlab"><span>達成率 ' + g.pct.toFixed(1) + '%</span><span>' + yen(g.target) + '</span></div>' +
+      '<div class="mrow"><span>今月の収支</span><b class="' + cls(mSum) + '">' + sgn(mSum) + '</b></div>';
+  }
+
+  function renderStats(c, v) {
+    var t = todayStr(), wk = mondayOf(t), mk = t.slice(0, 7);
+    var wSum = 0, wN = 0, mSum = 0, mN = 0, win = 0, lose = 0;
+    c.dates.forEach(function (d) {
+      var p = v.entries[d].pnl;
+      if (mondayOf(d) === wk) { wSum += p; wN++; }
+      if (d.slice(0, 7) === mk) { mSum += p; mN++; }
+      if (p > 0) win++; else if (p < 0) lose++;
+    });
+    var te = v.entries[t];
+    var tile = function (lab, val, sub) {
+      return '<div class="stat"><div class="lab">' + lab + '</div><div class="val ' + (val === null ? 'flat' : cls(val)) + '">' + (val === null ? '—' : sgn(val)) + '</div><div class="sub">' + sub + '</div></div>';
+    };
+    $('stats').innerHTML =
+      tile('今日', te ? te.pnl : null, md(t) + '（' + WD[dow(t)] + '）' + (te ? '・記録済み' : isBiz(t, state.settings.excludeHolidays) ? '・未記入' : '・休場日')) +
+      tile('今週', wN ? wSum : null, md(wk) + '〜' + md(addDays(wk, 6)) + '・' + wN + '日') +
+      tile('今月', mN ? mSum : null, (+mk.slice(5)) + '月・' + mN + '日') +
+      tile('累積', c.total, win + '勝' + lose + '敗・' + c.dates.length + '日');
+  }
+
+  var lastW = 0;
+  function renderCharts(c, v) {
+    var el = $('pace');
+    if (!c) { var v2 = view(); c = compute(v2.entries); v = v2; }
+    var w = Math.max(260, Math.floor(el.clientWidth - 34)) || 560;
+    lastW = w;
+    var gs = gset(c, v), g = goal(gs.c, gs.v), s = state.settings;
+    el.innerHTML =
+      '<h2>ペース</h2>' +
+      '<dl class="pace-meta">' +
+        '<div><dt>必要ペース</dt><dd>' + (g.need !== null ? yen(g.need) + '/日' : '—') + '<small>残り' + g.biz + '日</small></dd></div>' +
+        '<div><dt>平均損益</dt><dd class="' + (g.avg !== null ? cls(g.avg) : '') + '">' + (g.avg !== null ? sgn(g.avg) + '/日' : '—') + '<small>記録' + g.n + '日の平均</small></dd></div>' +
+        '<div><dt>目標日</dt><dd>' + md(s.targetDate) + '<small>' + (g.daysLeft >= 0 ? 'あと' + g.daysLeft + '日' : (-g.daysLeft) + '日経過') + '</small></dd></div>' +
+      '</dl>' +
+      '<div class="charthead"><h2>累積損益と目標ペース</h2></div>' +
+      '<div class="legend"><span><i class="sw"></i>累積損益</span><span><i class="sw dash"></i>目標ペース</span></div>' +
+      '<div class="chartbox">' + (gs.c.dates.length ? chartCum(gs.c, w) : '<p class="empty">' + md(s.targetFrom) + ' 以降の記録がまだありません。</p>') + '</div>';
+    $('chart-daily').innerHTML =
+      '<div class="charthead"><h2>日々の損益</h2><span class="sub">直近' + Math.min(30, c.dates.length) + '日</span></div>' +
+      '<div class="chartbox">' + chartDaily(c, v, w) + '</div>';
+  }
+
+  function group(c, v, keyFn) {
+    var g = {};
+    c.dates.forEach(function (d) {
+      var k = keyFn(d), p = v.entries[d].pnl, o = g[k] || (g[k] = { sum: 0, n: 0, w: 0, l: 0, last: d });
+      o.sum += p; o.n++; o.last = d;
+      if (p > 0) o.w++; else if (p < 0) o.l++;
+    });
+    return Object.keys(g).sort().reverse().map(function (k) { return { k: k, sum: g[k].sum, n: g[k].n, w: g[k].w, l: g[k].l, cum: c.cum[g[k].last] }; });
+  }
+
+  function renderHistory(c, v) {
+    var t = todayStr(), body = '', E = v.entries;
+    var wins = 0, losses = 0, sw = 0, sl = 0;
+    c.dates.forEach(function (d) { var p = E[d].pnl; if (p > 0) { wins++; sw += p; } else if (p < 0) { losses++; sl += p; } });
+    var rate = wins + losses ? Math.round(wins / (wins + losses) * 100) : null;
+    var sumline = '<dl class="sumline">' +
+      '<div><dt>勝率（' + wins + '勝' + losses + '敗）</dt><dd>' + (rate === null ? '—' : rate + '%') + '</dd></div>' +
+      '<div><dt>平均利益</dt><dd class="' + (wins ? 'pos' : 'flat') + '">' + (wins ? sgn(Math.round(sw / wins)) : '—') + '</dd></div>' +
+      '<div><dt>平均損失</dt><dd class="' + (losses ? 'neg' : 'flat') + '">' + (losses ? sgn(Math.round(sl / losses)) : '—') + '</dd></div>' +
+      '</dl>';
+    var bar = function (p, mx) { return p ? '<i class="mag ' + cls(p) + '" style="width:' + Math.max(4, Math.round(Math.abs(p) / mx * 100)) + '%"></i>' : ''; };
+
+    if (state.tab === 'daily') {
+      var desc = c.dates.slice().reverse(), shown = desc.slice(0, state.limit);
+      var mx = Math.max.apply(null, c.dates.map(function (d) { return Math.abs(E[d].pnl); }).concat([1]));
+      var months = {};
+      group(c, v, function (d) { return d.slice(0, 7); }).forEach(function (r) { months[r.k] = r; });
+      body += '<div class="row head r4"><span>日付</span><span class="n">損益</span><span class="n">累積</span><span></span></div>';
+      var curM = '', prevWk = '';
+      shown.forEach(function (d) {
+        var e = E[d], m = d.slice(0, 7), wk = mondayOf(d), isWk = false;
+        if (m !== curM) {
+          curM = m;
+          var r = months[m];
+          body += '<div class="mhead"><span>' + m.slice(0, 4) + '年' + (+m.slice(5)) + '月<small>' + r.n + '日・' + r.w + '勝' + r.l + '敗</small></span><span class="n ' + cls(r.sum) + '">' + sgn(r.sum) + '</span></div>';
+        } else if (wk !== prevWk) { isWk = true; }
+        prevWk = wk;
+        body += '<div class="row r4' + (isWk ? ' wk' : '') + '"><div class="d">' + md(d) + '<small>' + WD[dow(d)] + '曜</small></div>' +
+          '<div class="n pcell ' + cls(e.pnl) + '">' + sgn(e.pnl) + bar(e.pnl, mx) + '</div>' +
+          '<div class="n cumc">' + sgn(c.cum[d]) + '</div>' +
+          (v.demo || itemsOf(e).length > 1 ? '<span></span>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(itemsOf(e)[0].id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') +
+          (itemsOf(e).length > 1 ? '<div class="subs">' + itemsOf(e).map(function (it) { return '<div class="subl"><span>' + esc(pLabel(it) || '記録') + '</span><span class="n ' + cls(it.pnl) + '">' + sgn(it.pnl) + '</span>' + (v.demo ? '<span></span>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(it.id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') + '</div>'; }).join('') + '</div>' : (e.memo ? '<div class="memo">' + esc(e.memo) + '</div>' : '')) + '</div>';
+      });
+      if (desc.length > shown.length) body += '<button type="button" class="more" data-more>さらに表示（残り' + (desc.length - shown.length) + '日）</button>';
+    } else {
+      var weekly = state.tab === 'weekly';
+      var rows = group(c, v, weekly ? mondayOf : function (d) { return d.slice(0, 7); });
+      var cur = weekly ? mondayOf(t) : t.slice(0, 7);
+      var mx2 = Math.max.apply(null, rows.map(function (r) { return Math.abs(r.sum); }).concat([1]));
+      body += '<div class="row head r3"><span>' + (weekly ? '週（月〜日）' : '月') + '</span><span class="n">損益</span><span class="n">期末の累積</span></div>';
+      rows.forEach(function (r) {
+        var label = weekly ? md(r.k) + '〜' + md(addDays(r.k, 6)) : r.k.slice(0, 4) + '年' + (+r.k.slice(5)) + '月';
+        var rt = r.w + r.l ? Math.round(r.w / (r.w + r.l) * 100) : null;
+        var sub = (r.k === cur ? (weekly ? '今週' : '今月') + '・' : '') + r.n + '日・' + r.w + '勝' + r.l + '敗' + (!weekly && rt !== null ? '・勝率' + rt + '%' : '');
+        body += '<div class="row r3"><div class="d">' + label + '<small>' + sub + '</small></div>' +
+          '<div class="n pcell ' + cls(r.sum) + '">' + sgn(r.sum) + bar(r.sum, mx2) + '</div><div class="n cumc">' + sgn(r.cum) + '</div></div>';
+      });
+    }
+    var tabs = [['daily', '日次'], ['weekly', '週次'], ['monthly', '月次']].map(function (x) {
+      return '<button type="button" role="tab" data-tab="' + x[0] + '" aria-selected="' + (state.tab === x[0]) + '">' + x[1] + '</button>';
+    }).join('');
+    $('history').innerHTML = '<div class="histhead"><h2>記録</h2><div class="seg" role="tablist" aria-label="集計単位">' + tabs + '</div></div>' + sumline + '<div class="table">' + body + '</div>';
+  }
+
+  /* ---------- cash flow (daily) ---------- */
+  var uid = function () { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); };
+  function defaultStart() { return CASH_START; }
+  var HOLC = {};
+  function holidaysOf(y) {
+    if (HOLC[y]) return HOLC[y];
+    var s = {}, pad = function (n) { return String(n).padStart(2, '0'); };
+    function add(m, d) { s[y + '-' + pad(m) + '-' + pad(d)] = 1; }
+    function nthMon(m, n) { var f = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(); return 1 + ((8 - f) % 7) + 7 * (n - 1); }
+    [[1, 1], [2, 11], [2, 23], [4, 29], [5, 3], [5, 4], [5, 5], [8, 11], [11, 3], [11, 23]].forEach(function (a) { add(a[0], a[1]); });
+    add(1, nthMon(1, 2)); add(7, nthMon(7, 3)); add(9, nthMon(9, 3)); add(10, nthMon(10, 2));
+    add(3, Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4)));
+    add(9, Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4)));
+    var base = Object.keys(s);
+    base.forEach(function (k) {
+      if (new Date(k + 'T00:00:00Z').getUTCDay() === 0) { var t = addDays(k, 1); while (s[t]) t = addDays(t, 1); s[t] = 1; }
+    });
+    Object.keys(s).forEach(function () {});
+    for (var dd = y + '-01-02'; dd < y + '-12-31'; dd = addDays(dd, 1)) {
+      if (!s[dd] && s[addDays(dd, -1)] && s[addDays(dd, 1)] && new Date(dd + 'T00:00:00Z').getUTCDay() !== 0) s[dd] = 1;
+    }
+    return (HOLC[y] = s);
+  }
+  function isBizDay(d) {
+    var w = new Date(d + 'T00:00:00Z').getUTCDay();
+    if (w === 0 || w === 6) return false;
+    var md = d.slice(5);
+    if (md === '12-31' || md === '01-02' || md === '01-03') return false;
+    return !holidaysOf(+d.slice(0, 4))[d];
+  }
+  function adjDay(d, mode) {
+    if (!mode) return d;
+    for (var i = 0; i < 12 && !isBizDay(d); i++) d = addDays(d, mode === 'prev' ? -1 : 1);
+    return d;
+  }
+  function recMode(r, isLoan) { return isLoan ? 'next' : (r.cat === 'sal' ? 'prev' : (r.cat === 'rak' || r.cat === 'amz') ? 'next' : ''); }
+  function nomDate(r, m) { return m + '-' + String(Math.min(r.day, daysInMonth(m))).padStart(2, '0'); }
+  function hitM(r, d, mode) {
+    var m0 = d.slice(0, 7), ms = mode ? [addMonths(m0, -1), m0, addMonths(m0, 1)] : [m0];
+    for (var i = 0; i < ms.length; i++) {
+      if (r.from && ms[i] < r.from) continue;
+      if (adjDay(nomDate(r, ms[i]), mode) === d) return ms[i];
+    }
+    return '';
+  }
+  function recHits(r, d) { return !!hitM(r, d, recMode(r, false)); }
+  function repayStep(L, bal, m, days) {
+    var interest = L.ints && L.ints[m] != null ? L.ints[m] : Math.floor(bal * (L.rate || 0) / 100 / 365 * Math.max(0, days || 0));
+    var po = L.pays && L.pays[m] != null ? L.pays[m] : null;
+    if (L.excl) { var pr = Math.min(po != null ? Math.max(0, po - interest) : L.payment, bal); return { pay: pr + interest, interest: interest, principal: pr }; }
+    var pay = Math.min(po != null ? po : L.payment, bal + interest);
+    return { pay: pay, interest: interest, principal: pay - interest };
+  }
+  function loanSchedule(L, start) {
+    var bal = L.balance, m = start.slice(0, 7), rows = [], xi = 0, last = start;
+    var ex = (L.extras || []).filter(function (x) { return x.date >= start; }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    if (L.from && L.from > m) m = L.from;
+    function flush(upto) {
+      while (xi < ex.length && ex[xi].date <= upto) {
+        if (bal > 0) { var xi0 = Math.min(ex[xi].interest || 0, ex[xi].amount), a = Math.min(ex[xi].amount - xi0, bal); bal -= a; last = ex[xi].date; rows.push({ d: ex[xi].date, m: ex[xi].date.slice(0, 7), x: true, id: ex[xi].id, pay: a + xi0, interest: xi0, principal: a, bal: bal, ov: false }); }
+        xi++;
+      }
+    }
+    if (!(L.payment > 0)) { flush('9999-12-31'); return rows; }
+    for (var i = 0; i < 720 && bal > 0; i++, m = addMonths(m, 1)) {
+      var d = adjDay(nomDate(L, m), 'next');
+      if (d < start) continue;
+      flush(d);
+      if (bal <= 0) break;
+      var dd0 = daysBetween(last, d), auto0 = Math.floor(bal * (L.rate || 0) / 100 / 365 * Math.max(0, dd0));
+      var s = repayStep(L, bal, m, dd0); last = d;
+      var s0 = L.pays && L.pays[m] != null ? repayStep(Object.assign({}, L, { pays: null }), bal, m, dd0) : s;
+      if (s.principal <= 0 && !(L.ints && L.ints[m] != null) && !(L.pays && L.pays[m] != null)) break;
+      bal = Math.max(0, bal - s.principal);
+      rows.push({ d: d, m: m, pay: s.pay, interest: s.interest, principal: s.principal, bal: bal, ov: !!(L.ints && L.ints[m] != null && L.ints[m] !== auto0), pov: s.pay !== s0.pay });
+    }
+    return rows;
+  }
+  function payoffOf(L, start) {
+    var rows = loanSchedule(L, start);
+    return rows.length && rows[rows.length - 1].bal <= 0 ? rows[rows.length - 1].d : null;
+  }
+  function loanVia(L) {
+    if (L.via === 'rak' || L.via === 'amz') return L.via;
+    if (/楽天カード/.test(L.name || '')) return 'rak';
+    return '';
+  }
+  function computeCash(v) {
+    var demo = v.demo && !state.cash.saved;
+    var src = demo ? DEMO_CASH : state.cash;
+    var E = demo ? v.entries : state.entries;
+    var today = todayStr(), keys = Object.keys(E).sort();
+    var start = src.startDate || CASH_START;
+    var cm = today.slice(0, 7), minM = start.slice(0, 7), maxM = addMonths(cm, 36);
+    var selM = state.cMonth || cm;
+    if (selM < minM) selM = minM;
+    if (selM > maxM) selM = maxM;
+    var wFrom = addMonths(cm, -11) < minM ? minM : addMonths(cm, -11), wTo = addMonths(cm, 12);
+    if (wTo < wFrom) wTo = wFrom;
+    var horizon = addDays(today, 120), mEnd = endOfMonth(selM);
+    if (endOfMonth(wTo) > horizon) horizon = endOfMonth(wTo);
+    if (mEnd > horizon) horizon = mEnd;
+    if (horizon < start) horizon = start;
+    var days = {}, bal = src.opening || 0, loanBal = {}, loanTotal = 0, loanLast = {};
+    src.loans.forEach(function (L) { loanBal[L.id] = L.balance; loanTotal += L.balance; loanLast[L.id] = start; });
+    for (var d = start; d <= horizon; d = addDays(d, 1)) {
+      var f = { pnl: E[d] ? E[d].pnl : 0, sal: 0, oin: 0, oout: 0, rak: 0, amz: 0, repay: 0, inc: 0, exp: 0 }, notes = [], lines = [], loanOpen = loanTotal;
+      if (E[d]) lines.push({ k: 'pnl', label: '損益', amt: E[d].pnl });
+      (src.items[d] || []).forEach(function (it) { f[it.cat] += it.amount; notes.push(it.memo || CAT_LABEL[it.cat]); lines.push({ k: 'item', id: it.id, cat: it.cat, label: it.memo || CAT_LABEL[it.cat], memo: it.memo ? CAT_LABEL[it.cat] : '', amt: it.amount, out: CAT_OUT[it.cat] }); });
+      src.recurring.forEach(function (r) { if (recHits(r, d)) { f[r.cat] += r.amount; notes.push(r.name); lines.push({ k: 'rec', id: r.id, cat: r.cat, day: r.day, label: r.name, amt: r.amount, out: CAT_OUT[r.cat] }); } });
+      src.loans.forEach(function (L) {
+        (L.extras || []).forEach(function (x) {
+          if (x.date === d) loanLast[L.id] = d;
+          if (x.date === d && loanBal[L.id] > 0) {
+            var xi0 = Math.min(x.interest || 0, x.amount), a = Math.min(x.amount - xi0, loanBal[L.id]);
+            loanBal[L.id] -= a; if (!loanVia(L)) f.repay += a + xi0; notes.push(L.name + '返済');
+            lines.push({ k: 'xrep', id: x.id, label: L.name + 'の返済', amt: a + xi0, principal: a, interest: xi0, remain: loanBal[L.id], out: true, via: loanVia(L) || '' });
+          }
+        });
+        var lm = L.payment > 0 ? hitM(L, d, 'next') : '';
+        if (loanBal[L.id] > 0 && L.payment > 0 && lm) {
+          var s = repayStep(L, loanBal[L.id], lm, daysBetween(loanLast[L.id], d)); loanLast[L.id] = d;
+          loanBal[L.id] = Math.max(0, loanBal[L.id] - s.principal);
+          if (!loanVia(L)) f.repay += s.pay;
+          notes.push(L.name + '返済' + (L.rate ? '（元本' + nf.format(s.principal) + '・利息' + nf.format(s.interest) + '）' : ''));
+          lines.push({ k: 'loan', id: L.id, label: L.name + '返済', amt: s.pay, principal: s.principal, interest: s.interest, remain: loanBal[L.id], out: true, via: loanVia(L) || '' });
+        }
+      });
+      lines.filter(function (l) { return l.via; }).forEach(function (vl) {
+        var ci = -1; lines.forEach(function (l, i) { if (ci < 0 && (l.k === 'item' || l.k === 'rec') && l.cat === vl.via) ci = i; });
+        if (ci < 0) return;
+        lines.splice(lines.indexOf(vl), 1);
+        ci = -1; lines.forEach(function (l, i) { if (ci < 0 && (l.k === 'item' || l.k === 'rec') && l.cat === vl.via) ci = i; });
+        var at = ci + 1; while (at < lines.length && lines[at].via === vl.via) at++;
+        lines.splice(at, 0, vl);
+      });
+      loanTotal = Object.keys(loanBal).reduce(function (a, k) { return a + loanBal[k]; }, 0);
+      f.inc = f.sal + f.oin;
+      f.exp = f.oout + f.rak + f.amz + f.repay;
+      var net = f.pnl + f.inc - f.exp;
+      days[d] = { f: f, net: net, open: bal, close: bal + net, notes: notes, loanOpen: loanOpen, loan: loanTotal, lb: Object.assign({}, loanBal), lines: lines };
+      bal += net;
+    }
+    return { demo: demo, src: src, start: start, days: days, today: today, selM: selM, minM: minM, maxM: maxM, horizon: horizon, wFrom: wFrom, wTo: wTo };
+  }
+
+  function renderCash(v) {
+    var cf = computeCash(v), days = cf.days, today = cf.today, cm = today.slice(0, 7), d;
+    var bal = function (n) { return (n < 0 ? '−' : '') + yen(n); };
+    var cell = function (n, signed) { if (!n) return '—'; var s = nf.format(Math.abs(Math.round(n))); return n < 0 ? '−' + s : (signed ? '+' + s : s); };
+    var tKey = today < cf.start ? cf.start : today, tDay = days[tKey];
+    var prevEnd = endOfMonth(addMonths(cf.selM, -1)), selEnd = endOfMonth(cf.selM);
+    var endDay = days[selEnd < cf.start ? cf.start : selEnd];
+    var lns = cf.src.loans.filter(function (L) { return !(prevEnd >= cf.start && days[prevEnd] && days[prevEnd].lb[L.id] <= 0); });
+    var hasLoan = lns.length > 0;
+    var mFirst = cm + '-01' < cf.start ? cf.start : cm + '-01', mLast = endOfMonth(cm) < cf.start ? cf.start : endOfMonth(cm), mPnl = 0, mRepay = 0;
+    for (d = mFirst; d <= mLast; d = addDays(d, 1)) { mPnl += days[d].f.pnl; mRepay += days[d].f.repay; }
+    var mEndDay = days[mLast], low = null, short = null, limit = addDays(tKey, 120);
+    if (limit > cf.horizon) limit = cf.horizon;
+    for (d = tKey; d <= limit; d = addDays(d, 1)) {
+      var cl = days[d].close;
+      if (!low || cl < low.c) low = { d: d, c: cl };
+      if (!short && cl < 0) short = { d: d, c: cl };
+    }
+    var heroHtml =
+      (!cf.demo && !state.cash.saved ? '<div class="proj" style="margin-top:0">開始残高が未設定のため、0円から計算しています。</div>' : '');
+    $('c-hero').innerHTML = heroHtml; $('c-hero').hidden = !heroHtml;
+
+    var sm = cf.selM, first = sm + '-01', last = endOfMonth(sm), from = first < cf.start ? cf.start : first;
+    var rows = [], tot = { pnl: 0, sal: 0, oin: 0, oout: 0, rak: 0, amz: 0, repay: 0, inc: 0, exp: 0, net: 0 };
+    for (d = from; d <= last; d = addDays(d, 1)) {
+      rows.push(d);
+      Object.keys(days[d].f).forEach(function (k) { tot[k] += days[d].f[k]; });
+      tot.net += days[d].net;
+    }
+    var cols = [['pnl', '損益', true], ['inc', '収入'], ['exp', '支出']];
+    var numCell = function (n, signed) {
+      var c = [];
+      if (!n) c.push('zero'); else if (signed) c.push(n > 0 ? 'pos' : 'neg');
+      return '<td class="' + c.join(' ') + '">' + cell(n, signed) + '</td>';
+    };
+    var closeCell = function (n) { return '<td class="' + (n < 0 ? 'neg short' : '') + '">' + cell(n) + '</td>'; };
+    var loanCell = function (n) { return hasLoan ? '<td class="' + (n ? '' : 'zero') + '">' + cell(n) + '</td>' : ''; };
+    var head = '<thead><tr><th class="rl" scope="col">日付</th>' + cols.map(function (c) { return '<th scope="col">' + c[1] + '</th>'; }).join('') +
+      '<th scope="col">残高</th>' + (hasLoan ? '<th scope="col">借入残高</th>' : '') + '</tr></thead>';
+    var openLabel = from === first ? '前月繰越' : '開始残高', editOpen = from === cf.start;
+    var openTd = editOpen ? '<td class="' + (days[from].open < 0 ? 'neg' : '') + '"><button type="button" class="lint" data-oedit aria-label="' + openLabel + 'の残高を入力">' + nf.format(days[from].open) + '</button></td>' : closeCell(days[from].open);
+    var body = '<tr class="open"><td class="rl">' + openLabel + '</td><td colspan="3"></td>' + openTd + loanCell(days[from].loanOpen) + '</tr>' +
+      (editOpen && state.oEdit ? '<tr class="lined"><td colspan="' + (hasLoan ? 6 : 5) + '"><div class="lint-ed"><label for="o-in">' + openLabel + 'の残高（円）</label><input id="o-in" type="text" inputmode="numeric" autocomplete="off" value="' + (cf.demo && !state.cash.saved ? '' : days[from].open) + '">' +
+        '<button type="button" class="lnk" data-osave>保存</button><button type="button" class="lnk" data-ocancel>やめる</button></div>' + (state.oMsg ? '<p class="msg err">' + esc(state.oMsg) + '</p>' : '') + '</td></tr>' : '');
+    rows.forEach(function (day) {
+      var x = days[day], w = dow(day);
+      body += '<tr class="' + (w === 0 || w === 6 ? 'wkend ' : '') + (day === today ? 'today' : '') + '" data-cday="' + day + '">' +
+        '<td class="rl"><button type="button" class="mth" aria-label="' + md(day) + 'の詳細を開く">' + md(day) + '（' + WD[w] + '）</button></td>' +
+        cols.map(function (c) { return numCell(x.f[c[0]], c[2]); }).join('') +
+        closeCell(x.close) + loanCell(x.loan) + '</tr>';
+    });
+    body += '<tr class="tot"><td class="rl">月計</td>' + cols.map(function (c) { return numCell(tot[c[0]], c[2]); }).join('') + closeCell(days[last].close) + loanCell(days[last].loan) + '</tr>';
+    var monthLabel = sm.slice(0, 4) + '年' + (+sm.slice(5)) + '月';
+    var navBtns = '<div class="mnav">' +
+        '<button type="button" class="tdy" data-cm="0"' + (sm === cm ? ' disabled' : '') + '>今月</button>' +
+        '<button type="button" data-cm="-1"' + (sm <= cf.minM ? ' disabled' : '') + ' aria-label="前の月">‹</button>' +
+        '<span class="mlab">' + monthLabel + '</span>' +
+        '<button type="button" data-cm="1"' + (sm >= cf.maxM ? ' disabled' : '') + ' aria-label="次の月">›</button>' +
+      '</div>';
+    $('c-nav').innerHTML = navBtns;
+    $('c-acts').innerHTML = cf.demo ? '' : '<button type="button" class="addbtn" data-opencash aria-controls="c-form" aria-expanded="' + !!state.formOpen + '">記録</button>';
+    $('c-table').innerHTML =
+      '<div class="cfhead"><h2>' + foldBtn('table', '日別資金繰り表') + '</h2></div>' +
+      '<div class="cf-wrap"><table class="cf cfd" aria-label="' + monthLabel + 'の日別資金繰り表">' + head + '<tbody>' + body + '</tbody></table></div>' +
+      '';
+
+    $('c-loans').hidden = !hasLoan;
+    if (hasLoan) {
+      $('c-loans').innerHTML =
+        '<div class="cfhead"><h2>' + foldBtn('loans', '返済予定表') + '</h2><span class="sub">' + (+sm.slice(5)) + '月の返済後残高 ' + yen(lns.reduce(function (a, L) { return a + endDay.lb[L.id]; }, 0)) + '</span></div>' +
+        '<div class="table">' + lns.map(function (L) {
+          var now = endDay.lb[L.id], paid = Math.max(0, Math.min(100, Math.round((1 - now / L.balance) * 100)));
+          var sch = loanSchedule(L, cf.start), po = sch.length && sch[sch.length - 1].bal <= 0 ? sch[sch.length - 1].d : null;
+          var sub = L.payment > 0 ? '毎月' + L.day + '日・' + yen(L.payment) + (L.excl ? '＋利息' : '') + (loanVia(L) ? '・' + CAT_LABEL[loanVia(L)] + '払い' : '') + (L.rate ? '・年利' + L.rate + '%' : '') + (now <= 0 ? '・完済' : po ? '・完済予定 ' + ym(po.slice(0, 7)) : '・返済額が足りず完済しません') : '定期返済なし' + (now <= 0 ? '・完済' : '・返済した分だけ残高が減ります');
+          var firstNext = -1;
+          sch.forEach(function (r, i) { if (firstNext < 0 && r.d >= today) firstNext = i; });
+          var fromM = addMonths(cf.selM, -1), firstShown = -1;
+          sch.forEach(function (r, i) { if (firstShown < 0 && r.m >= fromM) firstShown = i; });
+          if (firstShown < 0) firstShown = sch.length;
+          var openBal = firstShown > 0 ? sch[firstShown - 1].bal : L.balance;
+          var tr = '<tr class="open"><td class="rl">' + (firstShown > 0 ? '返済前' : '開始時点') + '</td><td></td><td>' + cell(openBal) + '</td></tr>';
+          sch.forEach(function (r, i) {
+            if (i < firstShown) return;
+            var key = L.id + '|' + r.m, editing = !r.x && state.lEdit === key, editingP = !r.x && state.lEdit === key + '|p';
+            var pcell = (cf.demo || r.x) ? cell(r.pay) : '<button type="button" class="lint lpay' + (r.pov ? ' ov' : '') + '" data-lint="' + esc(key + '|p') + '" aria-label="' + ym(r.m) + 'の返済額を編集">' + cell(r.pay) + '</button>';
+            var icell = (cf.demo || r.x) ? cell(r.interest) : '<button type="button" class="lint' + (r.ov ? ' ov' : '') + '" data-lint="' + esc(key) + '" aria-label="' + ym(r.m) + 'の利息を編集">' + cell(r.interest) + '</button>';
+            tr += '<tr class="' + (r.d < today ? 'paid ' : '') + (r.m < cf.selM ? 'prevm ' : '') + (r.m === cf.selM ? 'sel ' : '') + (i === firstNext ? 'today' : '') + '"><td class="rl">' + md(r.d) + '<small>' + (r.x ? '追加' : r.d.slice(0, 4) + '年') + '</small></td><td class="pc">' + pcell + '<small><span>元本 ' + cell(r.principal) + '</span><span>利息 ' + icell + '</span></small></td><td class="bc">' + cell(r.bal) + '</td></tr>';
+            if (editingP) tr += '<tr class="lined"><td colspan="3"><div class="lint-ed"><label for="lint-in">' + ym(r.m) + 'の返済額（円）</label><input id="lint-in" type="text" inputmode="numeric" autocomplete="off" value="' + r.pay + '">' +
+              '<button type="button" class="lnk" data-lintsave="' + esc(key + '|p') + '">保存</button>' + (r.pov ? '<button type="button" class="lnk" data-lintreset="' + esc(key + '|p') + '">元の返済額に戻す</button>' : '') + '<button type="button" class="lnk" data-lintcancel>やめる</button></div>' +
+              (state.lMsg ? '<p class="msg err">' + esc(state.lMsg) + '</p>' : '') + '</td></tr>';
+            if (editing) tr += '<tr class="lined"><td colspan="3"><div class="lint-ed"><label for="lint-in">' + ym(r.m) + 'の利息（円）</label><input id="lint-in" type="text" inputmode="numeric" autocomplete="off" value="' + r.interest + '">' +
+              '<button type="button" class="lnk" data-lintsave="' + esc(key) + '">保存</button>' + (r.ov ? '<button type="button" class="lnk" data-lintreset="' + esc(key) + '">自動計算に戻す</button>' : '') + '<button type="button" class="lnk" data-lintcancel>やめる</button></div>' +
+              (state.lMsg ? '<p class="msg err">' + esc(state.lMsg) + '</p>' : '') + '</td></tr>';
+          });
+          var exl = (L.extras || []).slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).map(function (x) {
+            return '<div class="row r3b xl"><div class="d">返済<small>' + x.date.replace(/-/g, '/') + (x.interest ? '・うち利息 ' + yen(x.interest) : '') + '</small></div><div class="n">' + yen(x.amount) + '</div>' + cashBtns(cf.demo, 'data-ex="' + esc(x.id) + '"', 'data-delx="' + esc(x.id) + '"', 'x' + x.id) + '</div>';
+          }).join('');
+          var lo = !!state.lOpen[L.id];
+          var sched = sch.length && lo ? '<div class="inner schbox">' +
+            (cf.demo || !(L.payment > 0) ? '' : '<p class="hint" style="margin-top:8px">返済額や利息の金額をタップすると、その月の金額を実際の金額に直せます。直した金額は金色の文字で表示し、日別資金繰り表にも反映されます。</p>') +
+            '<div class="cf-wrap sch"><table class="cf" aria-label="' + esc(L.name) + 'の月別返済残高"><thead><tr><th class="rl" scope="col">返済日</th><th scope="col">返済額（内訳）</th><th scope="col">返済後の残高</th></tr></thead><tbody>' + tr + '</tbody></table></div></div>' : '';
+          return '<div class="loanbox"><div class="row r3b"><div class="d">' + (sch.length ? '<button type="button" class="lname" data-lname="' + esc(L.id) + '" aria-expanded="' + lo + '">' + esc(L.name) + '<i aria-hidden="true">' + (lo ? '▾' : '▸') + '</i></button>' : esc(L.name)) + '<small>' + sub + '</small><span class="pbar" title="返済済み ' + paid + '%"><i style="width:' + paid + '%"></i></span></div>' +
+            '<div class="n">' + yen(now) + '<small>' + (+sm.slice(5)) + '月の返済後</small></div>' + cashBtns(cf.demo, 'data-el="' + esc(L.id) + '"', 'data-delloan="' + esc(L.id) + '"', 'l' + L.id) + '</div>' + exl + sched + '</div>';
+        }).join('') + '</div>' +
+        '';
+    }
+
+    var items = [];
+    Object.keys(cf.days).sort().forEach(function (dd) {
+      if (dd.slice(0, 7) !== sm) return;
+      cf.days[dd].lines.forEach(function (l) { if (l.k !== 'pnl') items.push({ d: dd, l: l }); });
+    });
+    $('c-list').innerHTML =
+      '<div class="cfhead"><h2>' + foldBtn('list', monthLabel + 'の記録') + '</h2><span class="sub">' + items.length + '件（定期分を含む）</span></div>' +
+      (items.length ? '<div class="table">' + items.map(function (x) {
+        var l = x.l, sub = '', btns = '', amt;
+        if (l.k === 'item') { sub = l.memo || ''; btns = cashBtns(cf.demo, 'data-ei="' + esc(x.d + '|' + l.id) + '"', 'data-delitem="' + x.d + '" data-id="' + esc(l.id) + '"', 'i' + x.d + '|' + l.id); }
+        else if (l.k === 'rec') { sub = '毎月' + l.day + '日の定期'; btns = cashBtns(cf.demo, 'data-er="' + esc(l.id) + '"', 'data-delrec="' + esc(l.id) + '"', 'r' + l.id); }
+        else if (l.k === 'xrep') { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest); btns = cashBtns(cf.demo, 'data-ex="' + esc(l.id) + '"', 'data-delx="' + esc(l.id) + '"', 'x' + l.id); }
+        else { sub = '毎月の返済・元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest); btns = cashBtns(cf.demo, 'data-el="' + esc(l.id) + '"', 'data-delloan="' + esc(l.id) + '"', 'l' + l.id); }
+        amt = '<div class="n ' + (l.out ? 'neg' : 'pos') + '">' + (l.out ? '−' : '+') + yen(l.amt) + '</div>';
+        if (l.via) { sub = ''; amt = '<div class="n muted">（' + yen(l.amt) + '）</div>'; }
+        if ((l.k === 'item' || l.k === 'rec') && (l.cat === 'rak' || l.cat === 'amz')) { var vi = viaIn(cf.days[x.d], l.cat); if (vi) sub = (sub ? sub + ' ' : '') + vi; }
+        return '<div class="row r5"><div class="d">' + md(x.d) + '<small>' + WD[dow(x.d)] + '曜</small></div>' +
+          '<div class="d">' + esc(l.label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + amt + btns + '</div>';
+      }).join('') + '</div>' : '<p class="empty">この月の記録はありません。</p>');
+
+    var rr = cf.src.recurring;
+    $('c-rec-list').innerHTML = rr.length ? '<div class="table">' + rr.map(function (r) {
+      var out = CAT_OUT[r.cat];
+      return '<div class="row r3b"><div class="d">' + esc(r.name) + '<small>毎月' + r.day + '日' + (r.from ? '・' + ym(r.from) + 'から' : '') + '</small></div>' +
+        '<div class="n ' + (out ? 'neg' : 'pos') + '">' + (out ? '−' : '+') + yen(r.amount) + '</div>' +
+        cashBtns(cf.demo, 'data-er="' + esc(r.id) + '"', 'data-delrec="' + esc(r.id) + '"', 'r' + r.id) + '</div>';
+    }).join('') + '</div>' : '<p class="hint">登録はありません。</p>';
+    var lrows = '';
+    cf.src.loans.forEach(function (L) {
+      if (L.payment > 0) lrows += '<div class="row r3b"><div class="d">' + esc(L.name) + 'の返済<small>毎月' + L.day + '日</small></div><div class="n neg">−' + yen(L.payment) + '</div>' + cashBtns(cf.demo, 'data-el="' + esc(L.id) + '"', 'data-delloan="' + esc(L.id) + '"', 'l' + L.id) + '</div>';
+    });
+    if (lrows) $('c-rec-list').innerHTML = '<div class="table">' + (rr.length ? $('c-rec-list').innerHTML.replace(/^<div class="table">|<\/div>$/g, '') : '') + lrows + '</div>';
+    ['table', 'loans', 'list'].forEach(function (k) { $('c-' + k).classList.toggle('collapsed', !!state.fold[k]); });
+    renderDay(cf);
+  }
+
+  function cashBtns(demo, editAttr, delAttr, key) {
+    if (demo) return '<span></span>';
+    var armed = state.armKey === key;
+    return '<span class="acts"><button type="button" class="lnk" ' + editAttr + '>編集</button><button type="button" class="lnk' + (armed ? ' armed' : '') + '" ' + delAttr + '>' + (armed ? '本当に削除' : '削除') + '</button></span>';
+  }
+  function viaIn(day, cat) {
+    var s = 0;
+    if (day) day.lines.forEach(function (l) { if ((l.k === 'loan' || l.k === 'xrep') && l.via === cat) s += l.amt; });
+    return s ? '（うち、返済' + nf.format(s) + '円）' : '';
+  }
+  function renderDay(cf) {
+    var el = $('c-day'), d = state.cDay, x = d && cf.days[d];
+    if (!x) { el.hidden = true; el.innerHTML = ''; return; }
+    var demo = cf.demo, hasLoan = cf.src.loans.length > 0, w = dow(d), lns = '';
+    var title = md(d) + '（' + WD[w] + '）' + (d > cf.today ? '・予定' : d === cf.today ? '・今日' : '');
+    var prev = d > cf.start ? addDays(d, -1) : '', next = d < cf.horizon ? addDays(d, 1) : '';
+    x.lines.forEach(function (l) {
+      var amt, sub = '', btns = '';
+      if (l.k === 'pnl') { amt = '<span class="' + cls(l.amt) + '">' + sgn(l.amt) + '</span>'; sub = '損益タブの記録から'; }
+      else {
+        amt = '<span class="' + (l.out ? 'neg' : 'pos') + '">' + (l.out ? '−' : '+') + yen(l.amt) + '</span>';
+        if (l.k === 'item') { sub = l.memo || ''; btns = cashBtns(demo, 'data-ei="' + esc(d + '|' + l.id) + '"', 'data-delitem="' + d + '" data-id="' + esc(l.id) + '"', 'i' + d + '|' + l.id); }
+        else if (l.k === 'rec') { sub = '毎月' + l.day + '日の定期'; btns = cashBtns(demo, 'data-er="' + esc(l.id) + '"', 'data-delrec="' + esc(l.id) + '"', 'r' + l.id); }
+        else if (l.k === 'xrep') { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest) + '・借入残高 ' + yen(l.remain); btns = cashBtns(demo, 'data-ex="' + esc(l.id) + '"', 'data-delx="' + esc(l.id) + '"', 'x' + l.id); }
+        else { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest) + '・借入残高 ' + yen(l.remain); btns = cashBtns(demo, 'data-el="' + esc(l.id) + '"', 'data-delloan="' + esc(l.id) + '"', 'l' + l.id); }
+      }
+      if (l.via) { sub = ''; amt = '<span class="muted">（' + yen(l.amt) + '）</span>'; }
+      if ((l.k === 'item' || l.k === 'rec') && (l.cat === 'rak' || l.cat === 'amz')) { var vi = viaIn(x, l.cat); if (vi) sub = (sub ? sub + ' ' : '') + vi; }
+      lns += '<div class="dline"><div>' + esc(l.label) + '<small>' + esc(sub) + '</small></div><div class="dl-n">' + amt + '</div>' + (btns || '<span></span>') + '</div>';
+    });
+    var wasHidden = el.hidden;
+    el.innerHTML = '<div class="sheet-bg" data-closeday></div><div class="sheet" role="dialog" aria-modal="true" aria-label="' + title + 'の詳細">' +
+      '<div class="sh-head"><button type="button" data-cday="' + prev + '"' + (prev ? '' : ' disabled') + ' aria-label="前の日">‹</button><h2>' + title + '</h2>' +
+      '<button type="button" data-cday="' + next + '"' + (next ? '' : ' disabled') + ' aria-label="次の日">›</button>' +
+      '<button type="button" class="sh-x" id="c-day-close" data-closeday aria-label="閉じる">×</button></div>' +
+      '<dl class="sh-sum"><div><dt>' + (d === cf.start ? '開始残高' : '前日残高') + '</dt><dd>' + (x.open < 0 ? '−' : '') + yen(x.open) + '</dd></div>' +
+            '<div><dt>この日の残高</dt><dd class="' + (x.close < 0 ? 'neg' : '') + '">' + (x.close < 0 ? '−' : '') + yen(x.close) + '</dd></div></dl>' +
+      (hasLoan ? '<p class="sub">借入残高 ' + yen(x.loan) + '</p>' : '') +
+      (lns || '<p class="empty">この日の記録はありません。</p>') +
+      (demo ? '' : '<button type="button" class="btn" data-cadd="' + d + '">この日に記録を追加</button>') + '</div>';
+    el.hidden = false;
+    if (wasHidden) $('c-day-close').focus();
+  }
+
+  function saveOpening() {
+    if (!backend) return;
+    var p = parseAmount($('o-in').value);
+    if (isNaN(p.value) || p.neg) { state.oMsg = '残高は0以上の数字で入力してください。'; render(); var a = $('o-in'); if (a) a.focus(); return; }
+    state.oEdit = false; state.oMsg = '';
+    Promise.resolve(backend.saveCash(cashPayload({ opening: p.value }))).then(render, function () { state.oMsg = '保存できませんでした。'; state.oEdit = true; render(); });
+  }
+  function saveInterest(key, mode) {
+    var parts = key.split('|'), lid = parts[0], m = parts[1];
+    if (!backend) return;
+    var pl = cashPayload({}), L = pl.loans.filter(function (l) { return l.id === lid; })[0];
+    if (!L) { state.lEdit = ''; render(); return; }
+    L.ints = L.ints || {}; L.pays = L.pays || {};
+    if (parts[2] === 'p') {
+      if (mode === 'reset') delete L.pays[m];
+      else {
+        var pp = parseAmount($('lint-in').value);
+        if (isNaN(pp.value) || pp.neg || !(pp.value > 0)) { state.lMsg = '返済額は1円以上の数字で入力してください。'; render(); var pa = $('lint-in'); if (pa) pa.focus(); return; }
+        var prow = loanSchedule(L, state.cash.startDate || defaultStart()).filter(function (r) { return !r.x && r.m === m; })[0];
+        if (prow && !L.excl && pp.value < prow.interest) { state.lMsg = '返済額は、その月の利息（' + yen(prow.interest) + '）以上にしてください。'; render(); var pb = $('lint-in'); if (pb) pb.focus(); return; }
+        L.pays[m] = pp.value;
+      }
+    }
+    else if (mode === 'reset') delete L.ints[m];
+    else {
+      var p = parseAmount($('lint-in').value);
+      if (isNaN(p.value) || p.neg) { state.lMsg = '利息は0以上の数字で入力してください。'; render(); var a = $('lint-in'); if (a) a.focus(); return; }
+      var irow = loanSchedule(L, state.cash.startDate || defaultStart()).filter(function (r) { return !r.x && r.m === m; })[0];
+      if (irow && !L.excl && p.value > irow.pay) { state.lMsg = 'この月の返済額（' + yen(irow.pay) + '）を超える利息は入力できません。'; render(); var b = $('lint-in'); if (b) b.focus(); return; }
+      L.ints[m] = p.value;
+    }
+    state.lEdit = ''; state.lMsg = '';
+    Promise.resolve(backend.saveCash(pl)).then(render, function () { state.lMsg = '保存できませんでした。'; render(); });
+  }
+  function dailyInt(L, d, bb, cf) {
+    var last = cf.start;
+    loanSchedule(L, cf.start).forEach(function (r) { if (r.d < d && r.d > last) last = r.d; });
+    var days = Math.max(0, Math.round((Date.parse(d + 'T00:00:00Z') - Date.parse(last + 'T00:00:00Z')) / 86400000));
+    return { days: days, last: last, interest: Math.floor(bb * (L.rate || 0) / 100 / 365 * days) };
+  }
+  function syncTabSels() {
+    Array.prototype.forEach.call(document.querySelectorAll('select.tabsel'), function (sel) {
+      var box = document.getElementById(sel.id + '-t');
+      if (!box) { box = document.createElement('div'); box.id = sel.id + '-t'; box.className = 'ltabs'; box.setAttribute('role', 'tablist'); sel.parentNode.insertBefore(box, sel.nextSibling); }
+      box.innerHTML = Array.prototype.map.call(sel.options, function (o) { return '<button type="button" role="tab" data-tsel="' + sel.id + '" data-v="' + esc(o.value) + '" aria-selected="' + (o.value === sel.value) + '">' + esc(o.textContent) + '</button>'; }).join('');
+    });
+  }
+  function syncCrUI() {
+    var cat = $('cr-cat').value, rep = cat === 'rep', loans = state.cash.loans;
+    var CR = [['oout', '支出'], ['oin', '収入'], ['rep', '返済']];
+    $('cr-loan-wrap').hidden = !rep; $('cr-rest').hidden = rep; $('cl-wrap').hidden = !rep;
+    if (!rep) return;
+    if (state.crLoan !== '__new' && (!loans.some(function (l) { return l.id === state.crLoan; }) || !(state.cEdit && state.cEdit.kind === 'l' && state.cEdit.id === state.crLoan))) state.crLoan = '__new';
+    $('cr-loan-tabs').innerHTML = '<select id="cr-loan-sel" aria-label="借入">' + loans.map(function (L) { return '<option value="' + esc(L.id) + '"' + (L.id === state.crLoan ? ' selected' : '') + '>' + esc(L.name) + '</option>'; }).join('') + '<option value="__new"' + (state.crLoan === '__new' ? ' selected' : '') + '>＋ 新しい借入</option></select>';
+  }
+  function syncRepUI() {
+    syncCrUI();
+    var rep = $('ci-cat').value === 'rep', loans = state.cash.loans;
+    $('ci-loan-wrap').hidden = !rep; $('ci-int-wrap').hidden = !rep;
+    if (!rep) return;
+    if (!loans.some(function (l) { return l.id === state.ciLoan; })) state.ciLoan = loans.length ? loans[0].id : '';
+    $('ci-loan-tabs').innerHTML = loans.length ? '<select id="ci-loan-sel" aria-label="借入">' + loans.map(function (L) { return '<option value="' + esc(L.id) + '"' + (L.id === state.ciLoan ? ' selected' : '') + '>' + esc(L.name) + '</option>'; }).join('') + '</select>' : '<span class="hint">借入がありません。「記録」の「定期」タブで区分「返済」を選び、借入を登録してください。</span>';
+    var L = loans.filter(function (l) { return l.id === state.ciLoan; })[0], hint = '';
+    if (L) {
+      var d = $('ci-date').value, cf = computeCash(view()), pd = /^\d{4}-\d{2}-\d{2}$/.test(d) ? addDays(d, -1) : '', bb = pd && cf.days[pd] && cf.days[pd].lb[L.id] != null ? cf.days[pd].lb[L.id] : L.balance;
+      hint = L.rate > 0 ? '年利' + L.rate + '%の1か月分の利息の目安：' + yen(Math.round(bb * L.rate / 100 / 12)) + '（返済前の借入残高 ' + yen(bb) + '）' : '返済前の借入残高：' + yen(bb) + '（年利が未設定です）';
+      var av = parseAmount($('ci-amount').value), iv = $('ci-interest').value.trim() === '' ? { value: 0, neg: false } : parseAmount($('ci-interest').value);
+      var ex = $('ci-incl').value === 'ex';
+      if (ex && !isNaN(iv.value) && iv.value === 0 && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        var di = dailyInt(L, d, bb, cf); iv = { value: di.interest, neg: false };
+        hint += '\n利息が空欄・0円のため、日割りで計算します（' + md(di.last) + '〜' + md(d) + '・' + di.days + '日・端数切り捨て）：' + yen(di.interest);
+      }
+      if (!isNaN(av.value) && !av.neg && av.value > 0 && !isNaN(iv.value) && !iv.neg && (ex || iv.value <= av.value)) hint += '\n元本 ' + yen(ex ? av.value : av.value - iv.value) + '・利息 ' + yen(iv.value) + '・支払合計 ' + yen(ex ? av.value + iv.value : av.value);
+    }
+    $('ci-int-hint').innerHTML = esc(hint).replace(/\n/g, '<br>');
+  }
+  var DEF_BTN = { ci: '追加する', cr: '定期に追加', cl: '借入を追加' };
+  function syncEditUI() {
+    var e = state.cEdit;
+    [['ci', 'i'], ['cr', 'r'], ['cl', 'l']].forEach(function (q) {
+      var on = !!e && (e.kind === q[1] || (q[1] === 'i' && e.kind === 'x'));
+      $(q[0] + '-submit').textContent = on ? '更新する' : DEF_BTN[q[0]];
+      $(q[0] + '-cancel').hidden = !on;
+    });
+  }
+  function clearCashForms() {
+    ['ci-amount', 'ci-memo', 'cr-name', 'cr-amount', 'cr-day', 'cr-from', 'cl-name', 'cl-balance', 'cl-pay', 'cl-rate', 'cl-day', 'cl-from', 'ci-interest'].forEach(function (id) { $(id).value = ''; }); $('cl-incl').value = 'in'; $('cl-via').value = ''; $('ci-incl').value = 'in';
+    ['ci-msg', 'cr-msg', 'cl-msg'].forEach(function (id) { msg(id, ''); }); syncTabSels();
+  }
+  function endEdit() { state.cEdit = null; clearCashForms(); syncEditUI(); }
+  function foldBtn(k, label) {
+    var open = !state.fold[k];
+    return '<button type="button" class="fold" data-fold="' + k + '" aria-expanded="' + open + '">' + label + '<i aria-hidden="true">' + (open ? '−' : '＋') + '</i></button>';
+  }
+  function showForm(on, mode) {
+    state.formOpen = on; if (mode) state.formMode = mode;
+    var one = state.formMode !== 'rec';
+    $('c-form-h').hidden = !on; $('mode-sel').hidden = !on; $('mode-sel').value = state.formMode;
+    $('ci-form').hidden = !(on && one); $('c-rec-box').hidden = !(on && !one);
+    var b = document.querySelector('[data-opencash]'); if (b) b.setAttribute('aria-expanded', String(!!on));
+    syncFormCard();
+  }
+  function setFormMonth() {
+    var cf = computeCash(view()), m = cf.selM, td = todayStr(), v = $('ci-date').value;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v.slice(0, 7) === m) return;
+    var d = td.slice(0, 7) === m ? td : m + '-01';
+    if (d < cf.start) d = cf.start;
+    $('ci-date').value = d;
+  }
+  function syncFormCard() { $('c-form').hidden = !state.formOpen; }
+  function recShow(on) { showForm(on, 'rec'); }
+  function ciShow(on) { showForm(on, 'one'); }
+  function startEdit(kind, id, date) {
+    var c = state.cash, target, focusId, editCat = '';
+    clearCashForms();
+    if (kind === 'i') {
+      var t = (c.items[date] || []).filter(function (it) { return it.id === id; })[0]; if (!t) return;
+      $('ci-date').value = date; if (t.cat === 'amz' && !$('ci-cat').querySelector('option[value=amz]')) { var ao = document.createElement('option'); ao.value = 'amz'; ao.textContent = CAT_LABEL.amz; $('ci-cat').appendChild(ao); } $('ci-cat').value = t.cat; syncRepUI(); $('ci-amount').value = nf.format(t.amount); $('ci-memo').value = t.memo || '';
+      target = $('ci-form'); focusId = 'ci-amount';
+    } else if (kind === 'r') {
+      var r = c.recurring.filter(function (x) { return x.id === id; })[0]; if (!r) return;
+      recShow(true);
+      $('cr-name').value = r.name; $('cr-cat').value = CAT_OUT[r.cat] ? 'oout' : 'oin'; editCat = r.cat; syncCrUI(); $('cr-amount').value = nf.format(r.amount); $('cr-day').value = r.day; $('cr-from').value = r.from || '';
+      target = $('cr-form'); focusId = 'cr-amount';
+    } else if (kind === 'x') {
+      var xf = null, xl = null;
+      c.loans.forEach(function (Q) { (Q.extras || []).forEach(function (x) { if (x.id === id) { xf = x; xl = Q; } }); });
+      if (!xf) return;
+      $('ci-date').value = xf.date; $('ci-cat').value = 'rep'; state.ciLoan = xl.id;
+      $('ci-amount').value = nf.format(xf.amount); $('ci-interest').value = xf.interest ? nf.format(xf.interest) : ''; $('ci-incl').value = 'in'; $('ci-memo').value = '';
+      syncRepUI();
+      target = $('ci-form'); focusId = 'ci-amount';
+    } else {
+      var L = c.loans.filter(function (x) { return x.id === id; })[0]; if (!L) return;
+      recShow(true); $('cr-cat').value = 'rep'; state.crLoan = id;
+      $('cl-name').value = L.name; $('cl-balance').value = nf.format(L.balance); $('cl-pay').value = L.payment ? nf.format(L.payment) : ''; $('cl-rate').value = L.rate ? String(L.rate) : ''; $('cl-day').value = L.payment ? L.day : ''; $('cl-from').value = L.from || ''; $('cl-incl').value = L.excl ? 'ex' : 'in'; $('cl-via').value = loanVia(L) || '';
+      target = $('cl-wrap'); focusId = 'cl-balance';
+    }
+    state.cEdit = { kind: kind, id: id, date: date, cat: editCat }; state.cDay = '';
+    syncEditUI(); render();
+    if (target.id === 'ci-form') ciShow(true);
+    target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    $(focusId).focus({ preventScroll: true });
+  }
+
+  function renderGoalHist() {
+    var s = state.settings, E = state.entries, t = todayStr(), rows = [];
+    function sum(from, end) { var a = 0; Object.keys(E).forEach(function (d) { if (d >= from && d <= end) a += E[d].pnl; }); return a; }
+    (s.history || []).forEach(function (g) { var end = g.end < g.date ? g.end : g.date; rows.push({ id: g.id, from: g.from, end: end, date: g.date, amount: g.amount, pnl: sum(g.from, end), cur: false }); });
+    var cend = t < s.targetDate ? t : s.targetDate;
+    rows.push({ id: '', from: s.targetFrom || '', end: cend, date: s.targetDate, amount: s.targetAmount, pnl: sum(s.targetFrom || '', cend), cur: true });
+    var first = Object.keys(E).sort()[0];
+    $('goal-hist').innerHTML = !Object.keys(E).length ? '' : '<h3 class="subh">目標の履歴と達成率</h3><div class="table">' + rows.map(function (r) {
+      var pct = r.amount > 0 ? r.pnl / r.amount * 100 : 0, ok = r.pnl >= r.amount;
+      var label = (r.from ? md(r.from) : first ? md(first) : '') + '〜' + md(r.cur ? r.date : r.end);
+      return '<div class="row r3b"><div class="d">' + label + '<small>目標 ' + yen(r.amount) + '・' + (r.cur ? '進行中' : ok ? '達成' : '未達') + '</small><span class="pbar" title="達成率 ' + pct.toFixed(1) + '%"><i style="width:' + Math.max(0, Math.min(100, pct)).toFixed(1) + '%"></i></span></div>' +
+        '<div class="n ' + cls(r.pnl) + '">' + pct.toFixed(1) + '%<small>' + sgn(r.pnl) + '</small></div>' +
+        (r.cur ? '<span></span>' : '<span class="acts"><button type="button" class="lnk' + (state.armKey === 'g' + r.id ? ' armed' : '') + '" data-delgoal="' + esc(r.id) + '">' + (state.armKey === 'g' + r.id ? '本当に削除' : '削除') + '</button></span>') + '</div>';
+    }).join('') + '</div>';
+  }
+  function fillSettings() {
+    renderGoalHist();
+    if ($('settings-form').contains(document.activeElement)) return;
+    $('s-amount').value = nf.format(state.settings.targetAmount);
+    $('s-date').value = state.settings.targetDate; $('s-from').value = state.settings.targetFrom || '';
+    $('s-hol').checked = state.settings.excludeHolidays;
+  }
+
+  function updateFormButtons() {
+    var d = $('f-date').value, ed = !!state.pEdit, n = itemsOf(state.entries[d]).length;
+    $('f-submit').textContent = ed ? 'この記録を更新' : (n ? '記録を追加（この日 ' + n + '件）' : '記録する');
+    $('f-delete').hidden = !ed; $('f-cancel').hidden = !ed;
+    $('f-delete').textContent = 'この記録を削除';
+    $('f-delete').classList.remove('armed');
+    state.armed = false;
+  }
+
+  function render() {
+    renderSaveState();
+    var banner = $('banner');
+    if (!state.loaded) {
+      $('hero').innerHTML = '<div class="eyebrow"><span>読み込み中…</span></div>';
+      $('stats').innerHTML = ''; $('pace').innerHTML = ''; $('chart-daily').innerHTML = ''; $('history').innerHTML = '';
+      banner.hidden = true;
+      return;
+    }
+    var v = view(), c = compute(v.entries);
+    var onCash = state.view === 'cash', showDemo = onCash ? (v.demo && !state.cash.saved) : v.demo;
+    banner.hidden = !showDemo;
+    if (showDemo) banner.textContent = onCash ? 'いまはサンプルの資金繰りを表示しています。日別表の前月繰越の残高をタップして入力すると、あなたのデータに切り替わります。' : 'いまはサンプルデータを表示しています。最初の記録を保存すると、あなたのデータに切り替わります。';
+    renderHero(c, v); renderStats(c, v); renderCharts(c, v); renderHistory(c, v); renderCash(v);
+    fillSettings(); updateFormButtons(); syncRepUI(); syncFormCard(); syncTabSels();
+    if (!state.initDone) { state.initDone = true; $('settings').open = false; }
+  }
+
+  /* ---------- form handlers ---------- */
+  function msg(id, text, err) { var m = $(id); m.textContent = text; m.className = 'msg' + (err ? ' err' : ''); }
+  function setSign(neg) { $('sign-loss').checked = neg; $('sign-profit').checked = !neg; }
+  function syncForm() {
+    if (state.pEdit) { state.pEdit = null; $('f-amount').value = ''; $('f-memo').value = ''; setSign(false); }
+    updateFormButtons();
+  }
+  function resetForm() {
+    state.pEdit = null; $('f-cat').value = 'stock'; $('f-date').value = todayStr(); $('f-amount').value = ''; $('f-memo').value = ''; setSign(false); updateFormButtons();
+  }
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function toForm() { $('form-card').hidden = false; var rb = document.querySelector('[data-openrec]'); if (rb) rb.setAttribute('aria-expanded', 'true'); $('form-card').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); }
+
+  $('f-date').addEventListener('change', syncForm);
+  $('entry-form').addEventListener('submit', async function (e) {
+    e.preventDefault(); msg('f-msg', '');
+    if (!backend) return msg('f-msg', '読み込み中です。少し待ってからもう一度お試しください。', true);
+    var date = $('f-date').value, p = parseAmount($('f-amount').value);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return msg('f-msg', '日付を選んでください。', true);
+    if (date > todayStr()) return msg('f-msg', '未来の日付は記録できません。今日以前の日付を選んでください。', true);
+    if (isNaN(p.value)) return msg('f-msg', '金額を数字で入力してください。', true);
+    var neg = p.neg || $('sign-loss').checked, pnl = neg && p.value ? -p.value : p.value;
+    var btn = $('f-submit'); btn.disabled = true;
+    try {
+      var memo = $('f-memo').value.trim(), cur = itemsOf(state.entries[date]).slice(), upd = false;
+      if (state.pEdit && state.pEdit.date === date) cur = cur.map(function (it) { if (it.id === state.pEdit.id) { upd = true; return { id: it.id, pnl: pnl, memo: memo, cat: $('f-cat').value }; } return it; });
+      if (!upd) cur.push({ id: uid(), pnl: pnl, memo: memo, cat: $('f-cat').value });
+      await backend.saveDay(date, cur);
+      var tot = mkDay(cur).pnl;
+      resetForm();
+      msg('f-msg', md(date) + ' の損益 ' + sgn(pnl) + ' を' + (upd ? '更新' : '追加') + 'しました。この日の合計は ' + sgn(tot) + ' です。');
+      renderSaveState();
+    } catch (err) {
+      msg('f-msg', '保存できませんでした。この画面の編集権限がないか、通信に失敗しています。', true);
+    }
+    btn.disabled = false;
+  });
+  /* カレンダー（日付・月の選択）を開いている間は、送信ボタンを押せないようにする */
+  (function () {
+    var pairs = [['f-date', 'f-submit'], ['ci-date', 'ci-submit'], ['cr-from', 'cr-submit'], ['cl-from', 'cl-submit'], ['s-date', null], ['s-from', null]];
+    function btnOf(id, bid) { return bid ? $(bid) : document.querySelector('#settings-form .btn'); }
+    pairs.forEach(function (pr) {
+      var inp = $(pr[0]); if (!inp) return;
+      var on = function () { var b = btnOf(pr[0], pr[1]); if (b) b.disabled = true; };
+      var off = function () { var b = btnOf(pr[0], pr[1]); if (b) b.disabled = false; };
+      ['focus', 'click', 'touchstart'].forEach(function (ev) { inp.addEventListener(ev, on, { passive: true }); });
+      ['change', 'blur', 'input'].forEach(function (ev) { inp.addEventListener(ev, off); });
+      document.addEventListener('pointerdown', function (e) { if (e.target !== inp) off(); }, true);
+    });
+  })();
+  $('f-cancel').addEventListener('click', function () { resetForm(); msg('f-msg', ''); });
+  $('f-delete').addEventListener('click', async function () {
+    var d = $('f-date').value, btn = $('f-delete');
+    if (!state.pEdit || !state.entries[d] || !backend) return;
+    if (!state.armed) {
+      state.armed = true; btn.textContent = '本当に削除する（もう一度タップ）'; btn.classList.add('armed');
+      clearTimeout(state.armT); state.armT = setTimeout(updateFormButtons, 4000);
+      return;
+    }
+    try {
+      var rest = itemsOf(state.entries[d]).filter(function (it) { return it.id !== state.pEdit.id; });
+      if (rest.length) await backend.saveDay(d, rest); else await backend.removeEntry(d);
+      resetForm(); msg('f-msg', md(d) + ' の記録を削除しました。');
+    }
+    catch (err) { msg('f-msg', '削除できませんでした。', true); }
+  });
+  $('settings-form').addEventListener('submit', async function (e) {
+    e.preventDefault(); msg('s-msg', '');
+    if (!backend) return msg('s-msg', '読み込み中です。少し待ってからもう一度お試しください。', true);
+    var p = parseAmount($('s-amount').value), d = $('s-date').value;
+    if (isNaN(p.value) || p.neg || p.value <= 0) return msg('s-msg', '目標利益は1円以上の数字で入力してください。', true);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return msg('s-msg', '目標日を選んでください。', true);
+    try {
+      var oldS = state.settings, nf0 = $('s-from').value || '', hist = (oldS.history || []).slice();
+      if (nf0 && nf0 !== (oldS.targetFrom || '') && (!oldS.targetFrom || nf0 > oldS.targetFrom)) hist.push({ id: uid(), from: oldS.targetFrom || '', end: addDays(nf0, -1), date: oldS.targetDate, amount: oldS.targetAmount });
+      await backend.saveSettings({ targetAmount: p.value, targetDate: d, targetFrom: nf0, history: hist, excludeHolidays: $('s-hol').checked });
+      msg('s-msg', '目標を保存しました。'); $('settings').open = false;
+    } catch (err) { msg('s-msg', '保存できませんでした。', true); }
+  });
+
+  function parseAmt(id) {
+    var p = parseAmount($(id).value);
+    return isNaN(p.value) || p.neg || p.value <= 0 ? null : p.value;
+  }
+  function cashPayload(over) {
+    var c = state.cash;
+    return Object.assign({ startFix: true, startDate: c.startDate || defaultStart(), opening: c.opening, items: JSON.parse(JSON.stringify(c.items)), recurring: JSON.parse(JSON.stringify(c.recurring)), loans: JSON.parse(JSON.stringify(c.loans)) }, over);
+  }
+  function armOrDo(key, fn) {
+    if (state.armKey !== key) {
+      state.armKey = key; clearTimeout(state.armT2);
+      state.armT2 = setTimeout(function () { state.armKey = ''; render(); }, 4000);
+      render();
+      return;
+    }
+    state.armKey = ''; clearTimeout(state.armT2);
+    Promise.resolve().then(fn).then(render, function () { msg('ci-msg', '削除できませんでした。', true); render(); });
+  }
+  $('ci-form').addEventListener('submit', async function (e) {
+    e.preventDefault(); msg('ci-msg', '');
+    if (!backend) return msg('ci-msg', '読み込み中です。少し待ってからもう一度お試しください。', true);
+    var d = $('ci-date').value, cat = $('ci-cat').value, amt = parseAmt('ci-amount');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return msg('ci-msg', '日付を選んでください。', true);
+    if (!CAT_LABEL[cat]) return msg('ci-msg', '区分を選んでください。', true);
+    if (amt === null) return msg('ci-msg', '金額は1円以上の数字で入力してください。', true);
+    if (d < (state.cash.startDate || defaultStart())) return msg('ci-msg', '開始日（2026年10月1日）より前の日付は追加できません。', true);
+    var isRep = cat === 'rep', exInt = isRep && $('ci-incl').value === 'ex';
+    var ed = state.cEdit && (state.cEdit.kind === 'i' || state.cEdit.kind === 'x') ? state.cEdit : null;
+    var pl = cashPayload({}), rint = 0, TL = null;
+    if (isRep) {
+      var ipv = $('ci-interest').value.trim() === '' ? { value: 0, neg: false } : parseAmount($('ci-interest').value);
+      if (isNaN(ipv.value) || ipv.neg) return msg('ci-msg', '利息は0以上の数字で入力してください。', true);
+      if (!exInt && ipv.value > amt) return msg('ci-msg', '利息は、金額以下にしてください。', true);
+      rint = ipv.value;
+      if (exInt && rint === 0) { var cf0 = computeCash(view()), pd0 = addDays(d, -1), bb0 = cf0.days[pd0] && cf0.days[pd0].lb[state.ciLoan] != null ? cf0.days[pd0].lb[state.ciLoan] : (pl.loans.filter(function (l) { return l.id === state.ciLoan; })[0] || {}).balance || 0; rint = dailyInt(pl.loans.filter(function (l) { return l.id === state.ciLoan; })[0] || { rate: 0 }, d, bb0, cf0).interest; }
+      if (exInt) amt = amt + rint;
+      TL = pl.loans.filter(function (l) { return l.id === state.ciLoan; })[0];
+      if (!TL) return msg('ci-msg', 'どの借入の返済か選んでください。先に「借入登録」で借入を登録してください。', true);
+    }
+    if (ed && ed.kind === 'i' && pl.items[ed.date]) {
+      pl.items[ed.date] = pl.items[ed.date].filter(function (it) { return it.id !== ed.id; });
+      if (!pl.items[ed.date].length) delete pl.items[ed.date];
+    }
+    if (ed && ed.kind === 'x') pl.loans.forEach(function (Q) { Q.extras = (Q.extras || []).filter(function (x) { return x.id !== ed.id; }); });
+    if (isRep) {
+      TL.extras = TL.extras || [];
+      if (TL.extras.length >= 60) return msg('ci-msg', '返済の入力は、1つの借入につき60件まで登録できます。', true);
+      TL.extras.push({ id: ed ? ed.id : uid(), date: d, amount: amt, interest: rint });
+    } else (pl.items[d] = pl.items[d] || []).push({ id: ed ? ed.id : uid(), cat: cat, amount: amt, memo: $('ci-memo').value.trim().slice(0, 60) });
+    var btn = $('ci-submit'); btn.disabled = true;
+    try {
+      await backend.saveCash(pl);
+      state.cMonth = d.slice(0, 7);
+      $('ci-amount').value = ''; $('ci-memo').value = ''; $('ci-interest').value = '';
+      if (ed) endEdit();
+      msg('ci-msg', ed ? md(d) + ' の ' + CAT_LABEL[cat] + ' を更新しました。' : md(d) + ' に ' + CAT_LABEL[cat] + ' ' + yen(amt) + ' を追加しました。');
+      render();
+    } catch (err) { msg('ci-msg', '追加できませんでした。この画面の編集権限がないか、通信に失敗しています。', true); }
+    btn.disabled = false;
+  });
+  $('cr-form').addEventListener('submit', async function (e) {
+    e.preventDefault(); msg('cr-msg', '');
+    if (!backend) return msg('cr-msg', '読み込み中です。少し待ってからもう一度お試しください。', true);
+    if ($('cr-cat').value === 'rep') return;
+    var cat = $('cr-cat').value, amt = parseAmt('cr-amount'), dp = parseAmount($('cr-day').value), from = $('cr-from').value;
+    if (!CAT_LABEL[cat]) return msg('cr-msg', '区分を選んでください。', true);
+    if (amt === null) return msg('cr-msg', '金額は1円以上の数字で入力してください。', true);
+    if (isNaN(dp.value) || dp.neg || dp.value < 1 || dp.value > 31) return msg('cr-msg', '毎月の日は、1〜31の数字で入力してください。', true);
+    if (from && !/^\d{4}-\d{2}$/.test(from)) return msg('cr-msg', '開始月は、年と月を選んでください。', true);
+    var ed = state.cEdit && state.cEdit.kind === 'r' ? state.cEdit : null;
+    if (!ed && state.cash.recurring.length >= 30) return msg('cr-msg', '定期は30件まで登録できます。', true);
+    var pl = cashPayload({});
+    var robj = { id: ed ? ed.id : uid(), name: ($('cr-name').value.trim() || CAT_LABEL[cat]).slice(0, 30), cat: (ed && ed.cat && CAT_OUT[ed.cat] === CAT_OUT[cat]) ? ed.cat : cat, amount: amt, day: dp.value, from: from || '' };
+    var rix = ed ? pl.recurring.findIndex(function (r) { return r.id === ed.id; }) : -1;
+    if (rix >= 0) pl.recurring[rix] = robj; else pl.recurring.push(robj);
+    try {
+      await backend.saveCash(pl);
+      $('cr-name').value = ''; $('cr-amount').value = ''; $('cr-day').value = '';
+      endEdit(); msg('cr-msg', ed ? '更新しました。' : '定期を登録しました。'); render();
+    } catch (err) { msg('cr-msg', '登録できませんでした。', true); }
+  });
+  $('cl-form').addEventListener('submit', async function (e) {
+    e.preventDefault(); msg('cl-msg', '');
+    if (!backend) return msg('cl-msg', '読み込み中です。少し待ってからもう一度お試しください。', true);
+    var bal = parseAmt('cl-balance'), hasPay = $('cl-pay').value.trim() !== '', pay = hasPay ? parseAmt('cl-pay') : 0, dp = $('cl-day').value.trim() === '' ? { value: 1, neg: false } : parseAmount($('cl-day').value), from = $('cl-from').value;
+    var rawRate = $('cl-rate').value.replace(/[０-９．]/g, function (c) { return c === '．' ? '.' : String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/[%％\s]/g, '');
+    var rate = rawRate === '' ? 0 : parseFloat(rawRate);
+    if (bal === null) return msg('cl-msg', '借入残高は1円以上の数字で入力してください。', true);
+    if (pay === null) return msg('cl-msg', '毎月の返済額は1円以上の数字で入力してください。定期返済がなければ空欄にしてください。', true);
+    if (isNaN(rate) || rate < 0 || rate > 100) return msg('cl-msg', '年利は0〜100の数字で入力してください。', true);
+    if (hasPay && ($('cl-day').value.trim() === '' || isNaN(dp.value) || dp.neg || dp.value < 1 || dp.value > 31)) return msg('cl-msg', '返済日は、1〜31の数字で入力してください。', true);
+    if (from && !/^\d{4}-\d{2}$/.test(from)) return msg('cl-msg', '最初の返済月は、年と月を選んでください。', true);
+    if (hasPay && $('cl-incl').value !== 'ex' && Math.round(bal * rate / 100 / 12) >= pay) return msg('cl-msg', '返済額が利息以下のため、借入残高が減りません。返済額を見直してください。', true);
+    var ed = state.cEdit && state.cEdit.kind === 'l' ? state.cEdit : null;
+    if (!ed && state.cash.loans.length >= 20) return msg('cl-msg', '借入は20件まで登録できます。', true);
+    var pl = cashPayload({});
+    var prior = ed ? pl.loans.filter(function (l) { return l.id === ed.id; })[0] : null;
+    var lobj = { extras: prior && prior.extras ? prior.extras : [], ints: prior && prior.ints ? prior.ints : {}, pays: prior && prior.pays ? prior.pays : {}, id: ed ? ed.id : uid(), name: ($('cl-name').value.trim() || '借入').slice(0, 30), balance: bal, rate: rate, payment: pay, excl: $('cl-incl').value === 'ex', via: $('cl-via').value, day: dp.value, from: from || '' };
+    var lix = ed ? pl.loans.findIndex(function (l) { return l.id === ed.id; }) : -1;
+    if (lix >= 0) pl.loans[lix] = lobj; else pl.loans.push(lobj);
+    try {
+      await backend.saveCash(pl);
+      ['cl-name', 'cl-balance', 'cl-pay', 'cl-rate', 'cl-day'].forEach(function (id) { $(id).value = ''; }); $('cl-incl').value = 'in'; $('cl-via').value = '';
+      endEdit(); msg('cl-msg', ed ? '更新しました。' : '借入を登録しました。'); state.crLoan = '__new'; render();
+    } catch (err) { msg('cl-msg', '登録できませんでした。', true); }
+  });
+  function fitTabs() { document.documentElement.style.setProperty('--tabh', $('stickytabs').offsetHeight + 'px'); }
+  window.addEventListener('resize', fitTabs);
+  function setView(name) {
+    fitTabs();
+    state.view = name; state.cDay = '';
+    $('view-pnl').hidden = name !== 'pnl';
+    $('view-cash').hidden = name !== 'cash';
+    $('tab-pnl').setAttribute('aria-selected', String(name === 'pnl'));
+    $('tab-cash').setAttribute('aria-selected', String(name === 'cash'));
+    render();
+  }
+
+  ['ci', 'cr', 'cl'].forEach(function (q) { $(q + '-cancel').addEventListener('click', function () { endEdit(); }); });
+  $('mode-sel').addEventListener('change', function () { if (state.cEdit) endEdit(); showForm(true, this.value); });
+  $('cr-cat').addEventListener('change', function () { var v = this.value; if (state.cEdit && (state.cEdit.kind === 'l' || v === 'rep')) endEdit(); this.value = v; state.crLoan = '__new'; syncCrUI(); });
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.id === 'ci-loan-sel') { state.ciLoan = t.value; syncRepUI(); }
+    else if (t.id === 'cr-loan-sel') { if (t.value === '__new') { if (state.cEdit) endEdit(); $('cr-cat').value = 'rep'; state.crLoan = '__new'; syncCrUI(); } else startEdit('l', t.value); }
+  });
+  $('ci-cat').addEventListener('change', syncRepUI); $('ci-incl').addEventListener('change', syncRepUI);
+  $('ci-date').addEventListener('click', function () { try { if (this.showPicker) this.showPicker(); } catch (e) {} });
+  ['ci-date', 'ci-amount', 'ci-interest'].forEach(function (id) { $(id).addEventListener('input', function () { if ($('ci-cat').value === 'rep') syncRepUI(); }); });
+  document.addEventListener('toggle', function (e) { var t = e.target; if (t && t.dataset && t.dataset.lopen) state.lOpen[t.dataset.lopen] = t.open; }, true);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target && e.target.id === 'o-in') { e.preventDefault(); saveOpening(); return; }
+    if (e.key === 'Escape' && state.oEdit) { state.oEdit = false; state.oMsg = ''; render(); return; }
+    if (e.key === 'Enter' && e.target && e.target.id === 'lint-in') { e.preventDefault(); var b = document.querySelector('[data-lintsave]'); if (b) saveInterest(b.dataset.lintsave, 'save'); return; }
+    if (e.key === 'Escape' && state.lEdit) { state.lEdit = ''; state.lMsg = ''; render(); return; }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.cDay) { state.cDay = ''; render(); } });
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-delgoal],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
+    if (!t) return;
+    if (t.dataset.view) setView(t.dataset.view);
+    else if (t.dataset.cm !== undefined) {
+      var cf = computeCash(view());
+      var m = t.dataset.cm === '0' ? curMonth() : addMonths(cf.selM, +t.dataset.cm);
+      if (m < cf.minM) m = cf.minM;
+      if (m > cf.maxM) m = cf.maxM;
+      state.cMonth = m; render(); if (state.formOpen && !state.cEdit && !$('ci-form').hidden) setFormMonth();
+    }
+    else if (t.dataset.cday !== undefined) { if (t.dataset.cday) { state.cDay = t.dataset.cday; render(); } }
+    else if (t.dataset.closeday !== undefined) { state.cDay = ''; render(); }
+    else if (t.dataset.cadd) {
+      var ad = t.dataset.cadd; state.cDay = '';
+      if (state.cEdit) endEdit();
+      $('ci-date').value = ad; render(); ciShow(true);
+      $('c-form').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); $('ci-amount').focus({ preventScroll: true });
+    }
+    else if (t.dataset.openrec !== undefined) {
+      var fc = $('form-card'); fc.hidden = !fc.hidden; t.setAttribute('aria-expanded', String(!fc.hidden));
+      if (!fc.hidden) { fc.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); $('f-amount').focus({ preventScroll: true }); }
+    }
+    else if (t.dataset.delgoal !== undefined) {
+      var gid = t.dataset.delgoal;
+      armOrDo('g' + gid, function () { return backend.saveSettings(Object.assign({}, state.settings, { history: (state.settings.history || []).filter(function (g) { return g.id !== gid; }) })); });
+    }
+    else if (t.dataset.crpick) { if (state.cEdit) endEdit(); $('cr-cat').value = t.dataset.crpick; state.crLoan = '__new'; syncCrUI(); }
+    else if (t.dataset.crloan) { if (t.dataset.crloan === '__new') { if (state.cEdit) endEdit(); $('cr-cat').value = 'rep'; state.crLoan = '__new'; syncCrUI(); } else startEdit('l', t.dataset.crloan); }
+    else if (t.dataset.fold) { state.fold[t.dataset.fold] = !state.fold[t.dataset.fold]; render(); }
+    else if (t.dataset.tsel) { var ts = $(t.dataset.tsel); ts.value = t.dataset.v; syncTabSels(); if (ts.id === 'ci-incl') syncRepUI(); }
+    else if (t.dataset.mode) { if (state.cEdit) endEdit(); showForm(true, t.dataset.mode); }
+    else if (t.dataset.opencash !== undefined) {
+      showForm(!state.formOpen, 'one');
+      if (state.formOpen && !state.cEdit) setFormMonth();
+      if (state.formOpen) { $('c-form').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); $('ci-amount').focus({ preventScroll: true }); }
+    }
+    else if (t.dataset.ccpick) { $('ci-cat').value = t.dataset.ccpick; syncRepUI(); }
+    else if (t.dataset.clpick) { state.ciLoan = t.dataset.clpick; syncRepUI(); }
+    else if (t.dataset.oedit !== undefined) { state.oEdit = true; state.oMsg = ''; render(); var oi = $('o-in'); if (oi) { oi.focus(); oi.select(); } }
+    else if (t.dataset.ocancel !== undefined) { state.oEdit = false; state.oMsg = ''; render(); }
+    else if (t.dataset.osave !== undefined) saveOpening();
+    else if (t.dataset.lname) { state.lOpen[t.dataset.lname] = !state.lOpen[t.dataset.lname]; render(); }
+    else if (t.dataset.lint) { state.lEdit = t.dataset.lint; state.lMsg = ''; render(); var li = $('lint-in'); if (li) { li.focus(); li.select(); } }
+    else if (t.dataset.lintcancel !== undefined) { state.lEdit = ''; state.lMsg = ''; render(); }
+    else if (t.dataset.lintsave || t.dataset.lintreset) { saveInterest(t.dataset.lintsave || t.dataset.lintreset, t.dataset.lintreset ? 'reset' : 'save'); }
+    else if (t.dataset.ei) { var pi = t.dataset.ei.split('|'); startEdit('i', pi[1], pi[0]); }
+    else if (t.dataset.er) startEdit('r', t.dataset.er);
+    else if (t.dataset.ex) startEdit('x', t.dataset.ex);
+    else if (t.dataset.delx) {
+      var xid = t.dataset.delx;
+      armOrDo('x' + xid, function () {
+        var pl = cashPayload({});
+        pl.loans.forEach(function (Q) { Q.extras = (Q.extras || []).filter(function (x) { return x.id !== xid; }); });
+        return backend.saveCash(pl);
+      });
+    }
+    else if (t.dataset.el) startEdit('l', t.dataset.el);
+    else if (t.dataset.delitem) {
+      var dd = t.dataset.delitem, iid = t.dataset.id;
+      armOrDo('i' + dd + '|' + iid, function () {
+        var pl = cashPayload({});
+        pl.items[dd] = (pl.items[dd] || []).filter(function (it) { return it.id !== iid; });
+        if (!pl.items[dd].length) delete pl.items[dd];
+        return backend.saveCash(pl);
+      });
+    }
+    else if (t.dataset.delloan) {
+      var lid = t.dataset.delloan;
+      armOrDo('l' + lid, function () {
+        var pl = cashPayload({});
+        pl.loans = pl.loans.filter(function (l) { return l.id !== lid; });
+        return backend.saveCash(pl);
+      });
+    }
+    else if (t.dataset.delrec) {
+      var rid = t.dataset.delrec;
+      armOrDo('r' + rid, function () {
+        var pl = cashPayload({});
+        pl.recurring = pl.recurring.filter(function (r) { return r.id !== rid; });
+        return backend.saveCash(pl);
+      });
+    }
+    else if (t.dataset.tab) { state.tab = t.dataset.tab; state.limit = 31; var v = view(); renderHistory(compute(v.entries), v); }
+    else if (t.dataset.edit) {
+      var ep = t.dataset.edit.split('|'), ee = state.entries[ep[0]], eit = itemsOf(ee).filter(function (it) { return it.id === ep[1]; })[0];
+      if (eit) { $('f-date').value = ep[0]; state.pEdit = { date: ep[0], id: eit.id }; $('f-amount').value = nf.format(Math.abs(eit.pnl)); setSign(eit.pnl < 0); $('f-memo').value = eit.memo || ''; $('f-cat').value = eit.cat || 'stock'; updateFormButtons(); msg('f-msg', ''); toForm(); $('f-amount').focus({ preventScroll: true }); }
+    }
+    else if (t.hasAttribute('data-more')) { state.limit += 31; var v2 = view(); renderHistory(compute(v2.entries), v2); }
+    else if (t.id === 'hero-edit') { $('settings').open = true; $('settings').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' }); }
+  });
+
+  if (window.ResizeObserver) {
+    var rt = 0;
+    new ResizeObserver(function () {
+      var w = Math.max(260, Math.floor($('pace').clientWidth - 34));
+      if (state.loaded && Math.abs(w - lastW) > 1) { clearTimeout(rt); rt = setTimeout(function () { renderCharts(); }, 80); }
+    }).observe($('pace'));
+  }
+
+  /* ---------- boot ---------- */
+  var t0 = todayStr();
+  $('f-date').value = t0; $('f-date').max = t0; var catOpts = CATS.map(function (c) { return '<option value="' + c[0] + '">' + c[1] + '</option>'; }).join('');
+  $('ci-cat').innerHTML = CATS.map(function (c) { return '<option value="' + c[0] + '">' + c[1] + '</option>'; }).join(''); $('cr-cat').innerHTML = '<option value="oout">支出</option><option value="oin">収入</option><option value="rep">返済</option>'; $('ci-date').value = t0;
+  fillSettings(); render();
+  setTimeout(function () { if (state.kind === 'pending') startLocal(); }, 2500);
+  initStorage();
+})();
+</script>
+
+<script>if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script>
+</body>
+</html>
