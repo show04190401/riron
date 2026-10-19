@@ -340,6 +340,8 @@ table.cf{border-collapse:separate;border-spacing:0;width:100%;min-width:max-cont
 .lname i{font-style:normal;color:var(--muted);font-size:12px}
 .loanbox .schbox{margin:0 0 12px;padding-top:6px}
 .cf-wrap.sch .cf tr.sel td{background:transparent}
+.cf-wrap.sch .cf tr.dmov td.rl{color:var(--gold)}
+.lint-ed input[type=date]{width:11em;text-align:left;min-height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font:500 14px var(--font-num)}
 .recbox{grid-column:1/-1;padding:8px 10px;margin:2px 0 6px;background:var(--gold-soft);border-radius:8px}
 .lint.ov{color:var(--gold);font-weight:700;border-bottom-color:var(--gold)}
 .lint-ed{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;font:400 13px var(--font-ui)}
@@ -744,7 +746,7 @@ details.inner[open]>summary::after{content:"－"}
         o.recurring = v.recurring.map(function (r, i) {
           if (r && LEGACY[r.cat]) r = Object.assign({}, r, { cat: LEGACY[r.cat] });
           if (!r || !CAT_LABEL[r.cat] || typeof r.amount !== 'number' || !(r.amount > 0) || !Number.isInteger(r.day) || r.day < 1 || r.day > 31) return null;
-          return { id: typeof r.id === 'string' && r.id ? r.id : 'r' + i, name: (typeof r.name === 'string' && r.name.trim() ? r.name.trim() : CAT_LABEL[r.cat]).slice(0, 30), cat: r.cat, amount: r.amount, day: r.day, from: typeof r.from === 'string' && rm.test(r.from) ? r.from : '', ovr: (function () { var o = {}; if (r.ovr && typeof r.ovr === 'object') Object.keys(r.ovr).slice(0, 240).forEach(function (k) { var x = r.ovr[k]; if (rm.test(k) && typeof x === 'number' && isFinite(x) && x >= 0) o[k] = Math.round(x); }); return o; })() };
+          return { id: typeof r.id === 'string' && r.id ? r.id : 'r' + i, name: (typeof r.name === 'string' && r.name.trim() ? r.name.trim() : CAT_LABEL[r.cat]).slice(0, 30), cat: r.cat, amount: r.amount, day: r.day, from: typeof r.from === 'string' && rm.test(r.from) ? r.from : '', ovr: (function () { var o = {}; if (r.ovr && typeof r.ovr === 'object') Object.keys(r.ovr).slice(0, 240).forEach(function (k) { var x = r.ovr[k]; if (rm.test(k) && typeof x === 'number' && isFinite(x) && x >= 0) o[k] = Math.round(x); }); return o; })(), dov: (function (src) { var o = {}; if (src && typeof src === 'object') Object.keys(src).slice(0, 240).forEach(function (k) { var x = src[k]; if (rm.test(k) && typeof x === 'string' && re.test(x)) o[k] = x; }); return o; })(r.dov) };
         }).filter(Boolean).slice(0, 30);
       }
       if (Array.isArray(v.loans)) {
@@ -758,7 +760,7 @@ details.inner[open]>summary::after{content:"－"}
           if (l.pays && typeof l.pays === 'object') Object.keys(l.pays).slice(0, 720).forEach(function (k) { var x = l.pays[k]; if (rm.test(k) && typeof x === 'number' && isFinite(x) && x > 0) pays[k] = Math.round(x); });
           var extras = [];
           if (Array.isArray(l.extras)) l.extras.slice(0, 60).forEach(function (x, j) { if (x && typeof x.date === 'string' && re.test(x.date) && typeof x.amount === 'number' && isFinite(x.amount) && x.amount > 0) extras.push({ id: typeof x.id === 'string' && x.id ? x.id : 'x' + i + '_' + j, date: x.date, amount: Math.round(x.amount), interest: typeof x.interest === 'number' && x.interest > 0 ? Math.round(Math.min(x.interest, x.amount)) : 0 }); });
-          return { extras: extras, ints: ints, pays: pays, id: typeof l.id === 'string' && l.id ? l.id : 'l' + i, name: (typeof l.name === 'string' && l.name.trim() ? l.name.trim() : '借入').slice(0, 30), balance: l.balance, rate: rate, payment: l.payment, excl: l.excl === true, via: l.via === 'rak' || l.via === 'amz' ? l.via : '', day: lday, from: typeof l.from === 'string' && rm.test(l.from) ? l.from : '' };
+          return { extras: extras, ints: ints, pays: pays, dov: (function (src) { var o = {}; if (src && typeof src === 'object') Object.keys(src).slice(0, 240).forEach(function (k) { var x = src[k]; if (rm.test(k) && typeof x === 'string' && re.test(x)) o[k] = x; }); return o; })(l.dov), id: typeof l.id === 'string' && l.id ? l.id : 'l' + i, name: (typeof l.name === 'string' && l.name.trim() ? l.name.trim() : '借入').slice(0, 30), balance: l.balance, rate: rate, payment: l.payment, excl: l.excl === true, via: l.via === 'rak' || l.via === 'amz' ? l.via : '', day: lday, from: typeof l.from === 'string' && rm.test(l.from) ? l.from : '' };
         }).filter(Boolean).slice(0, 20);
       }
       if (v.months && typeof v.months === 'object') {
@@ -1124,11 +1126,12 @@ details.inner[open]>summary::after{content:"－"}
   }
   function recMode(r, isLoan) { return isLoan ? 'next' : (r.cat === 'sal' ? 'prev' : (r.cat === 'rak' || r.cat === 'amz') ? 'next' : ''); }
   function nomDate(r, m) { return m + '-' + String(Math.min(r.day, daysInMonth(m))).padStart(2, '0'); }
+  function payDate(L, m) { return L.dov && L.dov[m] ? L.dov[m] : adjDay(nomDate(L, m), 'next'); }
   function hitM(r, d, mode) {
-    var m0 = d.slice(0, 7), ms = mode ? [addMonths(m0, -1), m0, addMonths(m0, 1)] : [m0];
+    var m0 = d.slice(0, 7), ms = [addMonths(m0, -1), m0, addMonths(m0, 1)];
     for (var i = 0; i < ms.length; i++) {
       if (r.from && ms[i] < r.from) continue;
-      if (adjDay(nomDate(r, ms[i]), mode) === d) return ms[i];
+      if ((r.dov && r.dov[ms[i]] ? r.dov[ms[i]] : adjDay(nomDate(r, ms[i]), mode)) === d) return ms[i];
     }
     return '';
   }
@@ -1152,7 +1155,7 @@ details.inner[open]>summary::after{content:"－"}
     }
     if (!(L.payment > 0)) { flush('9999-12-31'); return rows; }
     for (var i = 0; i < 720 && bal > 0; i++, m = addMonths(m, 1)) {
-      var d = adjDay(nomDate(L, m), 'next');
+      var d = payDate(L, m);
       if (d < start) continue;
       flush(d);
       if (bal <= 0) break;
@@ -1161,7 +1164,7 @@ details.inner[open]>summary::after{content:"－"}
       var s0 = L.pays && L.pays[m] != null ? repayStep(Object.assign({}, L, { pays: null }), bal, m, dd0) : s;
       if (s.principal <= 0 && !(L.ints && L.ints[m] != null) && !(L.pays && L.pays[m] != null)) break;
       bal = Math.max(0, bal - s.principal);
-      rows.push({ d: d, m: m, pay: s.pay, interest: s.interest, principal: s.principal, bal: bal, ov: !!(L.ints && L.ints[m] != null && L.ints[m] !== auto0), pov: s.pay !== s0.pay });
+      rows.push({ d: d, m: m, pay: s.pay, interest: s.interest, principal: s.principal, bal: bal, ov: !!(L.ints && L.ints[m] != null && L.ints[m] !== auto0), pov: s.pay !== s0.pay, dov: !!(L.dov && L.dov[m]) });
     }
     return rows;
   }
@@ -1196,7 +1199,7 @@ details.inner[open]>summary::after{content:"－"}
       var f = { pnl: E[d] ? E[d].pnl : 0, sal: 0, oin: 0, oout: 0, rak: 0, amz: 0, repay: 0, inc: 0, exp: 0 }, notes = [], lines = [], loanOpen = loanTotal;
       if (E[d]) lines.push({ k: 'pnl', label: '損益', amt: E[d].pnl });
       (src.items[d] || []).forEach(function (it) { f[it.cat] += it.amount; notes.push(it.memo || CAT_LABEL[it.cat]); lines.push({ k: 'item', id: it.id, cat: it.cat, label: it.memo || CAT_LABEL[it.cat], memo: it.memo ? CAT_LABEL[it.cat] : '', amt: it.amount, out: CAT_OUT[it.cat] }); });
-      src.recurring.forEach(function (r) { var hm = hitM(r, d, recMode(r, false)); if (hm) { var ra = r.ovr && r.ovr[hm] != null ? r.ovr[hm] : r.amount; f[r.cat] += ra; notes.push(r.name); lines.push({ k: 'rec', id: r.id, cat: r.cat, day: r.day, label: r.name, m: hm, base: r.amount, ov: !!(r.ovr && r.ovr[hm] != null), amt: ra, out: CAT_OUT[r.cat] }); } });
+      src.recurring.forEach(function (r) { var hm = hitM(r, d, recMode(r, false)); if (hm) { var ra = r.ovr && r.ovr[hm] != null ? r.ovr[hm] : r.amount; f[r.cat] += ra; notes.push(r.name); lines.push({ k: 'rec', id: r.id, cat: r.cat, day: r.day, label: r.name, m: hm, base: r.amount, ov: !!(r.ovr && r.ovr[hm] != null), dov: !!(r.dov && r.dov[hm]), amt: ra, out: CAT_OUT[r.cat] }); } });
       src.loans.forEach(function (L) {
         (L.extras || []).forEach(function (x) {
           if (x.date === d) loanLast[L.id] = d;
@@ -1212,7 +1215,7 @@ details.inner[open]>summary::after{content:"－"}
           loanBal[L.id] = Math.max(0, loanBal[L.id] - s.principal);
           if (!loanVia(L)) f.repay += s.pay;
           notes.push(L.name + '返済' + (L.rate ? '（元本' + nf.format(s.principal) + '・利息' + nf.format(s.interest) + '）' : ''));
-          lines.push({ k: 'loan', id: L.id, label: L.name + '返済', amt: s.pay, principal: s.principal, interest: s.interest, remain: loanBal[L.id], out: true, via: loanVia(L) || '' });
+          lines.push({ k: 'loan', id: L.id, m: lm, label: L.name + '返済', amt: s.pay, principal: s.principal, interest: s.interest, remain: loanBal[L.id], out: true, via: loanVia(L) || '' });
         }
       });
       lines.filter(function (l) { return l.via; }).forEach(function (vl) {
@@ -1316,12 +1319,12 @@ details.inner[open]>summary::after{content:"－"}
           var tr = '<tr class="open"><td class="rl">' + (firstShown > 0 ? '返済前' : '開始時点') + '</td><td></td><td>' + cell(openBal) + '</td></tr>';
           sch.forEach(function (r, i) {
             if (i < firstShown) return;
-            var key = L.id + '|' + r.m, editing = !r.x && state.lEdit === key, editingP = !r.x && state.lEdit === key + '|p';
+            var key = L.id + '|' + r.m, editing = !r.x && state.lEdit === key, editingP = !r.x && state.lEdit === key + '|p' && state.lWhere !== 'list';
             var pcell = (cf.demo || r.x) ? cell(r.pay) : '<button type="button" class="lint lpay' + (r.pov ? ' ov' : '') + '" data-lint="' + esc(key + '|p') + '" aria-label="' + ym(r.m) + 'の返済額を編集">' + cell(r.pay) + '</button>';
             var icell = (cf.demo || r.x) ? cell(r.interest) : '<button type="button" class="lint' + (r.ov ? ' ov' : '') + '" data-lint="' + esc(key) + '" aria-label="' + ym(r.m) + 'の利息を編集">' + cell(r.interest) + '</button>';
-            tr += '<tr class="' + (r.d < today ? 'paid ' : '') + (r.m < cf.selM ? 'prevm ' : '') + (r.m === cf.selM ? 'sel ' : '') + (i === firstNext ? 'today' : '') + '"><td class="rl">' + md(r.d) + '<small>' + (r.x ? '追加' : r.d.slice(0, 4) + '年') + '</small></td><td class="pc">' + pcell + '<small><span>元本 ' + cell(r.principal) + '</span><span>利息 ' + icell + '</span></small></td><td class="bc">' + cell(r.bal) + '</td></tr>';
-            if (editingP) tr += '<tr class="lined"><td colspan="3"><div class="lint-ed"><label for="lint-in">' + ym(r.m) + 'の返済額（円）</label><input id="lint-in" type="text" inputmode="numeric" autocomplete="off" value="' + r.pay + '">' +
-              '<button type="button" class="lnk" data-lintsave="' + esc(key + '|p') + '">保存</button>' + (r.pov ? '<button type="button" class="lnk" data-lintreset="' + esc(key + '|p') + '">元の返済額に戻す</button>' : '') + '<button type="button" class="lnk" data-lintcancel>やめる</button></div>' +
+            tr += '<tr class="' + (r.dov ? 'dmov ' : '') + (r.d < today ? 'paid ' : '') + (r.m < cf.selM ? 'prevm ' : '') + (r.m === cf.selM ? 'sel ' : '') + (i === firstNext ? 'today' : '') + '"><td class="rl">' + md(r.d) + '<small>' + (r.x ? '追加' : r.d.slice(0, 4) + '年') + '</small></td><td class="pc">' + pcell + '<small><span>元本 ' + cell(r.principal) + '</span><span>利息 ' + icell + '</span></small></td><td class="bc">' + cell(r.bal) + '</td></tr>';
+            if (editingP) tr += '<tr class="lined"><td colspan="3"><div class="lint-ed"><label for="lint-date">' + ym(r.m) + 'の返済日</label><input id="lint-date" type="date" value="' + r.d + '"><label for="lint-in">返済額（円）</label><input id="lint-in" type="text" inputmode="numeric" autocomplete="off" value="' + r.pay + '">' +
+              '<button type="button" class="lnk" data-lintsave="' + esc(key + '|p') + '">保存</button>' + (r.pov || r.dov ? '<button type="button" class="lnk" data-lintreset="' + esc(key + '|p') + '">通常に戻す</button>' : '') + '<button type="button" class="lnk" data-lintcancel>やめる</button></div>' +
               (state.lMsg ? '<p class="msg err">' + esc(state.lMsg) + '</p>' : '') + '</td></tr>';
             if (editing) tr += '<tr class="lined"><td colspan="3"><div class="lint-ed"><label for="lint-in">' + ym(r.m) + 'の利息（円）</label><input id="lint-in" type="text" inputmode="numeric" autocomplete="off" value="' + r.interest + '">' +
               '<button type="button" class="lnk" data-lintsave="' + esc(key) + '">保存</button>' + (r.ov ? '<button type="button" class="lnk" data-lintreset="' + esc(key) + '">自動計算に戻す</button>' : '') + '<button type="button" class="lnk" data-lintcancel>やめる</button></div>' +
@@ -1332,7 +1335,7 @@ details.inner[open]>summary::after{content:"－"}
           }).join('');
           var lo = !!state.lOpen[L.id];
           var sched = sch.length && lo ? '<div class="inner schbox">' +
-            (cf.demo || !(L.payment > 0) ? '' : '<p class="hint" style="margin-top:8px">返済額や利息の金額をタップすると、その月の金額を実際の金額に直せます。直した金額は金色の文字で表示し、日別資金繰り表にも反映されます。</p>') +
+            (cf.demo || !(L.payment > 0) ? '' : '<p class="hint" style="margin-top:8px">返済額をタップするとその月の返済日と返済額を、利息をタップするとその月の利息を直せます。直した金額は金色の文字で表示し、日別資金繰り表にも反映されます。</p>') +
             '<div class="cf-wrap sch"><table class="cf" aria-label="' + esc(L.name) + 'の月別返済残高"><thead><tr><th class="rl" scope="col">返済日</th><th scope="col">返済額（内訳）</th><th scope="col">返済後の残高</th></tr></thead><tbody>' + tr + '</tbody></table></div></div>' : '';
           return '<div class="loanbox"><div class="row r3b"><div class="d">' + (sch.length ? '<button type="button" class="lname" data-lname="' + esc(L.id) + '" aria-expanded="' + lo + '">' + esc(L.name) + '<i aria-hidden="true">' + (lo ? '▾' : '▸') + '</i></button>' : esc(L.name)) + '<small>' + sub + '</small><span class="pbar" title="返済済み ' + paid + '%"><i style="width:' + paid + '%"></i></span></div>' +
             '<div class="n">' + yen(now) + '<small>' + (+sm.slice(5)) + '月の返済後</small></div>' + cashBtns(cf.demo, 'data-el="' + esc(L.id) + '"', 'data-delloan="' + esc(L.id) + '"', 'l' + L.id) + '</div>' + exl + sched + '</div>';
@@ -1350,15 +1353,15 @@ details.inner[open]>summary::after{content:"－"}
       (items.length ? '<div class="table">' + items.map(function (x) {
         var l = x.l, sub = '', btns = '', amt;
         if (l.k === 'item') { sub = l.memo || ''; btns = cashBtns(cf.demo, 'data-ei="' + esc(x.d + '|' + l.id) + '"', 'data-delitem="' + x.d + '" data-id="' + esc(l.id) + '"', 'i' + x.d + '|' + l.id); }
-        else if (l.k === 'rec') { sub = l.ov ? 'この月のみ（通常 ' + yen(l.base) + '）' : '毎月' + l.day + '日の定期'; btns = cashBtns(cf.demo, 'data-er="' + esc(l.id) + '"', 'data-delrec="' + esc(l.id) + '"', 'r' + l.id); }
+        else if (l.k === 'rec') { sub = l.ov || l.dov ? 'この月のみ変更' : '毎月' + l.day + '日の定期'; btns = cashBtns(cf.demo, 'data-er="' + esc(l.id) + '"', 'data-delrec="' + esc(l.id) + '"', 'r' + l.id); }
         else if (l.k === 'xrep') { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest); btns = cashBtns(cf.demo, 'data-ex="' + esc(l.id) + '"', 'data-delx="' + esc(l.id) + '"', 'x' + l.id); }
-        else { sub = '毎月の返済・元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest); btns = cashBtns(cf.demo, 'data-el="' + esc(l.id) + '"', 'data-delloan="' + esc(l.id) + '"', 'l' + l.id); }
+        else { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest); btns = cashBtns(cf.demo, 'data-el="' + esc(l.id) + '"', 'data-delloan="' + esc(l.id) + '"', 'l' + l.id); }
         amt = '<div class="n ' + (l.out ? 'neg' : 'pos') + '">' + recAmt(l, cf.demo, (l.out ? '−' : '+') + yen(l.amt)) + '</div>';
         if (l.via) { sub = ''; amt = '<div class="n muted">（' + yen(l.amt) + '）</div>'; }
         if ((l.k === 'item' || l.k === 'rec') && (l.cat === 'rak' || l.cat === 'amz')) { var vi = viaIn(cf.days[x.d], l.cat); if (vi) sub = (sub ? sub + ' ' : '') + vi; }
         return '<div class="row r5"><div class="d">' + md(x.d) + '<small>' + WD[dow(x.d)] + '曜</small></div>' +
-          '<div class="d">' + esc(l.label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + amt + btns + '</div>' + recEd(l);
-      }).join('') + '</div>' + (items.some(function (x) { return x.l.k === 'rec'; }) && !cf.demo ? '<p class="hint" style="margin-top:8px">定期の金額をタップすると、その月だけ金額を変えられます。</p>' : '') : '<p class="empty">この月の記録はありません。</p>');
+          '<div class="d">' + esc(l.label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + amt + btns + '</div>' + recEd(l, x.d);
+      }).join('') + '</div>' + (items.some(function (x) { return x.l.k === 'rec' || x.l.k === 'loan'; }) && !cf.demo ? '<p class="hint" style="margin-top:8px">定期や返済の金額をタップすると、その月だけ日付と金額を変えられます。</p>' : '') : '<p class="empty">この月の記録はありません。</p>');
 
     var rr = cf.src.recurring;
     $('c-rec-list').innerHTML = rr.length ? '<div class="table">' + rr.map(function (r) {
@@ -1377,24 +1380,33 @@ details.inner[open]>summary::after{content:"－"}
   }
 
   function recAmt(l, demo, txt) {
+    if (l.k === 'loan' && !demo && l.m) return '<button type="button" class="lint" data-lint="' + esc(l.id + '|' + l.m + '|p') + '" aria-label="' + esc(l.label) + 'の' + ym(l.m) + 'の返済額・返済日を変更">' + txt + '</button>';
     if (l.k !== 'rec' || demo || l.via) return txt;
     return '<button type="button" class="lint' + (l.ov ? ' ov' : '') + '" data-rmon="' + esc(l.id + '|' + l.m) + '" aria-label="' + esc(l.label) + 'の' + ym(l.m) + 'の金額を変更">' + txt + '</button>';
   }
-  function recEd(l) {
+  function recEd(l, d) {
+    if (l.k === 'loan' && l.m && state.lWhere === 'list' && state.lEdit === l.id + '|' + l.m + '|p') {
+      return '<div class="lint-ed recbox"><label for="lint-date">' + (+l.m.slice(5)) + '月分の返済日</label><input id="lint-date" type="date" value="' + d + '"><label for="lint-in">返済額（円）</label><input id="lint-in" type="text" inputmode="numeric" autocomplete="off" value="' + l.amt + '">' +
+        '<button type="button" class="lnk" data-lintsave="' + esc(l.id + '|' + l.m + '|p') + '">保存</button><button type="button" class="lnk" data-lintreset="' + esc(l.id + '|' + l.m + '|p') + '">通常に戻す</button><button type="button" class="lnk" data-lintcancel>やめる</button>' +
+        (state.lMsg ? '<p class="msg err" style="flex-basis:100%">' + esc(state.lMsg) + '</p>' : '') + '</div>';
+    }
     if (l.k !== 'rec' || state.rEdit !== l.id + '|' + l.m) return '';
-    return '<div class="lint-ed recbox"><label for="rmon-in">' + (+l.m.slice(5)) + '月だけの金額（円）</label><input id="rmon-in" type="text" inputmode="numeric" autocomplete="off" value="' + l.amt + '">' +
-      '<button type="button" class="lnk" data-rmonsave="' + esc(l.id + '|' + l.m) + '">保存</button>' + (l.ov ? '<button type="button" class="lnk" data-rmonreset="' + esc(l.id + '|' + l.m) + '">通常の金額に戻す</button>' : '') + '<button type="button" class="lnk" data-rmoncancel>やめる</button>' +
-      (state.rMsg ? '<p class="msg err" style="flex-basis:100%">' + esc(state.rMsg) + '</p>' : '') + '<p class="hint" style="flex-basis:100%">0円にすると、その月はなしになります。</p></div>';
+    return '<div class="lint-ed recbox"><label for="rmon-date">' + (+l.m.slice(5)) + '月分の日付</label><input id="rmon-date" type="date" value="' + d + '"><label for="rmon-in">金額（円）</label><input id="rmon-in" type="text" inputmode="numeric" autocomplete="off" value="' + l.amt + '">' +
+      '<button type="button" class="lnk" data-rmonsave="' + esc(l.id + '|' + l.m) + '">保存</button>' + (l.ov || l.dov ? '<button type="button" class="lnk" data-rmonreset="' + esc(l.id + '|' + l.m) + '">通常に戻す</button>' : '') + '<button type="button" class="lnk" data-rmoncancel>やめる</button>' +
+      (state.rMsg ? '<p class="msg err" style="flex-basis:100%">' + esc(state.rMsg) + '</p>' : '') + '<p class="hint" style="flex-basis:100%">この月だけ、日付と金額を変えられます。0円にすると、その月はなしになります。</p></div>';
   }
   function saveRecMonth(key, reset) {
     var parts = key.split('|'), pl = cashPayload({}), r = pl.recurring.filter(function (x) { return x.id === parts[0]; })[0];
     if (!r || !backend) { state.rEdit = ''; render(); return; }
-    r.ovr = Object.assign({}, r.ovr || {});
-    if (reset) delete r.ovr[parts[1]];
+    r.ovr = Object.assign({}, r.ovr || {}); r.dov = Object.assign({}, r.dov || {});
+    var mm = parts[1];
+    if (reset) { delete r.ovr[mm]; delete r.dov[mm]; }
     else {
-      var p = parseAmount($('rmon-in').value);
+      var p = parseAmount($('rmon-in').value), nd = $('rmon-date').value, st = state.cash.startDate || defaultStart();
       if (isNaN(p.value) || p.neg) { state.rMsg = '金額は0以上の数字で入力してください。'; render(); var a = $('rmon-in'); if (a) a.focus(); return; }
-      if (p.value === r.amount) delete r.ovr[parts[1]]; else r.ovr[parts[1]] = p.value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(nd) || nd.slice(0, 7) < addMonths(mm, -1) || nd.slice(0, 7) > addMonths(mm, 1) || nd < st) { state.rMsg = '日付は、' + (+mm.slice(5)) + '月の前後1か月の中で選んでください。'; render(); return; }
+      if (p.value === r.amount) delete r.ovr[mm]; else r.ovr[mm] = p.value;
+      if (nd === adjDay(nomDate(r, mm), recMode(r, false))) delete r.dov[mm]; else r.dov[mm] = nd;
     }
     state.rEdit = ''; state.rMsg = '';
     Promise.resolve(backend.saveCash(pl)).then(render, function () { state.rMsg = '保存できませんでした。'; render(); });
@@ -1421,13 +1433,13 @@ details.inner[open]>summary::after{content:"－"}
       else {
         amt = '<span class="' + (l.out ? 'neg' : 'pos') + '">' + (l.out ? '−' : '+') + yen(l.amt) + '</span>';
         if (l.k === 'item') { sub = l.memo || ''; btns = cashBtns(demo, 'data-ei="' + esc(d + '|' + l.id) + '"', 'data-delitem="' + d + '" data-id="' + esc(l.id) + '"', 'i' + d + '|' + l.id); }
-        else if (l.k === 'rec') { sub = l.ov ? 'この月のみ（通常 ' + yen(l.base) + '）' : '毎月' + l.day + '日の定期'; btns = cashBtns(demo, 'data-er="' + esc(l.id) + '"', 'data-delrec="' + esc(l.id) + '"', 'r' + l.id); amt = '<span class="' + (l.out ? 'neg' : 'pos') + '">' + recAmt(l, demo, (l.out ? '−' : '+') + yen(l.amt)) + '</span>'; }
+        else if (l.k === 'rec') { sub = l.ov || l.dov ? 'この月のみ変更' : '毎月' + l.day + '日の定期'; btns = cashBtns(demo, 'data-er="' + esc(l.id) + '"', 'data-delrec="' + esc(l.id) + '"', 'r' + l.id); amt = '<span class="' + (l.out ? 'neg' : 'pos') + '">' + recAmt(l, demo, (l.out ? '−' : '+') + yen(l.amt)) + '</span>'; }
         else if (l.k === 'xrep') { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest) + '・借入残高 ' + yen(l.remain); btns = cashBtns(demo, 'data-ex="' + esc(l.id) + '"', 'data-delx="' + esc(l.id) + '"', 'x' + l.id); }
-        else { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest) + '・借入残高 ' + yen(l.remain); btns = cashBtns(demo, 'data-el="' + esc(l.id) + '"', 'data-delloan="' + esc(l.id) + '"', 'l' + l.id); }
+        else { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest) + '・借入残高 ' + yen(l.remain); btns = cashBtns(demo, 'data-el="' + esc(l.id) + '"', 'data-delloan="' + esc(l.id) + '"', 'l' + l.id); amt = '<span class="neg">' + recAmt(l, demo, '−' + yen(l.amt)) + '</span>'; }
       }
       if (l.via) { sub = ''; amt = '<span class="muted">（' + yen(l.amt) + '）</span>'; }
       if ((l.k === 'item' || l.k === 'rec') && (l.cat === 'rak' || l.cat === 'amz')) { var vi = viaIn(x, l.cat); if (vi) sub = (sub ? sub + ' ' : '') + vi; }
-      lns += '<div class="dline"><div>' + esc(l.label) + '<small>' + esc(sub) + '</small></div><div class="dl-n">' + amt + '</div>' + (btns || '<span></span>') + '</div>' + recEd(l);
+      lns += '<div class="dline"><div>' + esc(l.label) + '<small>' + esc(sub) + '</small></div><div class="dl-n">' + amt + '</div>' + (btns || '<span></span>') + '</div>' + recEd(l, d);
     });
     var wasHidden = el.hidden;
     el.innerHTML = '<div class="sheet-bg" data-closeday></div><div class="sheet" role="dialog" aria-modal="true" aria-label="' + title + 'の詳細">' +
@@ -1457,8 +1469,16 @@ details.inner[open]>summary::after{content:"－"}
     if (!L) { state.lEdit = ''; render(); return; }
     L.ints = L.ints || {}; L.pays = L.pays || {};
     if (parts[2] === 'p') {
-      if (mode === 'reset') delete L.pays[m];
+      L.dov = Object.assign({}, L.dov || {});
+      if (mode === 'reset') { delete L.pays[m]; delete L.dov[m]; }
       else {
+        var ldi = $('lint-date');
+        if (ldi) {
+          var nd = ldi.value, srows = loanSchedule(L, state.cash.startDate || defaultStart()).filter(function (r) { return !r.x; });
+          var pr0 = srows.filter(function (r) { return r.m < m; }).pop(), nx0 = srows.filter(function (r) { return r.m > m; })[0];
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(nd) || nd < (state.cash.startDate || defaultStart()) || (pr0 && nd <= pr0.d) || (nx0 && nd >= nx0.d)) { state.lMsg = '返済日は、前の月の返済日（' + (pr0 ? md(pr0.d) : '開始日') + '）より後' + (nx0 ? '、次の月の返済日（' + md(nx0.d) + '）より前' : '') + 'にしてください。'; render(); return; }
+          if (nd === adjDay(nomDate(L, m), 'next')) delete L.dov[m]; else L.dov[m] = nd;
+        }
         var pp = parseAmount($('lint-in').value);
         if (isNaN(pp.value) || pp.neg || !(pp.value > 0)) { state.lMsg = '返済額は1円以上の数字で入力してください。'; render(); var pa = $('lint-in'); if (pa) pa.focus(); return; }
         var prow = loanSchedule(L, state.cash.startDate || defaultStart()).filter(function (r) { return !r.x && r.m === m; })[0];
@@ -1792,7 +1812,7 @@ details.inner[open]>summary::after{content:"－"}
     var pl = cashPayload({});
     var robj = { id: ed ? ed.id : uid(), name: ($('cr-name').value.trim() || CAT_LABEL[cat]).slice(0, 30), cat: (ed && ed.cat && CAT_OUT[ed.cat] === CAT_OUT[cat]) ? ed.cat : cat, amount: amt, day: dp.value, from: from || '' };
     var rix = ed ? pl.recurring.findIndex(function (r) { return r.id === ed.id; }) : -1;
-    if (rix >= 0) { if (pl.recurring[rix].ovr) robj.ovr = pl.recurring[rix].ovr; pl.recurring[rix] = robj; } else pl.recurring.push(robj);
+    if (rix >= 0) { if (pl.recurring[rix].ovr) robj.ovr = pl.recurring[rix].ovr; if (pl.recurring[rix].dov) robj.dov = pl.recurring[rix].dov; pl.recurring[rix] = robj; } else pl.recurring.push(robj);
     try {
       await backend.saveCash(pl);
       $('cr-name').value = ''; $('cr-amount').value = ''; $('cr-day').value = '';
@@ -1815,7 +1835,7 @@ details.inner[open]>summary::after{content:"－"}
     if (!ed && state.cash.loans.length >= 20) return msg('cl-msg', '借入は20件まで登録できます。', true);
     var pl = cashPayload({});
     var prior = ed ? pl.loans.filter(function (l) { return l.id === ed.id; })[0] : null;
-    var lobj = { extras: prior && prior.extras ? prior.extras : [], ints: prior && prior.ints ? prior.ints : {}, pays: prior && prior.pays ? prior.pays : {}, id: ed ? ed.id : uid(), name: ($('cl-name').value.trim() || '借入').slice(0, 30), balance: bal, rate: rate, payment: pay, excl: $('cl-incl').value === 'ex', via: $('cl-via').value, day: dp.value, from: from || '' };
+    var lobj = { extras: prior && prior.extras ? prior.extras : [], ints: prior && prior.ints ? prior.ints : {}, pays: prior && prior.pays ? prior.pays : {}, dov: prior && prior.dov ? prior.dov : {}, id: ed ? ed.id : uid(), name: ($('cl-name').value.trim() || '借入').slice(0, 30), balance: bal, rate: rate, payment: pay, excl: $('cl-incl').value === 'ex', via: $('cl-via').value, day: dp.value, from: from || '' };
     var lix = ed ? pl.loans.findIndex(function (l) { return l.id === ed.id; }) : -1;
     if (lix >= 0) pl.loans[lix] = lobj; else pl.loans.push(lobj);
     try {
@@ -1899,7 +1919,7 @@ details.inner[open]>summary::after{content:"－"}
     else if (t.dataset.ocancel !== undefined) { state.oEdit = false; state.oMsg = ''; render(); }
     else if (t.dataset.osave !== undefined) saveOpening();
     else if (t.dataset.lname) { state.lOpen[t.dataset.lname] = !state.lOpen[t.dataset.lname]; render(); }
-    else if (t.dataset.lint) { state.lEdit = t.dataset.lint; state.lMsg = ''; render(); var li = $('lint-in'); if (li) { li.focus(); li.select(); } }
+    else if (t.dataset.lint) { state.lWhere = t.closest('#c-loans') ? 'sch' : 'list'; state.lEdit = t.dataset.lint; state.lMsg = ''; render(); var li = $('lint-in'); if (li) { li.focus(); li.select(); } }
     else if (t.dataset.lintcancel !== undefined) { state.lEdit = ''; state.lMsg = ''; render(); }
     else if (t.dataset.lintsave || t.dataset.lintreset) { saveInterest(t.dataset.lintsave || t.dataset.lintreset, t.dataset.lintreset ? 'reset' : 'save'); }
     else if (t.dataset.ei) { var pi = t.dataset.ei.split('|'); startEdit('i', pi[1], pi[0]); }
