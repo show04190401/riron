@@ -340,6 +340,7 @@ table.cf{border-collapse:separate;border-spacing:0;width:100%;min-width:max-cont
 .lname i{font-style:normal;color:var(--muted);font-size:12px}
 .loanbox .schbox{margin:0 0 12px;padding-top:6px}
 .cf-wrap.sch .cf tr.sel td{background:transparent}
+.recbox{grid-column:1/-1;padding:8px 10px;margin:2px 0 6px;background:var(--gold-soft);border-radius:8px}
 .lint.ov{color:var(--gold);font-weight:700;border-bottom-color:var(--gold)}
 .lint-ed{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;font:400 13px var(--font-ui)}
 .lint-ed input{width:8.5em;min-height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);text-align:right;font:500 14px var(--font-num)}
@@ -667,7 +668,7 @@ details.inner[open]>summary::after{content:"－"}
   /* ---------- state ---------- */
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', history: [], excludeHolidays: true, saved: false },
-    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'pnl', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: {}, pEdit: null, formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
+    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'pnl', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
   };
   var backend = null;
@@ -743,7 +744,7 @@ details.inner[open]>summary::after{content:"－"}
         o.recurring = v.recurring.map(function (r, i) {
           if (r && LEGACY[r.cat]) r = Object.assign({}, r, { cat: LEGACY[r.cat] });
           if (!r || !CAT_LABEL[r.cat] || typeof r.amount !== 'number' || !(r.amount > 0) || !Number.isInteger(r.day) || r.day < 1 || r.day > 31) return null;
-          return { id: typeof r.id === 'string' && r.id ? r.id : 'r' + i, name: (typeof r.name === 'string' && r.name.trim() ? r.name.trim() : CAT_LABEL[r.cat]).slice(0, 30), cat: r.cat, amount: r.amount, day: r.day, from: typeof r.from === 'string' && rm.test(r.from) ? r.from : '' };
+          return { id: typeof r.id === 'string' && r.id ? r.id : 'r' + i, name: (typeof r.name === 'string' && r.name.trim() ? r.name.trim() : CAT_LABEL[r.cat]).slice(0, 30), cat: r.cat, amount: r.amount, day: r.day, from: typeof r.from === 'string' && rm.test(r.from) ? r.from : '', ovr: (function () { var o = {}; if (r.ovr && typeof r.ovr === 'object') Object.keys(r.ovr).slice(0, 240).forEach(function (k) { var x = r.ovr[k]; if (rm.test(k) && typeof x === 'number' && isFinite(x) && x >= 0) o[k] = Math.round(x); }); return o; })() };
         }).filter(Boolean).slice(0, 30);
       }
       if (Array.isArray(v.loans)) {
@@ -1195,7 +1196,7 @@ details.inner[open]>summary::after{content:"－"}
       var f = { pnl: E[d] ? E[d].pnl : 0, sal: 0, oin: 0, oout: 0, rak: 0, amz: 0, repay: 0, inc: 0, exp: 0 }, notes = [], lines = [], loanOpen = loanTotal;
       if (E[d]) lines.push({ k: 'pnl', label: '損益', amt: E[d].pnl });
       (src.items[d] || []).forEach(function (it) { f[it.cat] += it.amount; notes.push(it.memo || CAT_LABEL[it.cat]); lines.push({ k: 'item', id: it.id, cat: it.cat, label: it.memo || CAT_LABEL[it.cat], memo: it.memo ? CAT_LABEL[it.cat] : '', amt: it.amount, out: CAT_OUT[it.cat] }); });
-      src.recurring.forEach(function (r) { if (recHits(r, d)) { f[r.cat] += r.amount; notes.push(r.name); lines.push({ k: 'rec', id: r.id, cat: r.cat, day: r.day, label: r.name, amt: r.amount, out: CAT_OUT[r.cat] }); } });
+      src.recurring.forEach(function (r) { var hm = hitM(r, d, recMode(r, false)); if (hm) { var ra = r.ovr && r.ovr[hm] != null ? r.ovr[hm] : r.amount; f[r.cat] += ra; notes.push(r.name); lines.push({ k: 'rec', id: r.id, cat: r.cat, day: r.day, label: r.name, m: hm, base: r.amount, ov: !!(r.ovr && r.ovr[hm] != null), amt: ra, out: CAT_OUT[r.cat] }); } });
       src.loans.forEach(function (L) {
         (L.extras || []).forEach(function (x) {
           if (x.date === d) loanLast[L.id] = d;
@@ -1349,15 +1350,15 @@ details.inner[open]>summary::after{content:"－"}
       (items.length ? '<div class="table">' + items.map(function (x) {
         var l = x.l, sub = '', btns = '', amt;
         if (l.k === 'item') { sub = l.memo || ''; btns = cashBtns(cf.demo, 'data-ei="' + esc(x.d + '|' + l.id) + '"', 'data-delitem="' + x.d + '" data-id="' + esc(l.id) + '"', 'i' + x.d + '|' + l.id); }
-        else if (l.k === 'rec') { sub = '毎月' + l.day + '日の定期'; btns = cashBtns(cf.demo, 'data-er="' + esc(l.id) + '"', 'data-delrec="' + esc(l.id) + '"', 'r' + l.id); }
+        else if (l.k === 'rec') { sub = l.ov ? 'この月のみ（通常 ' + yen(l.base) + '）' : '毎月' + l.day + '日の定期'; btns = cashBtns(cf.demo, 'data-er="' + esc(l.id) + '"', 'data-delrec="' + esc(l.id) + '"', 'r' + l.id); }
         else if (l.k === 'xrep') { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest); btns = cashBtns(cf.demo, 'data-ex="' + esc(l.id) + '"', 'data-delx="' + esc(l.id) + '"', 'x' + l.id); }
         else { sub = '毎月の返済・元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest); btns = cashBtns(cf.demo, 'data-el="' + esc(l.id) + '"', 'data-delloan="' + esc(l.id) + '"', 'l' + l.id); }
-        amt = '<div class="n ' + (l.out ? 'neg' : 'pos') + '">' + (l.out ? '−' : '+') + yen(l.amt) + '</div>';
+        amt = '<div class="n ' + (l.out ? 'neg' : 'pos') + '">' + recAmt(l, cf.demo, (l.out ? '−' : '+') + yen(l.amt)) + '</div>';
         if (l.via) { sub = ''; amt = '<div class="n muted">（' + yen(l.amt) + '）</div>'; }
         if ((l.k === 'item' || l.k === 'rec') && (l.cat === 'rak' || l.cat === 'amz')) { var vi = viaIn(cf.days[x.d], l.cat); if (vi) sub = (sub ? sub + ' ' : '') + vi; }
         return '<div class="row r5"><div class="d">' + md(x.d) + '<small>' + WD[dow(x.d)] + '曜</small></div>' +
-          '<div class="d">' + esc(l.label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + amt + btns + '</div>';
-      }).join('') + '</div>' : '<p class="empty">この月の記録はありません。</p>');
+          '<div class="d">' + esc(l.label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + amt + btns + '</div>' + recEd(l);
+      }).join('') + '</div>' + (items.some(function (x) { return x.l.k === 'rec'; }) && !cf.demo ? '<p class="hint" style="margin-top:8px">定期の金額をタップすると、その月だけ金額を変えられます。</p>' : '') : '<p class="empty">この月の記録はありません。</p>');
 
     var rr = cf.src.recurring;
     $('c-rec-list').innerHTML = rr.length ? '<div class="table">' + rr.map(function (r) {
@@ -1375,6 +1376,29 @@ details.inner[open]>summary::after{content:"－"}
     renderDay(cf);
   }
 
+  function recAmt(l, demo, txt) {
+    if (l.k !== 'rec' || demo || l.via) return txt;
+    return '<button type="button" class="lint' + (l.ov ? ' ov' : '') + '" data-rmon="' + esc(l.id + '|' + l.m) + '" aria-label="' + esc(l.label) + 'の' + ym(l.m) + 'の金額を変更">' + txt + '</button>';
+  }
+  function recEd(l) {
+    if (l.k !== 'rec' || state.rEdit !== l.id + '|' + l.m) return '';
+    return '<div class="lint-ed recbox"><label for="rmon-in">' + (+l.m.slice(5)) + '月だけの金額（円）</label><input id="rmon-in" type="text" inputmode="numeric" autocomplete="off" value="' + l.amt + '">' +
+      '<button type="button" class="lnk" data-rmonsave="' + esc(l.id + '|' + l.m) + '">保存</button>' + (l.ov ? '<button type="button" class="lnk" data-rmonreset="' + esc(l.id + '|' + l.m) + '">通常の金額に戻す</button>' : '') + '<button type="button" class="lnk" data-rmoncancel>やめる</button>' +
+      (state.rMsg ? '<p class="msg err" style="flex-basis:100%">' + esc(state.rMsg) + '</p>' : '') + '<p class="hint" style="flex-basis:100%">0円にすると、その月はなしになります。</p></div>';
+  }
+  function saveRecMonth(key, reset) {
+    var parts = key.split('|'), pl = cashPayload({}), r = pl.recurring.filter(function (x) { return x.id === parts[0]; })[0];
+    if (!r || !backend) { state.rEdit = ''; render(); return; }
+    r.ovr = Object.assign({}, r.ovr || {});
+    if (reset) delete r.ovr[parts[1]];
+    else {
+      var p = parseAmount($('rmon-in').value);
+      if (isNaN(p.value) || p.neg) { state.rMsg = '金額は0以上の数字で入力してください。'; render(); var a = $('rmon-in'); if (a) a.focus(); return; }
+      if (p.value === r.amount) delete r.ovr[parts[1]]; else r.ovr[parts[1]] = p.value;
+    }
+    state.rEdit = ''; state.rMsg = '';
+    Promise.resolve(backend.saveCash(pl)).then(render, function () { state.rMsg = '保存できませんでした。'; render(); });
+  }
   function cashBtns(demo, editAttr, delAttr, key) {
     if (demo) return '<span></span>';
     var armed = state.armKey === key;
@@ -1397,13 +1421,13 @@ details.inner[open]>summary::after{content:"－"}
       else {
         amt = '<span class="' + (l.out ? 'neg' : 'pos') + '">' + (l.out ? '−' : '+') + yen(l.amt) + '</span>';
         if (l.k === 'item') { sub = l.memo || ''; btns = cashBtns(demo, 'data-ei="' + esc(d + '|' + l.id) + '"', 'data-delitem="' + d + '" data-id="' + esc(l.id) + '"', 'i' + d + '|' + l.id); }
-        else if (l.k === 'rec') { sub = '毎月' + l.day + '日の定期'; btns = cashBtns(demo, 'data-er="' + esc(l.id) + '"', 'data-delrec="' + esc(l.id) + '"', 'r' + l.id); }
+        else if (l.k === 'rec') { sub = l.ov ? 'この月のみ（通常 ' + yen(l.base) + '）' : '毎月' + l.day + '日の定期'; btns = cashBtns(demo, 'data-er="' + esc(l.id) + '"', 'data-delrec="' + esc(l.id) + '"', 'r' + l.id); amt = '<span class="' + (l.out ? 'neg' : 'pos') + '">' + recAmt(l, demo, (l.out ? '−' : '+') + yen(l.amt)) + '</span>'; }
         else if (l.k === 'xrep') { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest) + '・借入残高 ' + yen(l.remain); btns = cashBtns(demo, 'data-ex="' + esc(l.id) + '"', 'data-delx="' + esc(l.id) + '"', 'x' + l.id); }
         else { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest) + '・借入残高 ' + yen(l.remain); btns = cashBtns(demo, 'data-el="' + esc(l.id) + '"', 'data-delloan="' + esc(l.id) + '"', 'l' + l.id); }
       }
       if (l.via) { sub = ''; amt = '<span class="muted">（' + yen(l.amt) + '）</span>'; }
       if ((l.k === 'item' || l.k === 'rec') && (l.cat === 'rak' || l.cat === 'amz')) { var vi = viaIn(x, l.cat); if (vi) sub = (sub ? sub + ' ' : '') + vi; }
-      lns += '<div class="dline"><div>' + esc(l.label) + '<small>' + esc(sub) + '</small></div><div class="dl-n">' + amt + '</div>' + (btns || '<span></span>') + '</div>';
+      lns += '<div class="dline"><div>' + esc(l.label) + '<small>' + esc(sub) + '</small></div><div class="dl-n">' + amt + '</div>' + (btns || '<span></span>') + '</div>' + recEd(l);
     });
     var wasHidden = el.hidden;
     el.innerHTML = '<div class="sheet-bg" data-closeday></div><div class="sheet" role="dialog" aria-modal="true" aria-label="' + title + 'の詳細">' +
@@ -1768,7 +1792,7 @@ details.inner[open]>summary::after{content:"－"}
     var pl = cashPayload({});
     var robj = { id: ed ? ed.id : uid(), name: ($('cr-name').value.trim() || CAT_LABEL[cat]).slice(0, 30), cat: (ed && ed.cat && CAT_OUT[ed.cat] === CAT_OUT[cat]) ? ed.cat : cat, amount: amt, day: dp.value, from: from || '' };
     var rix = ed ? pl.recurring.findIndex(function (r) { return r.id === ed.id; }) : -1;
-    if (rix >= 0) pl.recurring[rix] = robj; else pl.recurring.push(robj);
+    if (rix >= 0) { if (pl.recurring[rix].ovr) robj.ovr = pl.recurring[rix].ovr; pl.recurring[rix] = robj; } else pl.recurring.push(robj);
     try {
       await backend.saveCash(pl);
       $('cr-name').value = ''; $('cr-amount').value = ''; $('cr-day').value = '';
@@ -1827,12 +1851,13 @@ details.inner[open]>summary::after{content:"－"}
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && e.target && e.target.id === 'o-in') { e.preventDefault(); saveOpening(); return; }
     if (e.key === 'Escape' && state.oEdit) { state.oEdit = false; state.oMsg = ''; render(); return; }
+    if (e.key === 'Enter' && e.target && e.target.id === 'rmon-in') { e.preventDefault(); var rb = document.querySelector('[data-rmonsave]'); if (rb) saveRecMonth(rb.dataset.rmonsave, false); return; }
     if (e.key === 'Enter' && e.target && e.target.id === 'lint-in') { e.preventDefault(); var b = document.querySelector('[data-lintsave]'); if (b) saveInterest(b.dataset.lintsave, 'save'); return; }
     if (e.key === 'Escape' && state.lEdit) { state.lEdit = ''; state.lMsg = ''; render(); return; }
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.cDay) { state.cDay = ''; render(); } });
   document.addEventListener('click', function (e) {
-    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-delgoal],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
+    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-delgoal],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-rmon],[data-rmonsave],[data-rmonreset],[data-rmoncancel],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
     if (!t) return;
     if (t.dataset.view) setView(t.dataset.view);
     else if (t.dataset.cm !== undefined) {
@@ -1878,6 +1903,9 @@ details.inner[open]>summary::after{content:"－"}
     else if (t.dataset.lintcancel !== undefined) { state.lEdit = ''; state.lMsg = ''; render(); }
     else if (t.dataset.lintsave || t.dataset.lintreset) { saveInterest(t.dataset.lintsave || t.dataset.lintreset, t.dataset.lintreset ? 'reset' : 'save'); }
     else if (t.dataset.ei) { var pi = t.dataset.ei.split('|'); startEdit('i', pi[1], pi[0]); }
+    else if (t.dataset.rmon) { state.rEdit = t.dataset.rmon; state.rMsg = ''; render(); var ri = $('rmon-in'); if (ri) { ri.focus(); ri.select(); } }
+    else if (t.dataset.rmoncancel !== undefined) { state.rEdit = ''; state.rMsg = ''; render(); }
+    else if (t.dataset.rmonsave || t.dataset.rmonreset) saveRecMonth(t.dataset.rmonsave || t.dataset.rmonreset, !!t.dataset.rmonreset);
     else if (t.dataset.er) startEdit('r', t.dataset.er);
     else if (t.dataset.ex) startEdit('x', t.dataset.ex);
     else if (t.dataset.delx) {
