@@ -386,12 +386,12 @@ details.inner[open]>summary::after{content:"－"}
     </div>
   </header>
   <div class="stickytabs" id="stickytabs"><div class="seg tabs" role="tablist" aria-label="表示の切り替え">
-    <button type="button" role="tab" id="tab-pnl" data-view="pnl" aria-selected="true">損益</button>
-    <button type="button" role="tab" id="tab-cash" data-view="cash" aria-selected="false">資金繰り</button>
+    <button type="button" role="tab" id="tab-pnl" data-view="pnl" aria-selected="false">損益</button>
+    <button type="button" role="tab" id="tab-cash" data-view="cash" aria-selected="true">資金繰り</button>
   </div></div>
   <div id="banner" class="note" hidden></div>
 
-  <div class="layout" id="view-pnl">
+  <div class="layout" id="view-pnl" hidden>
 
 
     <section class="card hero" id="hero" aria-live="polite"></section>
@@ -457,7 +457,7 @@ details.inner[open]>summary::after{content:"－"}
       </details>
   </div>
 
-  <div id="view-cash" hidden>
+  <div id="view-cash">
     <div class="cfnav" id="c-nav"></div>
     <div class="actrow" id="c-acts"></div>
     <div id="cash-grid">
@@ -670,7 +670,7 @@ details.inner[open]>summary::after{content:"－"}
   /* ---------- state ---------- */
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', history: [], excludeHolidays: true, saved: false },
-    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'pnl', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
+    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'cash', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
   };
   var backend = null;
