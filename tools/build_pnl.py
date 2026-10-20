@@ -25,7 +25,7 @@ skel = '''<!doctype html>
 <link rel="apple-touch-icon" href="icon2-180.png">
 <link rel="icon" href="icon2-192.png">
 '''
-tail = '\n' + pathlib.Path(__file__).with_name('pnl_import_snippet.html').read_text(encoding='utf-8') + '''
+tail = '''
 <script>if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script>
 </body>
 </html>
