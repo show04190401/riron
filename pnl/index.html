@@ -213,6 +213,9 @@ svg{display:block;max-width:100%}
 .row .d small{display:block;font-size:12px;color:var(--muted);font-weight:400}
 .subs{grid-column:1/-1;margin-top:2px}
 .subl{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;font-size:13px;color:var(--muted);padding:2px 0}
+.subl .cnt{margin-left:8px;font-size:11.5px;color:var(--muted)}
+.subl.sub2{padding-left:14px;font-size:12.5px}
+.subl .lnk{min-width:3.4em}
 .subl .n{font:500 13.5px var(--font-num);color:inherit}
 .subl .n.pos{color:var(--pos)}.subl .n.neg{color:var(--neg)}
 .memo{grid-column:1/-1;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
@@ -670,7 +673,7 @@ details.inner[open]>summary::after{content:"－"}
   /* ---------- state ---------- */
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', history: [], excludeHolidays: true, saved: false },
-    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'cash', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
+    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'cash', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
   };
   var backend = null;
@@ -694,6 +697,17 @@ details.inner[open]>summary::after{content:"－"}
   }
   var PCAT = { stock: '株式', p: 'P', other: 'その他' };
   var pLabel = function (it) { var c = PCAT[it.cat] || '', m = it.memo || ''; return c && m ? c + '・' + m : c || m; };
+  function catSubs(d, e, demo) {
+    var order = ['stock', 'p', 'other', ''], g = {};
+    itemsOf(e).forEach(function (it) { var c = PCAT[it.cat] ? it.cat : ''; (g[c] = g[c] || []).push(it); });
+    return '<div class="subs">' + order.filter(function (c) { return g[c]; }).map(function (c) {
+      var its = g[c], net = its.reduce(function (a, it) { return a + it.pnl; }, 0), key = d + '|' + c, open = !!state.pOpen[key];
+      var head = '<div class="subl"><span>' + (PCAT[c] || '区分なし') + (its.length > 1 ? '<small class="cnt">' + its.length + '件</small>' : (its[0].memo ? '<small class="cnt">' + esc(its[0].memo) + '</small>' : '')) + '</span><span class="n ' + cls(net) + '">' + sgn(net) + '</span>' +
+        (demo ? '<span></span>' : its.length > 1 ? '<button type="button" class="lnk" data-popen="' + esc(key) + '" aria-expanded="' + open + '">' + (open ? '閉じる' : '内訳') + '</button>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(its[0].id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') + '</div>';
+      var body = its.length > 1 && open ? its.map(function (it) { return '<div class="subl sub2"><span>' + esc(it.memo || '記録') + '</span><span class="n ' + cls(it.pnl) + '">' + sgn(it.pnl) + '</span>' + (demo ? '<span></span>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(it.id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') + '</div>'; }).join('') : '';
+      return head + body;
+    }).join('') + '</div>';
+  }
   function mkDay(items) {
     var sum = 0, memos = [];
     items.forEach(function (it) { sum += it.pnl; if (pLabel(it)) memos.push(pLabel(it)); });
@@ -1066,7 +1080,7 @@ details.inner[open]>summary::after{content:"－"}
           '<div class="n pcell ' + cls(e.pnl) + '">' + sgn(e.pnl) + bar(e.pnl, mx) + '</div>' +
           '<div class="n cumc">' + sgn(c.cum[d]) + '</div>' +
           (v.demo || itemsOf(e).length > 1 ? '<span></span>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(itemsOf(e)[0].id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') +
-          (itemsOf(e).length > 1 ? '<div class="subs">' + itemsOf(e).map(function (it) { return '<div class="subl"><span>' + esc(pLabel(it) || '記録') + '</span><span class="n ' + cls(it.pnl) + '">' + sgn(it.pnl) + '</span>' + (v.demo ? '<span></span>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(it.id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') + '</div>'; }).join('') + '</div>' : (e.memo ? '<div class="memo">' + esc(e.memo) + '</div>' : '')) + '</div>';
+          (itemsOf(e).length > 1 ? catSubs(d, e, v.demo) : (e.memo ? '<div class="memo">' + esc(e.memo) + '</div>' : '')) + '</div>';
       });
       if (desc.length > shown.length) body += '<button type="button" class="more" data-more>さらに表示（残り' + (desc.length - shown.length) + '日）</button>';
     } else {
@@ -1877,7 +1891,7 @@ details.inner[open]>summary::after{content:"－"}
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.cDay) { state.cDay = ''; render(); } });
   document.addEventListener('click', function (e) {
-    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-delgoal],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-rmon],[data-rmonsave],[data-rmonreset],[data-rmoncancel],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
+    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-delgoal],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-popen],[data-rmon],[data-rmonsave],[data-rmonreset],[data-rmoncancel],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
     if (!t) return;
     if (t.dataset.view) setView(t.dataset.view);
     else if (t.dataset.cm !== undefined) {
@@ -1963,6 +1977,7 @@ details.inner[open]>summary::after{content:"－"}
       });
     }
     else if (t.dataset.tab) { state.tab = t.dataset.tab; state.limit = 31; var v = view(); renderHistory(compute(v.entries), v); }
+    else if (t.dataset.popen) { state.pOpen[t.dataset.popen] = !state.pOpen[t.dataset.popen]; render(); }
     else if (t.dataset.edit) {
       var ep = t.dataset.edit.split('|'), ee = state.entries[ep[0]], eit = itemsOf(ee).filter(function (it) { return it.id === ep[1]; })[0];
       if (eit) { $('f-date').value = ep[0]; state.pEdit = { date: ep[0], id: eit.id }; $('f-amount').value = nf.format(Math.abs(eit.pnl)); setSign(eit.pnl < 0); $('f-memo').value = eit.memo || ''; $('f-cat').value = eit.cat || 'stock'; updateFormButtons(); msg('f-msg', ''); toForm(); $('f-amount').focus({ preventScroll: true }); }
