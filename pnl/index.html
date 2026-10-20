@@ -715,7 +715,7 @@ details.inner[open]>summary::after{content:"－"}
       var its = g[c], net = its.reduce(function (a, it) { return a + it.pnl; }, 0), key = d + '|' + c, open = !!state.pOpen[key];
       var head = '<div class="subl"><span>' + (PCAT[c] || '区分なし') + (its.length > 1 ? '<small class="cnt">' + its.length + '件</small>' : (its[0].memo ? '<small class="cnt">' + esc(its[0].memo) + '</small>' : '')) + '</span><span class="n ' + cls(net) + '">' + sgn(net) + '</span>' +
         (demo ? '<span></span>' : its.length > 1 ? '<button type="button" class="lnk" data-popen="' + esc(key) + '" aria-expanded="' + open + '">' + (open ? '閉じる' : '内訳') + '</button>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(its[0].id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') + '</div>';
-      var body = its.length > 1 && open ? its.map(function (it) { return '<div class="subl sub2"><span>' + esc(it.memo || '記録') + '</span><span class="n ' + cls(it.pnl) + '">' + sgn(it.pnl) + '</span>' + (demo ? '<span></span>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(it.id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') + '</div>'; }).join('') : '';
+      var body = its.length > 1 && open ? its.map(function (it) { return '<div class="subl sub2"><span>' + esc(it.memo || PCAT[c] || '区分なし') + '</span><span class="n ' + cls(it.pnl) + '">' + sgn(it.pnl) + '</span>' + (demo ? '<span></span>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(it.id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') + '</div>'; }).join('') : '';
       return head + body;
     }).join('') + '</div>';
   }
