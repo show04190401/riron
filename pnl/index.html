@@ -1005,7 +1005,7 @@ details.inner[open]>summary::after{content:"－"}
       '<div class="big">' + big + '</div>' +
       '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + g.pct.toFixed(1) + '" aria-label="目標達成率"><i style="width:' + g.pct.toFixed(1) + '%"></i></div>' +
       '<div class="barlab"><span>達成率 ' + g.pct.toFixed(1) + '%</span><span>' + yen(g.target) + '</span></div>' +
-      '<div class="mrow"><span>今月の収支</span><b class="' + cls(mSum) + '">' + sgn(mSum) + '</b></div>';
+      '<div class="mrow"><span>今回の収支' + (state.settings.targetFrom ? '<small style="margin-left:6px;font-size:12px">' + md(state.settings.targetFrom) + '〜</small>' : '') + '</span><b class="' + cls(g.total) + '">' + sgn(g.total) + '</b></div>';
   }
 
   function renderStats(c, v) {
