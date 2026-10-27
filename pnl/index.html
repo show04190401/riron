@@ -1338,6 +1338,9 @@ details.inner[open]>summary::after{content:"－"}
           var sch = loanSchedule(L, cf.start), po = sch.length && sch[sch.length - 1].bal <= 0 ? sch[sch.length - 1].d : null;
           var sub = L.payment > 0 ? '毎月' + L.day + '日・' + yen(L.payment) + (L.excl ? '＋利息' : '') + (loanVia(L) ? '・' + CAT_LABEL[loanVia(L)] + '払い' : '') + (L.rate ? '・年利' + L.rate + '%' : '') + (now <= 0 ? '・完済' : po ? '・完済予定 ' + ym(po.slice(0, 7)) : '・返済額が足りず完済しません') : '定期返済なし' + (now <= 0 ? '・完済' : '・返済した分だけ残高が減ります');
           var firstNext = -1;
+          var nos = {}, nreg = 0, rem = 0;
+          sch.forEach(function (r, i) { if (!r.x) { nos[i] = ++nreg; if (r.d >= today) rem++; } });
+          if (L.payment > 0 && now > 0 && rem) sub += '・残り' + rem + '回';
           sch.forEach(function (r, i) { if (firstNext < 0 && r.d >= today) firstNext = i; });
           var fromM = addMonths(cf.selM, -1), firstShown = -1;
           sch.forEach(function (r, i) { if (firstShown < 0 && r.m >= fromM) firstShown = i; });
@@ -1349,7 +1352,7 @@ details.inner[open]>summary::after{content:"－"}
             var key = L.id + '|' + r.m, editing = !r.x && state.lEdit === key, editingP = !r.x && state.lEdit === key + '|p' && state.lWhere !== 'list';
             var pcell = cf.demo ? cell(r.pay) : r.x ? '<button type="button" class="lint lpay" data-ex="' + esc(r.id) + '" aria-label="' + md(r.d) + 'の追加返済を編集">' + cell(r.pay) + '</button>' : '<button type="button" class="lint lpay' + (r.pov ? ' ov' : '') + '" data-lint="' + esc(key + '|p') + '" aria-label="' + ym(r.m) + 'の返済額を編集">' + cell(r.pay) + '</button>';
             var icell = (cf.demo || r.x) ? cell(r.interest) : '<button type="button" class="lint' + (r.ov ? ' ov' : '') + '" data-lint="' + esc(key) + '" aria-label="' + ym(r.m) + 'の利息を編集">' + cell(r.interest) + '</button>';
-            tr += '<tr class="' + (r.dov ? 'dmov ' : '') + (r.d < today ? 'paid ' : '') + (r.m < cf.selM ? 'prevm ' : '') + (r.m === cf.selM ? 'sel ' : '') + (i === firstNext ? 'today' : '') + '"><td class="rl">' + md(r.d) + '<small>' + (r.x ? '追加' : r.d.slice(0, 4) + '年') + '</small></td><td class="pc">' + pcell + '<small><span>元本 ' + cell(r.principal) + '</span><span>利息 ' + icell + '</span></small></td><td class="bc">' + cell(r.bal) + '</td></tr>';
+            tr += '<tr class="' + (r.dov ? 'dmov ' : '') + (r.d < today ? 'paid ' : '') + (r.m < cf.selM ? 'prevm ' : '') + (r.m === cf.selM ? 'sel ' : '') + (i === firstNext ? 'today' : '') + '"><td class="rl">' + md(r.d) + '<small>' + (r.x ? '追加' : nos[i] + '回目') + '</small><small>' + r.d.slice(0, 4) + '年</small></td><td class="pc">' + pcell + '<small><span>元本 ' + cell(r.principal) + '</span><span>利息 ' + icell + '</span></small></td><td class="bc">' + cell(r.bal) + '</td></tr>';
             if (editingP) tr += '<tr class="lined"><td colspan="3"><div class="lint-ed"><label for="lint-date">' + ym(r.m) + 'の返済日</label><input id="lint-date" type="date" value="' + r.d + '"><label for="lint-in">返済額（円）</label><input id="lint-in" type="text" inputmode="numeric" autocomplete="off" value="' + r.pay + '">' +
               '<button type="button" class="lnk" data-lintsave="' + esc(key + '|p') + '">保存</button>' + (r.pov || r.dov ? '<button type="button" class="lnk" data-lintreset="' + esc(key + '|p') + '">通常に戻す</button>' : '') + '<button type="button" class="lnk" data-lintcancel>やめる</button></div>' +
               (state.lMsg ? '<p class="msg err">' + esc(state.lMsg) + '</p>' : '') + '</td></tr>';
