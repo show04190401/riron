@@ -491,9 +491,11 @@ details.inner[open]>summary::after{content:"－"}
         </div>
         <div class="field" id="ci-int-wrap" hidden>
           <label for="ci-incl">金額と利息</label>
-          <select id="ci-incl"><option value="in">利息を含む</option><option value="ex">利息を含まない（利息は別）</option></select>
+          <select id="ci-incl"><option value="in">利息を含む</option><option value="ex">利息を含まない（利息は別）</option><option value="none">利息なし</option></select>
+          <div id="ci-int-box">
           <label for="ci-interest" style="margin-top:10px">利息（円・任意。「含まない」で空欄・0円なら、前回返済日からの日割り計算）</label>
           <div class="amt"><span>¥</span><input id="ci-interest" type="text" inputmode="numeric" autocomplete="off"></div>
+          </div>
           <p class="hint" id="ci-int-hint"></p>
         </div>
         <div class="field">
@@ -558,14 +560,14 @@ details.inner[open]>summary::after{content:"－"}
           </div>
           <div class="field">
             <label for="cl-incl">返済額と利息</label>
-            <select id="cl-incl"><option value="in">利息を含む</option><option value="ex">利息を含まない（利息は別）</option></select>
+            <select id="cl-incl"><option value="in">利息を含む</option><option value="ex">利息を含まない（利息は別）</option><option value="none">利息なし</option></select>
           </div>
           <div class="field">
             <label for="cl-via">支払方法</label>
             <select id="cl-via"><option value="">現金から直接</option><option value="rak">楽天カードで支払う</option></select>
             <p class="hint">カード払いを選ぶと、返済分（元本・利息）は「記録」で登録したカードの支払額にすでに含まれているものとして、二重に引かず、借入残高だけを減らします。</p>
           </div>
-          <div class="field">
+          <div class="field" id="cl-rate-wrap">
             <label for="cl-rate">年利（％・任意）</label>
             <input id="cl-rate" type="text" inputmode="decimal" autocomplete="off">
             <p class="hint">毎月の利息は、「返済前の残高 × 年利 ÷ 365 × 前回の返済日からの日数」（1円未満は切り捨て）で日割り計算します。入力すると、利息を除いた元本の分だけ借入残高が減ります。空欄なら、返済額の全額が残高を減らします。</p>
@@ -1555,13 +1557,15 @@ details.inner[open]>summary::after{content:"－"}
       var d = $('ci-date').value, cf = computeCash(view()), pd = /^\d{4}-\d{2}-\d{2}$/.test(d) ? addDays(d, -1) : '', bb = pd && cf.days[pd] && cf.days[pd].lb[L.id] != null ? cf.days[pd].lb[L.id] : L.balance;
       hint = L.rate > 0 ? '年利' + L.rate + '%の1か月分の利息の目安：' + yen(Math.round(bb * L.rate / 100 / 12)) + '（返済前の借入残高 ' + yen(bb) + '）' : '返済前の借入残高：' + yen(bb) + '（年利が未設定です）';
       var av = parseAmount($('ci-amount').value), iv = $('ci-interest').value.trim() === '' ? { value: 0, neg: false } : parseAmount($('ci-interest').value);
-      var ex = $('ci-incl').value === 'ex';
+      var ex = $('ci-incl').value === 'ex', none = $('ci-incl').value === 'none';
+      if (none) { iv = { value: 0, neg: false }; hint = '利息なし：金額の全額が元本の返済になります（返済前の借入残高 ' + yen(bb) + '）'; }
       if (ex && !isNaN(iv.value) && iv.value === 0 && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
         var di = dailyInt(L, d, bb, cf); iv = { value: di.interest, neg: false };
         hint += '\n利息が空欄・0円のため、日割りで計算します（' + md(di.last) + '〜' + md(d) + '・' + di.days + '日・端数切り捨て）：' + yen(di.interest);
       }
       if (!isNaN(av.value) && !av.neg && av.value > 0 && !isNaN(iv.value) && !iv.neg && (ex || iv.value <= av.value)) hint += '\n元本 ' + yen(ex ? av.value : av.value - iv.value) + '・利息 ' + yen(iv.value) + '・支払合計 ' + yen(ex ? av.value + iv.value : av.value);
     }
+    $('ci-int-box').hidden = $('ci-incl').value === 'none';
     $('ci-int-hint').innerHTML = esc(hint).replace(/\n/g, '<br>');
   }
   var DEF_BTN = { ci: '追加する', cr: '定期に追加', cl: '借入を追加' };
@@ -1574,7 +1578,7 @@ details.inner[open]>summary::after{content:"－"}
     });
   }
   function clearCashForms() {
-    ['ci-amount', 'ci-memo', 'cr-name', 'cr-amount', 'cr-day', 'cr-from', 'cl-name', 'cl-balance', 'cl-pay', 'cl-rate', 'cl-day', 'cl-from', 'ci-interest'].forEach(function (id) { $(id).value = ''; }); $('cl-incl').value = 'in'; $('cl-via').value = ''; $('ci-incl').value = 'in';
+    ['ci-amount', 'ci-memo', 'cr-name', 'cr-amount', 'cr-day', 'cr-from', 'cl-name', 'cl-balance', 'cl-pay', 'cl-rate', 'cl-day', 'cl-from', 'ci-interest'].forEach(function (id) { $(id).value = ''; }); $('cl-incl').value = 'in'; syncClRate(); $('cl-via').value = ''; $('ci-incl').value = 'in';
     ['ci-msg', 'cr-msg', 'cl-msg'].forEach(function (id) { msg(id, ''); }); syncTabSels();
   }
   function endEdit() { state.cEdit = null; clearCashForms(); syncEditUI(); }
@@ -1623,7 +1627,7 @@ details.inner[open]>summary::after{content:"－"}
     } else {
       var L = c.loans.filter(function (x) { return x.id === id; })[0]; if (!L) return;
       recShow(true); $('cr-cat').value = 'rep'; state.crLoan = id;
-      $('cl-name').value = L.name; $('cl-balance').value = nf.format(L.balance); $('cl-pay').value = L.payment ? nf.format(L.payment) : ''; $('cl-rate').value = L.rate ? String(L.rate) : ''; $('cl-day').value = L.payment ? L.day : ''; $('cl-from').value = L.from || ''; $('cl-incl').value = L.excl ? 'ex' : 'in'; $('cl-via').value = loanVia(L) || '';
+      $('cl-name').value = L.name; $('cl-balance').value = nf.format(L.balance); $('cl-pay').value = L.payment ? nf.format(L.payment) : ''; $('cl-rate').value = L.rate ? String(L.rate) : ''; $('cl-day').value = L.payment ? L.day : ''; $('cl-from').value = L.from || ''; $('cl-incl').value = L.excl ? 'ex' : (L.rate ? 'in' : 'none'); syncClRate(); $('cl-via').value = loanVia(L) || '';
       target = $('cl-wrap'); focusId = 'cl-balance';
     }
     state.cEdit = { kind: kind, id: id, date: date, cat: editCat }; state.cDay = '';
@@ -1848,7 +1852,7 @@ details.inner[open]>summary::after{content:"－"}
     var ed = state.cEdit && (state.cEdit.kind === 'i' || state.cEdit.kind === 'x') ? state.cEdit : null;
     var pl = cashPayload({}), rint = 0, TL = null;
     if (isRep) {
-      var ipv = $('ci-interest').value.trim() === '' ? { value: 0, neg: false } : parseAmount($('ci-interest').value);
+      var ipv = $('ci-incl').value === 'none' || $('ci-interest').value.trim() === '' ? { value: 0, neg: false } : parseAmount($('ci-interest').value);
       if (isNaN(ipv.value) || ipv.neg) return msg('ci-msg', '利息は0以上の数字で入力してください。', true);
       if (!exInt && ipv.value > amt) return msg('ci-msg', '利息は、金額以下にしてください。', true);
       rint = ipv.value;
@@ -1904,7 +1908,7 @@ details.inner[open]>summary::after{content:"－"}
     if (!backend) return msg('cl-msg', '読み込み中です。少し待ってからもう一度お試しください。', true);
     var bal = parseAmt('cl-balance'), hasPay = $('cl-pay').value.trim() !== '', pay = hasPay ? parseAmt('cl-pay') : 0, dp = $('cl-day').value.trim() === '' ? { value: 1, neg: false } : parseAmount($('cl-day').value), from = $('cl-from').value;
     var rawRate = $('cl-rate').value.replace(/[０-９．]/g, function (c) { return c === '．' ? '.' : String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/[%％\s]/g, '');
-    var rate = rawRate === '' ? 0 : parseFloat(rawRate);
+    var rate = rawRate === '' || $('cl-incl').value === 'none' ? 0 : parseFloat(rawRate);
     if (bal === null) return msg('cl-msg', '借入残高は1円以上の数字で入力してください。', true);
     if (pay === null) return msg('cl-msg', '毎月の返済額は1円以上の数字で入力してください。定期返済がなければ空欄にしてください。', true);
     if (isNaN(rate) || rate < 0 || rate > 100) return msg('cl-msg', '年利は0〜100の数字で入力してください。', true);
@@ -1920,7 +1924,7 @@ details.inner[open]>summary::after{content:"－"}
     if (lix >= 0) pl.loans[lix] = lobj; else pl.loans.push(lobj);
     try {
       await backend.saveCash(pl);
-      ['cl-name', 'cl-balance', 'cl-pay', 'cl-rate', 'cl-day'].forEach(function (id) { $(id).value = ''; }); $('cl-incl').value = 'in'; $('cl-via').value = '';
+      ['cl-name', 'cl-balance', 'cl-pay', 'cl-rate', 'cl-day'].forEach(function (id) { $(id).value = ''; }); $('cl-incl').value = 'in'; syncClRate(); $('cl-via').value = '';
       endEdit(); msg('cl-msg', ed ? '更新しました。' : '借入を登録しました。'); state.crLoan = '__new'; render();
     } catch (err) { msg('cl-msg', '登録できませんでした。', true); }
   });
@@ -1944,6 +1948,8 @@ details.inner[open]>summary::after{content:"－"}
     if (t.id === 'ci-loan-sel') { state.ciLoan = t.value; syncRepUI(); }
     else if (t.id === 'cr-loan-sel') { if (t.value === '__new') { if (state.cEdit) endEdit(); $('cr-cat').value = 'rep'; state.crLoan = '__new'; syncCrUI(); } else startEdit('l', t.value); }
   });
+  function syncClRate() { $('cl-rate-wrap').hidden = $('cl-incl').value === 'none'; }
+  $('cl-incl').addEventListener('change', syncClRate);
   $('ci-cat').addEventListener('change', syncRepUI); $('ci-incl').addEventListener('change', syncRepUI);
   $('ci-date').addEventListener('click', function () { try { if (this.showPicker) this.showPicker(); } catch (e) {} });
   ['ci-date', 'ci-amount', 'ci-interest'].forEach(function (id) { $(id).addEventListener('input', function () { if ($('ci-cat').value === 'rep') syncRepUI(); }); });
