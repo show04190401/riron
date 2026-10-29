@@ -1815,6 +1815,62 @@ details.inner[open]>summary::after{content:"－"}
     }
     return 'PNL0:' + b64u(raw);
   }
+  /* 端末の機能に頼らない raw DEFLATE 展開（取り込みコード用） */
+  function inflateRaw(src) {
+    var out = [], pos = 0, bit = 0, bitcnt = 0;
+    function bits(n) { while (bitcnt < n) { if (pos >= src.length) throw new Error('eof'); bit |= src[pos++] << bitcnt; bitcnt += 8; } var v = bit & ((1 << n) - 1); bit >>>= n; bitcnt -= n; return v; }
+    function build(lens) {
+      var count = new Array(16).fill(0), offs = new Array(16).fill(0), sym = [];
+      for (var i = 0; i < lens.length; i++) count[lens[i]]++;
+      count[0] = 0;
+      for (i = 1; i < 16; i++) offs[i] = offs[i - 1] + count[i - 1];
+      for (i = 0; i < lens.length; i++) if (lens[i]) sym[offs[lens[i]]++] = i;
+      return { count: count, sym: sym };
+    }
+    function decode(h) {
+      var code = 0, first = 0, index = 0;
+      for (var len = 1; len < 16; len++) {
+        code |= bits(1); var c = h.count[len];
+        if (code - c < first) return h.sym[index + (code - first)];
+        index += c; first += c; first <<= 1; code <<= 1;
+      }
+      throw new Error('bad code');
+    }
+    var LB = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258], LE = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+    var DB = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577], DE = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+    var fl = [], i; for (i = 0; i < 144; i++) fl[i] = 8; for (; i < 256; i++) fl[i] = 9; for (; i < 280; i++) fl[i] = 7; for (; i < 288; i++) fl[i] = 8;
+    var fd = []; for (i = 0; i < 30; i++) fd[i] = 5;
+    var FL = build(fl), FD = build(fd), last;
+    do {
+      last = bits(1); var type = bits(2);
+      if (type === 0) {
+        bit = 0; bitcnt = 0; var len = src[pos] | (src[pos + 1] << 8); pos += 4;
+        for (i = 0; i < len; i++) out.push(src[pos++]);
+      } else if (type === 1 || type === 2) {
+        var lt = FL, dt = FD;
+        if (type === 2) {
+          var hl = bits(5) + 257, hd = bits(5) + 1, hc = bits(4) + 4, ord = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15], cl = new Array(19).fill(0);
+          for (i = 0; i < hc; i++) cl[ord[i]] = bits(3);
+          var ch = build(cl), ls = [];
+          while (ls.length < hl + hd) {
+            var sy = decode(ch);
+            if (sy < 16) ls.push(sy);
+            else if (sy === 16) { var pv = ls[ls.length - 1], r = 3 + bits(2); while (r--) ls.push(pv); }
+            else if (sy === 17) { r = 3 + bits(3); while (r--) ls.push(0); }
+            else { r = 11 + bits(7); while (r--) ls.push(0); }
+          }
+          lt = build(ls.slice(0, hl)); dt = build(ls.slice(hl));
+        }
+        for (;;) {
+          var s = decode(lt);
+          if (s < 256) out.push(s);
+          else if (s === 256) break;
+          else { s -= 257; var L = LB[s] + bits(LE[s]), ds = decode(dt), D = DB[ds] + bits(DE[ds]); var st = out.length - D; if (st < 0) throw new Error('bad dist'); for (i = 0; i < L; i++) out.push(out[st + i]); }
+        }
+      } else throw new Error('bad block');
+    } while (!last);
+    return new Uint8Array(out);
+  }
   async function decodeCode(code) {
     code = String(code || '').replace(/[\s\u200b-\u200d\ufeff]+/g, '').replace(/：/g, ':').replace(/[‐-―−ー－]/g, '-');
     var at = code.search(/PNL[01]:/); if (at > 0) code = code.slice(at);
@@ -1822,7 +1878,12 @@ details.inner[open]>summary::after{content:"－"}
     var u, kind = code.slice(0, 5);
     if (kind !== 'PNL1:' && kind !== 'PNL0:') throw new Error('code');
     u = unb64u(code.slice(5));
-    var txt = kind === 'PNL0:' ? new TextDecoder().decode(u) : await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+    var txt;
+    if (kind === 'PNL0:') txt = new TextDecoder().decode(u);
+    else {
+      try { if (typeof DecompressionStream !== 'function') throw 0; txt = await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text(); }
+      catch (e) { txt = new TextDecoder().decode(inflateRaw(u)); }
+    }
     var o = JSON.parse(txt);
     if (!o || typeof o !== 'object' || typeof o.entries !== 'object' || typeof o.cash !== 'object') throw new Error('shape');
     return o;
@@ -1872,7 +1933,7 @@ details.inner[open]>summary::after{content:"－"}
   $('io-import').addEventListener('click', async function () {
     msg('io-msg', '');
     var o;
-    try { o = await decodeCode($('io-in').value); } catch (e) { return msg('io-msg', '読み込めませんでした。コードを最初から最後まで、すべて貼り付けてください。', true); }
+    try { o = await decodeCode($('io-in').value); } catch (e) { var raw0 = $('io-in').value.replace(/\s+/g, ''); return msg('io-msg', '読み込めませんでした。' + (!/PNL[01]/.test(raw0) ? 'コードが PNL で始まっていません。' : 'コードが途中で切れている可能性があります（貼り付けた長さ：' + raw0.length + '文字）。書き出した側の「コードをコピー」でコピーし直してください。'), true); }
     if (await runImport(o, 'コードのデータ', '読み込みました（損益 {n}日分と資金繰り）。', false, $('io-import'))) $('io-in').value = '';
   });
   $('io-undo').addEventListener('click', async function () {
