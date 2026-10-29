@@ -618,6 +618,7 @@ details.inner[open]>summary::after{content:"－"}
     <textarea id="io-in" rows="4" placeholder="PNL で始まるコードを貼り付け" autocomplete="off" autocapitalize="off" spellcheck="false" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);color:var(--fg);font:16px var(--font-num)"></textarea>
     <button class="btn" id="io-import" type="button">読み込む（この画面のデータを置き換え）</button>
     <button class="btn ghost" id="io-undo" type="button" hidden>読み込む前のデータに戻す</button>
+    <div id="io-confirm" class="note" role="alertdialog" hidden style="margin-top:12px"></div>
     <p id="io-msg" class="msg" role="status"></p>
     <div id="io-auto"></div>
     <h3 class="subh" style="margin-top:20px">保存データの確認</h3>
@@ -1932,9 +1933,18 @@ details.inner[open]>summary::after{content:"－"}
     msg('io-msg', doneText.replace('{n}', dates.length));
     renderAutoList();
   }
+  /* Claudeアプリ内では確認ダイアログ（confirm）が使えないことがあるため、画面内で確認する */
+  function askInline(text) {
+    return new Promise(function (res) {
+      var box = $('io-confirm');
+      box.innerHTML = '<p style="margin:0">' + esc(text) + '</p><div class="btnrow"><button type="button" class="btn" data-cf="1">置き換える</button><button type="button" class="btn ghost" data-cf="0">やめる</button></div>';
+      box.hidden = false; box.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+      box.onclick = function (e) { var b = e.target.closest('[data-cf]'); if (!b) return; box.hidden = true; box.innerHTML = ''; box.onclick = null; res(b.dataset.cf === '1'); };
+    });
+  }
   async function runImport(o, what, doneText, keepUndo, btn) {
     var n = Object.keys(o.entries).filter(function (d) { return /^\d{4}-\d{2}-\d{2}$/.test(d); }).length;
-    if (!confirm(what + '（損益 ' + n + '日分と資金繰り）を読み込みます。いまのデータは置き換わります。\n読み込む前のデータは自動で控えを取り、「読み込む前のデータに戻す」で戻せます。よろしいですか？')) return false;
+    if (!(await askInline(what + '（損益 ' + n + '日分と資金繰り）を読み込みます。いまのデータは置き換わります。読み込む前のデータは自動で控えを取り、「読み込む前のデータに戻す」で戻せます。'))) { msg('io-msg', '読み込みを取りやめました。'); return false; }
     if (btn) btn.disabled = true;
     msg('io-msg', '読み込んでいます…');
     try { await importData(o, doneText, keepUndo); return true; }
