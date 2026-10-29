@@ -5,6 +5,13 @@ out = pathlib.Path(sys.argv[2])
 src = src.replace('<meta name="claude:viewport-fit-sides" content="cover">\n', '')
 assert 'waitForClaude(2000)' in src
 src = src.replace('waitForClaude(2000)', 'waitForClaude(0)')  # no Claude runtime here: use iPhone storage immediately
+# オフライン用：外部フォントを読み込まず、端末の標準フォントを使う
+for ln in ['<link rel="preconnect" href="https://fonts.googleapis.com">\n', '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n']:
+    src = src.replace(ln, '')
+src = re.sub(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com/[^"]*">\n', '', src)
+assert 'fonts.googleapis' not in src and 'fonts.gstatic' not in src
+src = src.replace('--font-ui:"Noto Sans JP","Hiragino Kaku Gothic ProN"', '--font-ui:"Hiragino Sans","Hiragino Kaku Gothic ProN"')
+src = src.replace('--font-num:"IBM Plex Mono",ui-monospace', '--font-num:ui-monospace')
 i = src.index('<div class="wrap">')
 head, body = src[:i], src[i:]
 head = re.sub(r'<title>.*?</title>\n', '', head)
