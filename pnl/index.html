@@ -347,14 +347,16 @@ table.cf{border-collapse:separate;border-spacing:0;width:100%;min-width:max-cont
 .loanbox .schbox{margin:0 0 12px;padding-top:6px}
 .cf-wrap.sch .cf tr.sel td{background:transparent}
 .cf-wrap.sch .cf tr.dmov td.rl{color:var(--gold)}
-.lint-ed input[type=date]{width:11em;text-align:left;min-height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font:500 14px var(--font-num)}
+.lint-ed input[type=date]{width:11em;text-align:left;min-height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font:500 16px var(--font-num)}
 .sheet .recbox{margin:6px 0 10px}
 .recbox .lint-ed,.recbox{max-width:100%}
 .recbox input[type=date]{max-width:100%}
+/* iPhoneは16px未満の入力欄を自動拡大するため、入力欄はすべて16px以上にする */
+input,select,textarea{font-size:16px}
 .recbox{grid-column:1/-1;padding:8px 10px;margin:2px 0 6px;background:var(--gold-soft);border-radius:8px}
 .lint.ov{color:var(--gold);font-weight:700;border-bottom-color:var(--gold)}
 .lint-ed{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;font:400 13px var(--font-ui)}
-.lint-ed input{width:8.5em;min-height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);text-align:right;font:500 14px var(--font-num)}
+.lint-ed input{width:8.5em;min-height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);text-align:right;font:500 16px var(--font-num)}
 .lint-ed .lnk{min-height:38px}
 .acts{display:flex;gap:14px;justify-content:flex-end;align-items:center}
 .cf tbody tr[data-cday]{cursor:pointer}
@@ -604,7 +606,7 @@ details.inner[open]>summary::after{content:"－"}
     <summary>データの書き出し・読み込み</summary>
     <p class="hint" style="margin-top:8px">Claude上の収支ノートと、ホーム画面のアプリのデータは別々です。片方で「書き出す」を押してコードをコピーし、もう片方の「読み込む」に貼り付けると、同じデータになります。</p>
     <button class="btn" id="io-export" type="button">書き出す</button>
-    <textarea id="io-out" rows="4" readonly hidden style="width:100%;margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);color:var(--fg);font:12px var(--font-num)"></textarea>
+    <textarea id="io-out" rows="4" readonly hidden style="width:100%;margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);color:var(--fg);font:16px var(--font-num)"></textarea>
     <button class="btn ghost" id="io-copy" type="button" hidden>コードをコピー</button>
     <h3 class="subh" style="margin-top:20px">ファイルでバックアップ</h3>
     <p class="hint">すべてのデータを1つのファイル（.json）に保存します。iPhoneでは「ファイル」アプリやiCloud Driveに保存しておくと安心です。</p>
@@ -613,7 +615,7 @@ details.inner[open]>summary::after{content:"－"}
     <h3 class="subh" style="margin-top:20px">CSVで出力（Excelで開けます）</h3>
     <div class="btnrow"><button class="btn ghost" id="io-csv-pnl" type="button">損益の記録</button><button class="btn ghost" id="io-csv-cash" type="button">資金繰り表（この月）</button></div>
     <h3 class="subh" style="margin-top:20px">読み込む</h3>
-    <textarea id="io-in" rows="4" placeholder="PNL で始まるコードを貼り付け" autocomplete="off" autocapitalize="off" spellcheck="false" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);color:var(--fg);font:12px var(--font-num)"></textarea>
+    <textarea id="io-in" rows="4" placeholder="PNL で始まるコードを貼り付け" autocomplete="off" autocapitalize="off" spellcheck="false" style="width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);color:var(--fg);font:16px var(--font-num)"></textarea>
     <button class="btn" id="io-import" type="button">読み込む（この画面のデータを置き換え）</button>
     <button class="btn ghost" id="io-undo" type="button" hidden>読み込む前のデータに戻す</button>
     <p id="io-msg" class="msg" role="status"></p>
