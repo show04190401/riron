@@ -348,6 +348,9 @@ table.cf{border-collapse:separate;border-spacing:0;width:100%;min-width:max-cont
 .cf-wrap.sch .cf tr.sel td{background:transparent}
 .cf-wrap.sch .cf tr.dmov td.rl{color:var(--gold)}
 .lint-ed input[type=date]{width:11em;text-align:left;min-height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font:500 14px var(--font-num)}
+.sheet .recbox{margin:6px 0 10px}
+.recbox .lint-ed,.recbox{max-width:100%}
+.recbox input[type=date]{max-width:100%}
 .recbox{grid-column:1/-1;padding:8px 10px;margin:2px 0 6px;background:var(--gold-soft);border-radius:8px}
 .lint.ov{color:var(--gold);font-weight:700;border-bottom-color:var(--gold)}
 .lint-ed{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;font:400 13px var(--font-ui)}
@@ -1413,7 +1416,7 @@ details.inner[open]>summary::after{content:"－"}
           var tr = '<tr class="open"><td class="rl">' + (firstShown > 0 ? '返済前' : '開始時点') + '</td><td></td><td>' + cell(openBal) + '</td></tr>';
           sch.forEach(function (r, i) {
             if (i < firstShown) return;
-            var key = L.id + '|' + r.m, editing = !r.x && state.lEdit === key, editingP = !r.x && state.lEdit === key + '|p' && state.lWhere !== 'list';
+            var key = L.id + '|' + r.m, editing = !r.x && state.lEdit === key, editingP = !r.x && state.lEdit === key + '|p' && state.lWhere === 'sch';
             var pcell = cf.demo ? cell(r.pay) : r.x ? '<button type="button" class="lint lpay" data-ex="' + esc(r.id) + '" aria-label="' + md(r.d) + 'の追加返済を編集">' + cell(r.pay) + '</button>' : '<button type="button" class="lint lpay' + (r.pov ? ' ov' : '') + '" data-lint="' + esc(key + '|p') + '" aria-label="' + ym(r.m) + 'の返済額を編集">' + cell(r.pay) + '</button>';
             var icell = (cf.demo || r.x) ? cell(r.interest) : '<button type="button" class="lint' + (r.ov ? ' ov' : '') + '" data-lint="' + esc(key) + '" aria-label="' + ym(r.m) + 'の利息を編集">' + cell(r.interest) + '</button>';
             tr += '<tr class="' + (r.dov ? 'dmov ' : '') + (r.d < today ? 'paid ' : '') + (r.m < cf.selM ? 'prevm ' : '') + (r.m === cf.selM ? 'sel ' : '') + (i === firstNext ? 'today' : '') + '"><td class="rl">' + md(r.d) + '<small>' + (r.x ? '追加' : nos[i] + '回目') + '</small><small>' + r.d.slice(0, 4) + '年</small></td><td class="pc">' + pcell + '<small><span>元本 ' + cell(r.principal) + '</span><span>利息 ' + icell + '</span></small></td><td class="bc">' + cell(r.bal) + '</td></tr>';
@@ -1454,7 +1457,7 @@ details.inner[open]>summary::after{content:"－"}
         if (l.via) { sub = ''; amt = '<div class="n muted">（' + yen(l.amt) + '）</div>'; }
         if ((l.k === 'item' || l.k === 'rec') && (l.cat === 'rak' || l.cat === 'amz')) { var vi = viaIn(cf.days[x.d], l.cat); if (vi) sub = (sub ? sub + ' ' : '') + vi; }
         return '<div class="row r5"><div class="d">' + md(x.d) + '<small>' + WD[dow(x.d)] + '曜</small></div>' +
-          '<div class="d">' + esc(l.label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + amt + btns + '</div>' + recEd(l, x.d);
+          '<div class="d">' + esc(l.label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + amt + btns + '</div>' + recEd(l, x.d, 'list');
       }).join('') + '</div>' + (items.some(function (x) { return x.l.k === 'rec' || x.l.k === 'loan'; }) && !cf.demo ? '<p class="hint" style="margin-top:8px">定期や返済の金額をタップすると、その月だけ日付と金額を変えられます。</p>' : '') : '<p class="empty">この月の記録はありません。</p>');
 
     var rr = cf.src.recurring;
@@ -1478,13 +1481,13 @@ details.inner[open]>summary::after{content:"－"}
     if (l.k !== 'rec' || demo || l.via) return txt;
     return '<button type="button" class="lint' + (l.ov ? ' ov' : '') + '" data-rmon="' + esc(l.id + '|' + l.m) + '" aria-label="' + esc(l.label) + 'の' + ym(l.m) + 'の金額を変更">' + txt + '</button>';
   }
-  function recEd(l, d) {
-    if (l.k === 'loan' && l.m && state.lWhere === 'list' && state.lEdit === l.id + '|' + l.m + '|p') {
+  function recEd(l, d, where) {
+    if (l.k === 'loan' && l.m && state.lWhere === where && state.lEdit === l.id + '|' + l.m + '|p') {
       return '<div class="lint-ed recbox"><label for="lint-date">' + (+l.m.slice(5)) + '月分の返済日</label><input id="lint-date" type="date" value="' + d + '"><label for="lint-in">返済額（円）</label><input id="lint-in" type="text" inputmode="numeric" autocomplete="off" value="' + l.amt + '">' +
         '<button type="button" class="lnk" data-lintsave="' + esc(l.id + '|' + l.m + '|p') + '">保存</button><button type="button" class="lnk" data-lintreset="' + esc(l.id + '|' + l.m + '|p') + '">通常に戻す</button><button type="button" class="lnk" data-lintcancel>やめる</button>' +
         (state.lMsg ? '<p class="msg err" style="flex-basis:100%">' + esc(state.lMsg) + '</p>' : '') + '</div>';
     }
-    if (l.k !== 'rec' || state.rEdit !== l.id + '|' + l.m) return '';
+    if (l.k !== 'rec' || state.rEdit !== l.id + '|' + l.m || state.rWhere !== where) return '';
     return '<div class="lint-ed recbox"><label for="rmon-date">' + (+l.m.slice(5)) + '月分の日付</label><input id="rmon-date" type="date" value="' + d + '"><label for="rmon-in">金額（円）</label><input id="rmon-in" type="text" inputmode="numeric" autocomplete="off" value="' + l.amt + '">' +
       '<button type="button" class="lnk" data-rmonsave="' + esc(l.id + '|' + l.m) + '">保存</button>' + (l.ov || l.dov ? '<button type="button" class="lnk" data-rmonreset="' + esc(l.id + '|' + l.m) + '">通常に戻す</button>' : '') + '<button type="button" class="lnk" data-rmoncancel>やめる</button>' +
       (state.rMsg ? '<p class="msg err" style="flex-basis:100%">' + esc(state.rMsg) + '</p>' : '') + '<p class="hint" style="flex-basis:100%">この月だけ、日付と金額を変えられます。0円にすると、その月はなしになります。</p></div>';
@@ -1533,7 +1536,7 @@ details.inner[open]>summary::after{content:"－"}
       }
       if (l.via) { sub = ''; amt = '<span class="muted">（' + yen(l.amt) + '）</span>'; }
       if ((l.k === 'item' || l.k === 'rec') && (l.cat === 'rak' || l.cat === 'amz')) { var vi = viaIn(x, l.cat); if (vi) sub = (sub ? sub + ' ' : '') + vi; }
-      lns += '<div class="dline"><div>' + esc(l.label) + '<small>' + esc(sub) + '</small></div><div class="dl-n">' + amt + '</div>' + (btns || '<span></span>') + '</div>' + recEd(l, d);
+      lns += '<div class="dline"><div>' + esc(l.label) + '<small>' + esc(sub) + '</small></div><div class="dl-n">' + amt + '</div>' + (btns || '<span></span>') + '</div>' + recEd(l, d, 'sheet');
     });
     var wasHidden = el.hidden;
     el.innerHTML = '<div class="sheet-bg" data-closeday></div><div class="sheet" role="dialog" aria-modal="true" aria-label="' + title + 'の詳細">' +
@@ -2255,11 +2258,11 @@ details.inner[open]>summary::after{content:"－"}
     else if (t.dataset.ocancel !== undefined) { state.oEdit = false; state.oMsg = ''; render(); }
     else if (t.dataset.osave !== undefined) saveOpening();
     else if (t.dataset.lname) { state.lOpen[t.dataset.lname] = !state.lOpen[t.dataset.lname]; render(); }
-    else if (t.dataset.lint) { state.lWhere = t.closest('#c-loans') ? 'sch' : 'list'; state.lEdit = t.dataset.lint; state.lMsg = ''; render(); var li = $('lint-in'); if (li) { li.focus(); li.select(); } }
+    else if (t.dataset.lint) { state.lWhere = t.closest('#c-loans') ? 'sch' : t.closest('#c-day') ? 'sheet' : 'list'; state.lEdit = t.dataset.lint; state.lMsg = ''; render(); var li = $('lint-in'); if (li) { li.focus(); li.select(); } }
     else if (t.dataset.lintcancel !== undefined) { state.lEdit = ''; state.lMsg = ''; render(); }
     else if (t.dataset.lintsave || t.dataset.lintreset) { saveInterest(t.dataset.lintsave || t.dataset.lintreset, t.dataset.lintreset ? 'reset' : 'save'); }
     else if (t.dataset.ei) { var pi = t.dataset.ei.split('|'); startEdit('i', pi[1], pi[0]); }
-    else if (t.dataset.rmon) { state.rEdit = t.dataset.rmon; state.rMsg = ''; render(); var ri = $('rmon-in'); if (ri) { ri.focus(); ri.select(); } }
+    else if (t.dataset.rmon) { state.rWhere = t.closest('#c-day') ? 'sheet' : 'list'; state.rEdit = t.dataset.rmon; state.rMsg = ''; render(); var ri = $('rmon-in'); if (ri) { ri.focus(); ri.select(); } }
     else if (t.dataset.rmoncancel !== undefined) { state.rEdit = ''; state.rMsg = ''; render(); }
     else if (t.dataset.rmonsave || t.dataset.rmonreset) saveRecMonth(t.dataset.rmonsave || t.dataset.rmonreset, !!t.dataset.rmonreset);
     else if (t.dataset.er) startEdit('r', t.dataset.er);
