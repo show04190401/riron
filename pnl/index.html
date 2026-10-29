@@ -615,6 +615,10 @@ details.inner[open]>summary::after{content:"－"}
     <button class="btn ghost" id="io-undo" type="button" hidden>読み込む前のデータに戻す</button>
     <p id="io-msg" class="msg" role="status"></p>
     <div id="io-auto"></div>
+    <h3 class="subh" style="margin-top:20px">保存データの確認</h3>
+    <p class="hint">この端末に残っている収支ノートのデータ（控えを含む）を一覧にします。消えたように見えるときは、ここから戻せることがあります。</p>
+    <button class="btn ghost" id="io-scan" type="button">保存データを確認する</button>
+    <div id="io-scan-out"></div>
   </details>
 </div>
 
@@ -1812,7 +1816,9 @@ details.inner[open]>summary::after{content:"－"}
     return 'PNL0:' + b64u(raw);
   }
   async function decodeCode(code) {
-    code = code.replace(/\s+/g, '');
+    code = String(code || '').replace(/[\s\u200b-\u200d\ufeff]+/g, '').replace(/：/g, ':').replace(/[‐-―−ー－]/g, '-');
+    var at = code.search(/PNL[01]:/); if (at > 0) code = code.slice(at);
+    code = code.slice(0, 5) + code.slice(5).replace(/[^A-Za-z0-9_\-]/g, '');
     var u, kind = code.slice(0, 5);
     if (kind !== 'PNL1:' && kind !== 'PNL0:') throw new Error('code');
     u = unb64u(code.slice(5));
@@ -1920,6 +1926,34 @@ details.inner[open]>summary::after{content:"－"}
     catch (e) { msg('io-msg', 'CSVを保存できませんでした。', true); }
   });
   /* ---- 自動バックアップ（この端末内・直近7日） ---- */
+  function summarize(o) {
+    var e = o && o.entries || {}, c = o && o.cash || {}, items = 0, ds = Object.keys(e).sort();
+    Object.keys(c.items || {}).forEach(function (d) { items += (c.items[d] || []).length; });
+    return '損益 ' + ds.length + '日' + (ds.length ? '（〜' + md(ds[ds.length - 1]) + '）' : '') + '・資金繰りの記録 ' + items + '件・定期 ' + ((c.recurring || []).length) + '件・借入 ' + ((c.loans || []).length) + '件' + (c.saved === false ? '（資金繰り未設定）' : '');
+  }
+  var scanList = [];
+  async function scanStorage() {
+    scanList = [];
+    var keys = []; try { for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i)); } catch (e) {}
+    for (var k = 0; k < keys.length; k++) {
+      var key = keys[k]; if (!/^pnl-notebook/.test(key)) continue;
+      var raw = lsGet(key) || '';
+      if (key === BK_KEY) { autoBackups().forEach(function (b) { try { scanList.push({ label: '自動バックアップ ' + md(b.date), o: JSON.parse(b.data) }); } catch (e) { scanList.push({ label: '自動バックアップ ' + md(b.date) + '（読めません）', o: null }); } }); continue; }
+      if (key === UNDO_KEY) { try { scanList.push({ label: '読み込み前の控え', o: await decodeCode(raw) }); } catch (e) { scanList.push({ label: '読み込み前の控え（読めません）', o: null }); } continue; }
+      try { scanList.push({ label: key === LS_KEY ? 'いま使っているデータ' : '保管データ（' + key + '）', o: JSON.parse(raw), cur: key === LS_KEY }); }
+      catch (e) { scanList.push({ label: key + '（読めません・' + raw.length + '文字）', o: null }); }
+    }
+    $('io-scan-out').innerHTML = scanList.length ? scanList.map(function (it, i) {
+      return '<div class="autobk"><span>' + esc(it.label) + '<small class="hint" style="display:block">' + (it.o ? esc(summarize(it.o.data || it.o)) : '') + '</small></span>' + (it.o && !it.cur ? '<button type="button" class="lnk" data-scanuse="' + i + '">これに戻す</button>' : '<span></span>') + '</div>';
+    }).join('') + '<p class="hint" style="margin-top:6px">保存の種類：' + (state.kind === 'db' ? 'Claudeの保存先' : 'この端末内') + '</p>' : '<p class="hint" style="margin-top:6px">この端末には、収支ノートのデータが見つかりませんでした。保存の種類：' + (state.kind === 'db' ? 'Claudeの保存先' : 'この端末内') + '</p>';
+  }
+  $('io-scan').addEventListener('click', function () { scanStorage(); });
+  document.addEventListener('click', async function (e) {
+    var b = e.target.closest && e.target.closest('[data-scanuse]'); if (!b) return;
+    var it = scanList[+b.dataset.scanuse], o;
+    try { o = dataOf(it.o); } catch (er) { return msg('io-msg', 'このデータは読み込めませんでした。', true); }
+    if (await runImport(o, it.label, it.label + 'に戻しました（損益 {n}日分と資金繰り）。', false, null)) scanStorage();
+  });
   function renderAutoList() {
     var box = $('io-auto'); if (!box) return;
     if (state.kind !== 'local') { box.innerHTML = ''; return; }
