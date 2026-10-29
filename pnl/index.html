@@ -1874,6 +1874,12 @@ details.inner[open]>summary::after{content:"－"}
   async function decodeCode(code) {
     code = String(code || '').replace(/[\s\u200b-\u200d\ufeff]+/g, '').replace(/：/g, ':').replace(/[‐-―−ー－]/g, '-');
     var at = code.search(/PNL[01]:/); if (at > 0) code = code.slice(at);
+    if (at < 0) {
+      /* 先頭の「PNL1:」が欠けたコードも、そのまま試す */
+      var body0 = code.replace(/^PNL[01]?:?/i, '').replace(/[^A-Za-z0-9_\-]/g, '');
+      if (body0.length < 20) throw new Error('code');
+      try { return await decodeCode('PNL1:' + body0); } catch (e1) { return await decodeCode('PNL0:' + body0); }
+    }
     code = code.slice(0, 5) + code.slice(5).replace(/[^A-Za-z0-9_\-]/g, '');
     var u, kind = code.slice(0, 5);
     if (kind !== 'PNL1:' && kind !== 'PNL0:') throw new Error('code');
@@ -1933,7 +1939,7 @@ details.inner[open]>summary::after{content:"－"}
   $('io-import').addEventListener('click', async function () {
     msg('io-msg', '');
     var o;
-    try { o = await decodeCode($('io-in').value); } catch (e) { var raw0 = $('io-in').value.replace(/\s+/g, ''); return msg('io-msg', '読み込めませんでした。' + (!/PNL[01]/.test(raw0) ? 'コードが PNL で始まっていません。' : 'コードが途中で切れている可能性があります（貼り付けた長さ：' + raw0.length + '文字）。書き出した側の「コードをコピー」でコピーし直してください。'), true); }
+    try { o = await decodeCode($('io-in').value); } catch (e) { var raw0 = $('io-in').value.replace(/\s+/g, ''); return msg('io-msg', '読み込めませんでした。' + 'コードが途中で切れている可能性があります（貼り付けた長さ：' + raw0.length + '文字）。書き出した側の「コードをコピー」でコピーし直すか、「ファイルに保存」→「ファイルから復元」で移してください。', true); }
     if (await runImport(o, 'コードのデータ', '読み込みました（損益 {n}日分と資金繰り）。', false, $('io-import'))) $('io-in').value = '';
   });
   $('io-undo').addEventListener('click', async function () {
