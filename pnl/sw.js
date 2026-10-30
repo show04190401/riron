@@ -1,8 +1,8 @@
 // オフライン用：アプリのファイルを端末に保存し、電波がなくてもすぐ開けるようにする。
 // 開くときは保存済みの版をすぐ表示し、通信できれば裏で新しい版を取りに行く。
 const PREFIX = 'pnl-notebook-';
-const CACHE = PREFIX + 'v23';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon3-180.png', './icon3-192.png', './icon3-512.png'];
+const CACHE = PREFIX + 'v24';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon4-180.png', './icon4-192.png', './icon4-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
