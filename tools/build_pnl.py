@@ -29,8 +29,8 @@ skel = '''<!doctype html>
 <meta name="theme-color" content="#EDF0F3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D141C" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon2-180.png">
-<link rel="icon" href="icon2-192.png">
+<link rel="apple-touch-icon" href="icon3-180.png">
+<link rel="icon" href="icon3-192.png">
 '''
 tail = '''
 <script>if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script>
