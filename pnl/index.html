@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>収支ノート</title>
+<title>収支note</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="収支ノート">
+<meta name="apple-mobile-web-app-title" content="収支note">
 <meta name="theme-color" content="#EDF0F3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D141C" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
@@ -393,7 +393,7 @@ details.inner[open]>summary::after{content:"－"}
 <div class="wrap">
   <header class="top">
     <div>
-      <h1 class="sr">収支ノート</h1>
+      <h1 class="sr">収支note</h1>
     </div>
   </header>
   <div class="stickytabs" id="stickytabs"><div class="seg tabs" role="tablist" aria-label="表示の切り替え">
@@ -604,7 +604,7 @@ details.inner[open]>summary::after{content:"－"}
   </div>
   <details class="card" id="io-card" style="margin-top:14px">
     <summary>データの書き出し・読み込み</summary>
-    <p class="hint" style="margin-top:8px">Claude上の収支ノートと、ホーム画面のアプリのデータは別々です。片方で「書き出す」を押してコードをコピーし、もう片方の「読み込む」に貼り付けると、同じデータになります。</p>
+    <p class="hint" style="margin-top:8px">Claude上の収支noteと、ホーム画面のアプリのデータは別々です。片方で「書き出す」を押してコードをコピーし、もう片方の「読み込む」に貼り付けると、同じデータになります。</p>
     <button class="btn" id="io-export" type="button">書き出す</button>
     <textarea id="io-out" rows="4" readonly hidden style="width:100%;margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);color:var(--fg);font:16px var(--font-num)"></textarea>
     <button class="btn ghost" id="io-copy" type="button" hidden>コードをコピー</button>
@@ -622,7 +622,7 @@ details.inner[open]>summary::after{content:"－"}
     <p id="io-msg" class="msg" role="status"></p>
     <div id="io-auto"></div>
     <h3 class="subh" style="margin-top:20px">保存データの確認</h3>
-    <p class="hint">この端末に残っている収支ノートのデータ（控えを含む）を一覧にします。消えたように見えるときは、ここから戻せることがあります。</p>
+    <p class="hint">この端末に残っている収支noteのデータ（控えを含む）を一覧にします。消えたように見えるときは、ここから戻せることがあります。</p>
     <button class="btn ghost" id="io-scan" type="button">保存データを確認する</button>
     <div id="io-scan-out"></div>
   </details>
@@ -1980,7 +1980,7 @@ details.inner[open]>summary::after{content:"－"}
   $('io-file-save').addEventListener('click', async function () {
     msg('io-msg', '');
     var body = JSON.stringify({ app: 'pnl-notebook', format: 1, exportedAt: new Date().toISOString(), data: { entries: state.entries, settings: state.settings, cash: cashPayload({}) } }, null, 1);
-    try { var r = await saveFile('収支ノート_バックアップ_' + stamp() + '.json', body, 'application/json'); msg('io-msg', r === 'declined' ? '保存を取りやめました。' : 'バックアップのファイルを用意しました（損益 ' + Object.keys(state.entries).length + '日分と資金繰り）。'); }
+    try { var r = await saveFile('収支note_バックアップ_' + stamp() + '.json', body, 'application/json'); msg('io-msg', r === 'declined' ? '保存を取りやめました。' : 'バックアップのファイルを用意しました（損益 ' + Object.keys(state.entries).length + '日分と資金繰り）。'); }
     catch (e) { msg('io-msg', 'ファイルに保存できませんでした。' + (e && e.message || ''), true); }
   });
   $('io-file-open').addEventListener('click', function () { $('io-file').value = ''; $('io-file').click(); });
@@ -1989,7 +1989,7 @@ details.inner[open]>summary::after{content:"－"}
     msg('io-msg', '');
     var o;
     try { var txt = await f.text(); o = /^\s*PNL[01]:/.test(txt) ? await decodeCode(txt) : dataOf(JSON.parse(txt)); }
-    catch (e) { return msg('io-msg', 'このファイルは読み込めませんでした。収支ノートで保存したバックアップファイル（.json）を選んでください。', true); }
+    catch (e) { return msg('io-msg', 'このファイルは読み込めませんでした。収支noteで保存したバックアップファイル（.json）を選んでください。', true); }
     await runImport(o, 'ファイル「' + f.name + '」', 'ファイルから復元しました（損益 {n}日分と資金繰り）。', false, $('io-file-open'));
   });
   /* ---- CSV ---- */
@@ -1998,13 +1998,13 @@ details.inner[open]>summary::after{content:"－"}
     var rows = [['日付', '区分', '金額', 'メモ', 'その日の合計']];
     Object.keys(state.entries).sort().forEach(function (d) { var e = state.entries[d]; itemsOf(e).forEach(function (it) { rows.push([d, PCAT[it.cat] || '', it.pnl, it.memo || '', e.pnl]); }); });
     if (rows.length === 1) return msg('io-msg', '損益の記録がありません。', true);
-    try { var r = await saveFile('収支ノート_損益_' + stamp() + '.csv', csv(rows), 'text/csv'); msg('io-msg', r === 'declined' ? '保存を取りやめました。' : '損益の記録をCSVにしました（' + (rows.length - 1) + '件）。'); }
+    try { var r = await saveFile('収支note_損益_' + stamp() + '.csv', csv(rows), 'text/csv'); msg('io-msg', r === 'declined' ? '保存を取りやめました。' : '損益の記録をCSVにしました（' + (rows.length - 1) + '件）。'); }
     catch (e) { msg('io-msg', 'CSVを保存できませんでした。', true); }
   });
   $('io-csv-cash').addEventListener('click', async function () {
     var cf = computeCash(view()), sm = cf.selM, rows = [['日付', '損益', '収入', '支出（返済を除く）', '返済', '差引', '残高', '借入残高', '内容']];
     Object.keys(cf.days).sort().forEach(function (d) { if (d.slice(0, 7) !== sm) return; var x = cf.days[d], f = x.f; rows.push([d, f.pnl, f.inc, f.exp - f.repay, f.repay, x.net, x.close, x.loan, x.notes.join(' / ')]); });
-    try { var r = await saveFile('収支ノート_資金繰り_' + sm.replace('-', '') + '.csv', csv(rows), 'text/csv'); msg('io-msg', r === 'declined' ? '保存を取りやめました。' : ym(sm) + 'の資金繰り表をCSVにしました。'); }
+    try { var r = await saveFile('収支note_資金繰り_' + sm.replace('-', '') + '.csv', csv(rows), 'text/csv'); msg('io-msg', r === 'declined' ? '保存を取りやめました。' : ym(sm) + 'の資金繰り表をCSVにしました。'); }
     catch (e) { msg('io-msg', 'CSVを保存できませんでした。', true); }
   });
   /* ---- 自動バックアップ（この端末内・直近7日） ---- */
@@ -2027,7 +2027,7 @@ details.inner[open]>summary::after{content:"－"}
     }
     $('io-scan-out').innerHTML = scanList.length ? scanList.map(function (it, i) {
       return '<div class="autobk"><span>' + esc(it.label) + '<small class="hint" style="display:block">' + (it.o ? esc(summarize(it.o.data || it.o)) : '') + '</small></span>' + (it.o && !it.cur ? '<button type="button" class="lnk" data-scanuse="' + i + '">これに戻す</button>' : '<span></span>') + '</div>';
-    }).join('') + '<p class="hint" style="margin-top:6px">保存の種類：' + (state.kind === 'db' ? 'Claudeの保存先' : 'この端末内') + '</p>' : '<p class="hint" style="margin-top:6px">この端末には、収支ノートのデータが見つかりませんでした。保存の種類：' + (state.kind === 'db' ? 'Claudeの保存先' : 'この端末内') + '</p>';
+    }).join('') + '<p class="hint" style="margin-top:6px">保存の種類：' + (state.kind === 'db' ? 'Claudeの保存先' : 'この端末内') + '</p>' : '<p class="hint" style="margin-top:6px">この端末には、収支noteのデータが見つかりませんでした。保存の種類：' + (state.kind === 'db' ? 'Claudeの保存先' : 'この端末内') + '</p>';
   }
   $('io-scan').addEventListener('click', function () { scanStorage(); });
   document.addEventListener('click', async function (e) {

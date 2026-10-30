@@ -1,6 +1,6 @@
 {
-  "name": "収支ノート",
-  "short_name": "収支ノート",
+  "name": "収支note",
+  "short_name": "収支note",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

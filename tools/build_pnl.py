@@ -21,11 +21,11 @@ skel = '''<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>収支ノート</title>
+<title>収支note</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="収支ノート">
+<meta name="apple-mobile-web-app-title" content="収支note">
 <meta name="theme-color" content="#EDF0F3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D141C" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
