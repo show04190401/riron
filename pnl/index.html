@@ -1142,7 +1142,9 @@ details.inner[open]>summary::after{content:"－"}
     var bar = function (p, mx) { return p ? '<i class="mag ' + cls(p) + '" style="width:' + Math.max(4, Math.round(Math.abs(p) / mx * 100)) + '%"></i>' : ''; };
 
     if (state.tab === 'daily') {
-      var desc = c.dates.slice().reverse(), shown = desc.slice(0, state.limit);
+      var tf = state.settings.targetFrom || '', all = c.dates.slice().reverse();
+      var oldN = tf ? all.filter(function (d) { return d < tf; }).length : 0;
+      var desc = tf && !state.showOld ? all.filter(function (d) { return d >= tf; }) : all, shown = desc.slice(0, state.limit);
       var mx = Math.max.apply(null, c.dates.map(function (d) { return Math.abs(E[d].pnl); }).concat([1]));
       var months = {};
       group(c, v, function (d) { return d.slice(0, 7); }).forEach(function (r) { months[r.k] = r; });
@@ -1167,6 +1169,7 @@ details.inner[open]>summary::after{content:"－"}
           (itemsOf(e).length > 1 ? catSubs(d, e, v.demo) : (e.memo ? '<div class="memo">' + esc(e.memo) + '</div>' : '')) + '</div>';
       });
       if (desc.length > shown.length) body += '<button type="button" class="more" data-more>さらに表示（残り' + (desc.length - shown.length) + '日）</button>';
+      if (oldN) body += '<button type="button" class="more" data-showold aria-expanded="' + !!state.showOld + '">' + (state.showOld ? '前の目標の記録を隠す' : '前の目標の記録を表示（' + md(tf) + 'より前・' + oldN + '日）') + '</button>';
     } else {
       var weekly = state.tab === 'weekly';
       var rows = group(c, v, weekly ? mondayOf : function (d) { return d.slice(0, 7); });
@@ -2267,7 +2270,7 @@ details.inner[open]>summary::after{content:"－"}
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.cDay) { state.cDay = ''; render(); } });
   document.addEventListener('click', function (e) {
-    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-delgoal],[data-editgoal],[data-gesave],[data-gecancel],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-popen],[data-rmon],[data-rmonsave],[data-rmonreset],[data-rmoncancel],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
+    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-showold],[data-delgoal],[data-editgoal],[data-gesave],[data-gecancel],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-popen],[data-rmon],[data-rmonsave],[data-rmonreset],[data-rmoncancel],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
     if (!t) return;
     if (t.dataset.view) setView(t.dataset.view);
     else if (t.dataset.cm !== undefined) {
@@ -2361,6 +2364,7 @@ details.inner[open]>summary::after{content:"－"}
       var ep = t.dataset.edit.split('|'), ee = state.entries[ep[0]], eit = itemsOf(ee).filter(function (it) { return it.id === ep[1]; })[0];
       if (eit) { $('f-date').value = ep[0]; state.pEdit = { date: ep[0], id: eit.id }; $('f-amount').value = nf.format(Math.abs(eit.pnl)); setSign(eit.pnl < 0); $('f-memo').value = eit.memo || ''; $('f-cat').value = eit.cat || 'stock'; updateFormButtons(); msg('f-msg', ''); toForm(); $('f-amount').focus({ preventScroll: true }); }
     }
+    else if (t.hasAttribute('data-showold')) { state.showOld = !state.showOld; var v3 = view(); renderHistory(compute(v3.entries), v3); }
     else if (t.hasAttribute('data-more')) { state.limit += 31; var v2 = view(); renderHistory(compute(v2.entries), v2); }
     else if (t.id === 'hero-edit') { $('settings').open = true; $('settings').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' }); }
   });
