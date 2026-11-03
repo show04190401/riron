@@ -293,8 +293,9 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),
 .mnav button{flex:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .top:has(>div>.sr){margin:0;min-height:0}
-table.cfd{table-layout:fixed;width:500px;min-width:500px}
-table.cfd th:nth-child(1){width:96px}table.cfd th:nth-child(2){width:56px}table.cfd th:nth-child(3){width:80px}table.cfd th:nth-child(4){width:92px}table.cfd th:nth-child(5){width:88px}table.cfd th:nth-child(6){width:88px}
+table.cfd{table-layout:fixed;width:600px;min-width:600px}
+table.cfd th:nth-child(1){width:92px}table.cfd th:nth-child(2){width:100px}table.cfd th:nth-child(3){width:100px}table.cfd th:nth-child(4){width:100px}table.cfd th:nth-child(5){width:104px}table.cfd th:nth-child(6){width:104px}
+table.cfd td{overflow:hidden;text-overflow:clip}
 .mnav .tdy{font-size:13px}
 .cf-wrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:10px;-webkit-overflow-scrolling:touch}
 table.cf{border-collapse:separate;border-spacing:0;width:100%;min-width:max-content;font-size:13px}
@@ -1388,7 +1389,7 @@ details.inner[open]>summary::after{content:"－"}
       Object.keys(days[d].f).forEach(function (k) { tot[k] += days[d].f[k]; });
       tot.net += days[d].net;
     }
-    var cols = [['pnl', '損益', true], ['inc', '収入'], ['exp', '支出']];
+    var cols = [['pnl', '損益', true], ['exp', '支出'], ['inc', '収入']];
     var numCell = function (n, signed) {
       var c = [];
       if (!n) c.push('zero'); else if (signed) c.push(n > 0 ? 'pos' : 'neg');
@@ -2058,8 +2059,8 @@ details.inner[open]>summary::after{content:"－"}
     catch (e) { msg('io-msg', 'CSVを保存できませんでした。', true); }
   });
   $('io-csv-cash').addEventListener('click', async function () {
-    var cf = computeCash(view()), sm = cf.selM, rows = [['日付', '損益', '収入', '支出（返済を除く）', '返済', '差引', '残高', '借入残高', '内容']];
-    Object.keys(cf.days).sort().forEach(function (d) { if (d.slice(0, 7) !== sm) return; var x = cf.days[d], f = x.f; rows.push([d, f.pnl, f.inc, f.exp - f.repay, f.repay, x.net, x.close, x.loan, x.notes.join(' / ')]); });
+    var cf = computeCash(view()), sm = cf.selM, rows = [['日付', '損益', '支出（返済を除く）', '返済', '収入', '差引', '残高', '借入残高', '内容']];
+    Object.keys(cf.days).sort().forEach(function (d) { if (d.slice(0, 7) !== sm) return; var x = cf.days[d], f = x.f; rows.push([d, f.pnl, f.exp - f.repay, f.repay, f.inc, x.net, x.close, x.loan, x.notes.join(' / ')]); });
     try { var r = await saveFile('収支note_資金繰り_' + sm.replace('-', '') + '.csv', csv(rows), 'text/csv'); msg('io-msg', r === 'declined' ? '保存を取りやめました。' : ym(sm) + 'の資金繰り表をCSVにしました。'); }
     catch (e) { msg('io-msg', 'CSVを保存できませんでした。', true); }
   });
