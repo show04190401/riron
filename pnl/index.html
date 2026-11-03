@@ -99,6 +99,7 @@ h2{font-size:15px;font-weight:700;letter-spacing:.02em}
 .recbtn{margin-left:auto;min-height:36px;padding:0 18px;border-radius:999px;border:1px solid var(--hero-line);background:transparent;color:var(--hero-fg);font:700 14px var(--font-ui);cursor:pointer}
 .eyebrow{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--hero-muted);letter-spacing:.04em}
 .big{font:600 40px/1.15 var(--font-num);margin:6px 0 14px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.big small.ov{display:block;margin:6px 0 0;font-size:13px;opacity:.8}
 .big small{font:500 14px var(--font-ui);color:var(--hero-muted);margin-left:8px;letter-spacing:0}
 .bar{height:8px;background:var(--hero-line);border-radius:99px;overflow:hidden}
 .bar>i{display:block;height:100%;background:var(--gold-fill);border-radius:99px;transition:width .5s}
@@ -708,7 +709,7 @@ details.inner[open]>summary::after{content:"－"}
   /* ---------- state ---------- */
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', history: [], excludeHolidays: true, saved: false },
-    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'cash', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
+    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'cash', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
   };
   var backend = null;
@@ -1064,8 +1065,8 @@ details.inner[open]>summary::after{content:"－"}
 
   function renderHero(c, v) {
     var g = goal.apply(null, (function (x) { return [x.c, x.v]; })(gset(c, v)));
-    var eyebrow = g.done ? '目標を達成しました' : g.daysLeft < 0 ? '目標日を過ぎました・未達' : '目標利益まで残り';
-    var big = g.done ? yen(-g.remaining) + '<small>超過</small>' : yen(g.remaining);
+    var eyebrow = g.done ? '目標達成・今回の利益' : g.daysLeft < 0 ? '目標日を過ぎました・未達' : '目標利益まで残り';
+    var big = g.done ? yen(g.total) + '<small class="ov">目標を ' + yen(-g.remaining) + ' 超過</small>' : yen(g.remaining);
     var mk = todayStr().slice(0, 7), mSum = 0;
     c.dates.forEach(function (d) { if (d.slice(0, 7) === mk) mSum += v.entries[d].pnl; });
     $('hero').innerHTML =
@@ -1409,7 +1410,7 @@ details.inner[open]>summary::after{content:"－"}
     $('c-loans').hidden = !hasLoan;
     if (hasLoan) {
       $('c-loans').innerHTML =
-        '<div class="cfhead"><h2>' + foldBtn('loans', '返済予定表') + '</h2><span class="sub">' + (+sm.slice(5)) + '月の返済後残高 ' + yen(lns.reduce(function (a, L) { return a + endDay.lb[L.id]; }, 0)) + '</span></div>' +
+        '<div class="cfhead"><h2>' + foldBtn('loans', '予定表') + '</h2><span class="sub">' + (+sm.slice(5)) + '月の返済後残高 ' + yen(lns.reduce(function (a, L) { return a + endDay.lb[L.id]; }, 0)) + '</span></div>' +
         '<div class="table">' + lns.map(function (L) {
           var now = endDay.lb[L.id], paid = Math.max(0, Math.min(100, Math.round((1 - now / L.balance) * 100)));
           var sch = loanSchedule(L, cf.start), po = sch.length && sch[sch.length - 1].bal <= 0 ? sch[sch.length - 1].d : null;
@@ -1727,6 +1728,25 @@ details.inner[open]>summary::after{content:"－"}
     $(focusId).focus({ preventScroll: true });
   }
 
+  function goalEd(r) {
+    var h = (state.settings.history || []).filter(function (g) { return g.id === r.id; })[0] || r;
+    return '<div class="lint-ed recbox"><label for="ge-from">開始日</label><input id="ge-from" type="date" value="' + esc(h.from || '') + '"><label for="ge-end">終了日</label><input id="ge-end" type="date" value="' + esc(h.end) + '">' +
+      '<label for="ge-date">目標日</label><input id="ge-date" type="date" value="' + esc(h.date) + '"><label for="ge-amt">目標利益（円）</label><input id="ge-amt" type="text" inputmode="numeric" autocomplete="off" value="' + nf.format(h.amount) + '">' +
+      '<button type="button" class="lnk" data-gesave="' + esc(r.id) + '">保存</button><button type="button" class="lnk" data-gecancel>やめる</button>' +
+      (state.gMsg ? '<p class="msg err" style="flex-basis:100%">' + esc(state.gMsg) + '</p>' : '') + '<p class="hint" style="flex-basis:100%">開始日〜終了日の損益で、この目標の達成率を計算します。開始日が空欄なら、最初の記録から数えます。</p></div>';
+  }
+  function saveGoalEdit(id) {
+    var re = /^\d{4}-\d{2}-\d{2}$/, f = $('ge-from').value, e = $('ge-end').value, dt = $('ge-date').value, a = parseAmount($('ge-amt').value);
+    var bad = function (m) { state.gMsg = m; renderGoalHist(); };
+    if (f && !re.test(f)) return bad('開始日を正しく選んでください。');
+    if (!re.test(e)) return bad('終了日を選んでください。');
+    if (!re.test(dt)) return bad('目標日を選んでください。');
+    if (f && f > e) return bad('終了日は、開始日より後にしてください。');
+    if (isNaN(a.value) || a.neg || a.value <= 0) return bad('目標利益は1円以上の数字で入力してください。');
+    var hist = (state.settings.history || []).map(function (g) { return g.id === id ? { id: g.id, from: f, end: e, date: dt, amount: a.value } : g; });
+    state.gEdit = ''; state.gMsg = '';
+    Promise.resolve(backend.saveSettings(Object.assign({}, state.settings, { history: hist }))).then(render, function () { state.gMsg = '保存できませんでした。'; state.gEdit = id; renderGoalHist(); });
+  }
   function renderGoalHist() {
     var s = state.settings, E = state.entries, t = todayStr(), rows = [];
     function sum(from, end) { var a = 0; Object.keys(E).forEach(function (d) { if (d >= from && d <= end) a += E[d].pnl; }); return a; }
@@ -1739,7 +1759,8 @@ details.inner[open]>summary::after{content:"－"}
       var label = (r.from ? md(r.from) : first ? md(first) : '') + '〜' + md(r.cur ? r.date : r.end);
       return '<div class="row r3b"><div class="d">' + label + '<small>目標 ' + yen(r.amount) + '・' + (r.cur ? '進行中' : ok ? '達成' : '未達') + '</small><span class="pbar" title="達成率 ' + pct.toFixed(1) + '%"><i style="width:' + Math.max(0, Math.min(100, pct)).toFixed(1) + '%"></i></span></div>' +
         '<div class="n ' + cls(r.pnl) + '">' + pct.toFixed(1) + '%<small>' + sgn(r.pnl) + '</small></div>' +
-        (r.cur ? '<span></span>' : '<span class="acts"><button type="button" class="lnk' + (state.armKey === 'g' + r.id ? ' armed' : '') + '" data-delgoal="' + esc(r.id) + '">' + (state.armKey === 'g' + r.id ? '本当に削除' : '削除') + '</button></span>') + '</div>';
+        (r.cur ? '<span></span>' : '<span class="acts"><button type="button" class="lnk" data-editgoal="' + esc(r.id) + '">編集</button><button type="button" class="lnk' + (state.armKey === 'g' + r.id ? ' armed' : '') + '" data-delgoal="' + esc(r.id) + '">' + (state.armKey === 'g' + r.id ? '本当に削除' : '削除') + '</button></span>') + '</div>' +
+        (!r.cur && state.gEdit === r.id ? goalEd(r) : '');
     }).join('') + '</div>';
   }
   function fillSettings() {
@@ -2246,7 +2267,7 @@ details.inner[open]>summary::after{content:"－"}
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.cDay) { state.cDay = ''; render(); } });
   document.addEventListener('click', function (e) {
-    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-delgoal],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-popen],[data-rmon],[data-rmonsave],[data-rmonreset],[data-rmoncancel],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
+    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-delgoal],[data-editgoal],[data-gesave],[data-gecancel],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-popen],[data-rmon],[data-rmonsave],[data-rmonreset],[data-rmoncancel],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
     if (!t) return;
     if (t.dataset.view) setView(t.dataset.view);
     else if (t.dataset.cm !== undefined) {
@@ -2268,6 +2289,9 @@ details.inner[open]>summary::after{content:"－"}
       var fc = $('form-card'); fc.hidden = !fc.hidden; t.setAttribute('aria-expanded', String(!fc.hidden));
       if (!fc.hidden) { fc.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); $('f-amount').focus({ preventScroll: true }); }
     }
+    else if (t.dataset.editgoal !== undefined) { state.gEdit = state.gEdit === t.dataset.editgoal ? '' : t.dataset.editgoal; state.gMsg = ''; renderGoalHist(); }
+    else if (t.dataset.gesave !== undefined) saveGoalEdit(t.dataset.gesave);
+    else if (t.dataset.gecancel !== undefined) { state.gEdit = ''; state.gMsg = ''; renderGoalHist(); }
     else if (t.dataset.delgoal !== undefined) {
       var gid = t.dataset.delgoal;
       armOrDo('g' + gid, function () { return backend.saveSettings(Object.assign({}, state.settings, { history: (state.settings.history || []).filter(function (g) { return g.id !== gid; }) })); });
