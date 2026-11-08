@@ -782,6 +782,10 @@ html::before{background-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www
 .qtext .blank.kw{background:linear-gradient(transparent 60%,#FAD0DB 60%);color:var(--ink);font-weight:700;text-decoration:none;padding:0 1px;margin:0;cursor:text;border-radius:0}
 :root[data-theme="dark"] .qtext .blank.kw{background:linear-gradient(transparent 60%,#6A2C42 60%)}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .qtext .blank.kw{background:linear-gradient(transparent 60%,#6A2C42 60%)} }
+
+table.stats{min-width:0}
+table.stats tbody th{white-space:normal;min-width:7.5em}
+table.stats th,table.stats td{padding:8px 6px}
 </style>
 
 <div class="wrap">
@@ -825,7 +829,7 @@ const VID={};
 const QMODES=["cloze","dict","kob","sog","tf","mc"];
 const SHUFFLE_MODES=["tf","mc"]; // ランダム・シャッフルの対象
 const REC_MODES=["mc","tf"]; // 回答を記録する形式
-const MODE_LABEL={cloze:"暗記",mc:"選択",tf:"正誤",dict:"記述",kob:"理論個別",sog:"理論総合"};
+const MODE_LABEL={cloze:"テキスト",mc:"選択",tf:"正誤",dict:"記述",kob:"理論個別",sog:"理論総合"};
 const SOG_CH={101:"個別複合問題",102:"取引関係の事例",103:"手続関係の事例"};
 const isWrite=q=>q.mode==="dict"||q.mode==="kob"||q.mode==="sog";
 const chMap=m=>m==="sog"?SOG_CH:CH;
@@ -1246,7 +1250,7 @@ function render(){
     let lastPid=null;
     // 暗記：規定（問題1-1など）ごとに、並んでいる最後の問題の右下へ「暗記完了」ボタンを置く
     state.memLast=new Set();
-    if(state.mode==="cloze") qs.forEach((q,i)=>{ if(q.pid&&(!qs[i+1]||qs[i+1].pid!==q.pid)) state.memLast.add(q.id); });
+    if(false) qs.forEach((q,i)=>{ if(q.pid&&(!qs[i+1]||qs[i+1].pid!==q.pid)) state.memLast.add(q.id); });
     lazyList(list,qs,(q,i)=>card(q,i+1,""));
   } else if(state.mode==="miss"){
     renderMiss(list);
@@ -1274,9 +1278,9 @@ function renderStatsTable(wrap){
     const acc=a.length?Math.round(ok/a.length*100)+"%":"—";
     return `<td><div class="bar2"><span style="width:${pct}%"></span></div><div class="nums"><span>${a.length}/${qs.length}</span><span class="acc">${acc}</span></div>${due?`<div class="duechip">復習 ${due}</div>`:""}</td>`;
   };
-  let h=`<div class="st2">章ごとの回答数・正答率</div><div class="tablewrap"><table class="stats"><thead><tr><th>章</th>${["cloze",...REC_MODES].map(m=>`<th>${m==="cloze"?"暗記":MODE_LABEL[m]}</th>`).join("")}</tr></thead><tbody>`;
-  Object.entries(CH).forEach(([k,v])=>{ h+=`<tr><th><span class="num">${k}</span>${v}</th>${["cloze",...REC_MODES].map(m=>cell(DATA[m].filter(q=>q.c===+k),m)).join("")}</tr>`; });
-  h+=`<tr class="total"><th>合計</th>${["cloze",...REC_MODES].map(m=>cell(DATA[m],m)).join("")}</tr></tbody></table></div><p class="legend2">各マス：回答数/問題数、右は直近の正答率。暗記は、テキストの記録で各回転まで記録した規定の数/規定数と、その割合です。帯は済んだ割合です。</p>`;
+  let h=`<div class="st2">章ごとの回答数・正答率</div><div class="tablewrap"><table class="stats"><thead><tr><th>章</th>${[...REC_MODES].map(m=>`<th>${m==="cloze"?"暗記":MODE_LABEL[m]}</th>`).join("")}</tr></thead><tbody>`;
+  Object.entries(CH).forEach(([k,v])=>{ h+=`<tr><th><span class="num">${k}</span>${v}</th>${[...REC_MODES].map(m=>cell(DATA[m].filter(q=>q.c===+k),m)).join("")}</tr>`; });
+  h+=`<tr class="total"><th>合計</th>${[...REC_MODES].map(m=>cell(DATA[m],m)).join("")}</tr></tbody></table></div><p class="legend2">各マス：回答数/問題数、右は直近の正答率。帯は済んだ割合です。</p>`;
   wrap.innerHTML=h;
 }
 
@@ -1349,7 +1353,7 @@ function renderProgress(list){
     store.settings=touchSettings({recClosed:c}); persist();
   }));
   // 記録・学習をタブで切り替える
-  const PR_TABS=[["記録",secR],["学習",secP]];
+  const PR_TABS=[["学習",secP]]; state.progTab=0;
   const ptabs=document.createElement("div"); ptabs.className="settabs";
   PR_TABS.forEach(([nm],i)=>{
     const b=document.createElement("button");
@@ -1358,8 +1362,7 @@ function renderProgress(list){
     b.onclick=()=>{ state.progTab=i; render(); window.scrollTo({top:0}); };
     ptabs.appendChild(b);
   });
-  list.insertBefore(ptabs,list.firstChild);
-  list.insertBefore(secR,secP);
+  // 記録（暗記の回転）は使わない
   PR_TABS.forEach(([nm,el],i)=>{ el.hidden=(i!==state.progTab); });
   secR.querySelectorAll("[data-pidspeak]").forEach(b=>b.onclick=()=>{ const p=b.dataset.pidspeak; state.speakingPid===p?stopSpeak():speakPid(p); });
   secR.querySelectorAll(".rc.next").forEach(b=>b.onclick=()=>{ const p=b.dataset.p; R[p]=(R[p]||[]).concat(Date.now()); persist(); counts(); const y=window.scrollY; render(); window.scrollTo(0,y); });
@@ -1405,7 +1408,7 @@ function renderSettings(list){
       row("端末の声の種類","「自動」は、この端末にある日本語の声からいちばん自然なものを選びます。いま使う声："+voiceNowLabel()+"。／もっと自然にするには、端末の「設定」→「アクセシビリティ」→「読み上げコンテンツ」→「声」→「日本語」で、Kyoko か Otoya の「プレミアム」を入れてから、このアプリを開き直してください。",`<select id="set-voice" class="sel"><option value=""${!setting("voice")||setting("voice")==="__auto__"?" selected":""}>自動（いちばん自然な声）</option><option value="__system__"${setting("voice")==="__system__"?" selected":""}>端末の設定どおり</option>${voicesSorted().map(v=>{const q=voiceQ(v);return `<option value="${esc(vid(v))}"${(setting("voice")===vid(v)||setting("voice")===v.name)?" selected":""}>${esc(v.name)}${q.n?"（"+q.n+"）":""}</option>`;}).join("")}</select>`)+
       row("読み上げの連続再生","オンにすると、読み終わったら次の規定を続けて読み上げます。",opt("autoNext",[["off","オフ"],["on","オン"]])):""));
   const secQ=sec("正誤・選択",
-    row("正誤・選択の出題順","ランダムにすると、タブを開くたびに並びが変わります。暗記は常にテキスト順です。",opt("order",[["text","テキスト順"],["random","ランダム"]]))+
+    row("正誤・選択の出題順","ランダムにすると、タブを開くたびに並びが変わります。テキストは常に番号順です。",opt("order",[["text","テキスト順"],["random","ランダム"]]))+
     row("選択肢の並び","オンにすると、選択問題の選択肢を毎回入れ替えます。位置で覚えてしまうのを防げます。",opt("optShuffle",[["off","固定"],["on","毎回入れ替える"]]))+
     row("回答後の動き","正誤・選択で答えたあと、次の問題へ自動で画面を送ります。",opt("after",[["stay","その場にとどまる"],["okonly","正解なら次へ"],["always","常に次へ"]]))+
     row("復習の間隔","間違えた問題・正解した問題が「復習」として戻ってくるまでの日数です。",opt("srs",[["short","短め 1・2・4・14日"],["std","標準 1・3・7・30日"],["long","長め 2・5・14・60日"]])));
@@ -1420,14 +1423,14 @@ function renderSettings(list){
     danger("ans-all","すべての形式をリセット","全部を未回答に戻す",`回答済み ${REC_MODES.reduce((s,m)=>s+answeredIn(m),0)}問`,"リセット"),
     "回答済みの記録を消して、未回答の状態に戻します。間違いの記録と付箋は残ります。");
   const secC=sec("記録の管理",
-    row("記録の書き出し","回答・間違い・付箋・暗記の記録・設定をテキストにしてコピーします。メモ帳などに貼って保管できるほか、オフライン版とclaude.ai版の間で記録を移すときにも使います。",`<button class="btn" id="bk-export">書き出してコピー</button>`)+
+    row("記録の書き出し","回答・間違い・付箋・設定をテキストにしてコピーします。メモ帳などに貼って保管できるほか、オフライン版とclaude.ai版の間で記録を移すときにも使います。",`<button class="btn" id="bk-export">書き出してコピー</button>`)+
     row("記録の読み込み","書き出したテキストを貼り付けて読み込みます。この端末の記録はそのまま残り、読み込んだ記録が足されます（回答数は端末ごとに合計し、同じ問題の回答や付箋は新しい方を残します）。同じテキストを2回読み込んでも二重には数えません。",`<div class="bk"><textarea id="bk-text" rows="2" class="sel" placeholder="ここに貼り付け"></textarea><div class="seg"><button class="btn primary" id="bk-import">読み込む</button></div></div><div class="sd" id="bk-msg"></div>`)+
     row("ファイルに保存・ファイルから読み込む","記録をファイル（.json）として保存します。読み込むと、この端末の記録に合わせます（上の「読み込む」と同じ）。コピーと貼り付けがうまくいかないときにも使えます。",`<div class="seg"><button class="btn" id="bk-file-save">ファイルに保存</button><button class="btn" id="bk-file-open">ファイルから読み込む</button></div><input type="file" id="bk-file" accept=".json,.txt,application/json,text/plain" hidden><div class="sd" id="bk-file-msg"></div>`)+
     row("バックアップから戻す","この端末には、毎日1回と、消す・読み込むなどの操作の直前に、記録の控えが自動で残ります。選んだ時点の記録を、今の記録に合わせて戻します（今の記録は消えません）。",`<div id="bk-snaps" class="bksnaps"><div class="sd">確認しています…</div></div>`)+
     danger("miss","間違いの記録を消す","全て消す",`記録 ${Object.keys(store.mistakes).filter(byId).length}問`,"消す")+
     danger("notes","付箋を全て外す","全て外す",`付箋 ${Object.keys(store.notes).filter(byId).length}枚（メモも消えます）`,"外す"));
   // 設定はタブで切り替える（表示 → 読み上げ → 記述 → 目標 → リセット → 記録）
-  const SET_TABS=[["表示",secD],["音声",secM],["出題",secQ],["目標",secG],["リセット",secB],["記録",secC]];
+  const SET_TABS=[["表示",secD],["出題",secQ],["目標",secG],["リセット",secB],["記録",secC]];
   const tabs=document.createElement("div"); tabs.className="settabs";
   SET_TABS.forEach(([name],i)=>{
     const b=document.createElement("button");
@@ -1776,7 +1779,7 @@ function card(q,no,ctx){
     }
     const seg="";
     // 読み上げ・めくるボタンは見出し行の付箋・メモの左に置く
-    const hb=`${TTS_OK?`<button class="pin hbtn speak" data-act="speak" aria-pressed="${state.speakingId===q.id}">${state.speakingId===q.id?"■ 停止":"▶ 再生"}</button>`:""}`;
+    const hb=""; // 読み上げは使わない
     const head2=head.replace('<span class="hgrp">','<span class="hgrp">'+hb);
     el.innerHTML=head2+seg+(q.title?`<p class="dtitle">${esc(titleNo(q))}</p>`:"")+`<p class="qtext${lv===3?" allhide":""}">${hangIndent(html)}</p>`+pnoteBox(q)+ytBox(q);
     const blanks=[...el.querySelectorAll(".blank")];
