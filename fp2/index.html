@@ -3356,7 +3356,7 @@ function renderShop(list){
       if(berryBalance()<it.price){ SFX.wrong(); toast(`いちごがあと${it.price-berryBalance()}こ 足りません`); return; }
       COURSE.spent=(COURSE.spent||0)+it.price; COURSE.owned[it.id]=1; COURSE.equip[it.slot]=it.id;
       if(it.id==="chi"){ COURSE.equip.petwear=COURSE.equip.petwear||"collar"; } if(it.slot==="petwear") COURSE.equip.pet="chi"; saveCourse(); if(it.slot==="pet"||it.slot==="petwear") setTimeout(()=>SFX.bark(),350);
-      SFX.chest(); state.tryOn=null; const y=window.scrollY; render(); window.scrollTo({top:y}); celebrate(it.id==="chi"?"ルイくん（ロングコートチワワ）をお迎えしました！ コースでもいっしょに進みます":it.slot==="petwear"?`ルイくんに「${it.name}」を着せました！`:`「${it.name}」を買って、着替えました！`); return;
+      SFX.chest(); state.tryOn=null; const y=window.scrollY; render(); window.scrollTo({top:y}); celebrate(it.id==="chi"?"ルイくん（ロングコートチワワ）を飼いはじめました！ コースでもいっしょに進みます":it.slot==="petwear"?`ルイくんに「${it.name}」を着せました！`:`「${it.name}」を買って、着替えました！`); return;
     }
     if(w){ if(it.slot==="skin"||(it.slot==="petwear"&&it.id==="collar")){ return; } if(it.slot==="petwear") COURSE.equip.petwear="collar"; else delete COURSE.equip[it.slot]; SFX.pop(); }
     else { COURSE.equip[it.slot]=it.id; if(it.slot==="petwear") COURSE.equip.pet="chi"; (it.slot==="pet"||it.slot==="petwear")?SFX.bark():SFX.squeak(); }
@@ -3367,7 +3367,7 @@ function shopAction(it,o,w){
   if(it.slot==="petwear"&&!COURSE.owned.chi) return `<span class="sname2">${esc(it.name)}</span><span class="shint">先に「ペット」でルイくんをお迎えしてね</span>`;
   if(it.slot==="petwear"&&it.id==="collar"&&w) return `<span class="sname2">${esc(it.name)}</span><span class="shint">きています</span>`;
   const short=Math.max(0,it.price-berryBalance());
-  if(!o) return `<span class="sname2">${esc(it.name)}</span><button class="cpbtn big" id="sact"${short?' data-short="1"':""}><span class="berrystar"></span>${it.price}こで買う${short?`（あと${short}こ）`:""}</button>`;
+  if(!o) return `<span class="sname2">${esc(it.name)}</span><button class="cpbtn big" id="sact"${short?' data-short="1"':""}><span class="berrystar"></span>${it.price}こで${it.id==="chi"?"飼う":"買う"}${short?`（あと${short}こ）`:""}</button>`;
   if(w) return `<span class="sname2">${esc(it.name)}</span>${it.slot==="skin"?`<span class="shint">きています</span>`:`<button class="cpbtn sub" id="sact">${it.slot==="pet"?"おるすばん":"はずす"}</button>`}`;
   return `<span class="sname2">${esc(it.name)}</span><button class="cpbtn big" id="sact">${it.slot==="pet"?"いっしょに連れていく":it.slot==="petwear"?"ルイくんに着せる":"きがえる"}</button>`;
 }
