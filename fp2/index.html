@@ -996,6 +996,22 @@ table.stats th,table.stats td{padding:8px 6px}
   .wrap{visibility:hidden}
 }
 @keyframes rotph{0%,20%{transform:rotate(90deg)}60%,100%{transform:rotate(0)}}
+
+.bar>header .berrytop{order:3;height:38px;width:auto;padding:0 10px 0 7px;margin-right:6px;display:flex;align-items:center;gap:3px;font-weight:800;font-size:15px;color:#B32A4A}
+.bar>header .berrytop .berrystar{width:19px;height:19px}
+.berrytop.bump{animation:bbump .5s ease}
+@keyframes bbump{30%{transform:scale(1.18)}}
+.bar>header .shopbtn,.bar>header .streakbtn,.bar>header .berrytop{margin-right:5px}
+@media (max-width:430px){
+  .bar>header .navbtn{height:36px}
+  .bar>header .backbtn,.bar>header .homebtn,.bar>header .shopbtn,.bar>header .gearbtn{width:38px}
+  .bar>header .streakbtn,.bar>header .berrytop{padding:0 8px 0 5px;font-size:14px}
+  .bar>header .eb-l{font-size:15px}
+  .bar>header:has(#back:not([hidden])) .eb-l{display:none}
+}
+.bar>header{align-items:center!important}
+.bar>header .navbtn{align-self:center;margin-block:0}
+.bar>.cbanner .cbt b{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.35}
 </style>
 
 <div class="rotnote" aria-hidden="true"><div><svg viewBox="0 0 48 48"><rect x="15" y="6" width="18" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M38 30a14 14 0 0 1-8 10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><b>縦向きでお使いください</b><small>スマホを縦に戻すと、続きから使えます</small></div></div>
@@ -1006,6 +1022,7 @@ table.stats th,table.stats td{padding:8px 6px}
       <button class="navbtn homebtn" id="homebtn" aria-label="最初の画面へ" title="最初の画面へ" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"/><path d="M6 9.6V20h12V9.6"/><path d="M10 20v-5h4v5"/></svg></button>
       <span class="eyebrow"><span class="eb-l">FP2級</span></span>
       <button class="navbtn streakbtn" id="streakbtn" aria-label="連続ログイン日数" title="連続ログイン日数"></button>
+      <button class="navbtn berrytop" id="berrytop" aria-label="もっているいちご" title="もっているいちご（ショップで使えます）"></button>
       <button class="navbtn shopbtn" id="shopbtn" aria-label="ショップ" title="ショップ"></button>
       <button class="navbtn gearbtn" id="gear" aria-label="設定" title="設定" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
       <span class="sync" id="sync"></span>
@@ -1438,6 +1455,7 @@ function render(){
   const qlist=isList&&QMODES.includes(state.mode);
   $("#back").hidden=home; $("#homebtn").hidden=home; $("#gear").hidden=false;
   { const st=$("#streakbtn"); if(st){ st.innerHTML=`${ICON_FLAME}<b>${streakNow()}</b>`; st.classList.toggle("on",state.nav==="streak"); } }
+  updBerryTop();
   { const sb=$("#shopbtn"); if(sb){ if(!sb.firstChild) sb.innerHTML=ICON_SHOP; sb.classList.toggle("on",state.nav==="shop"); } }
   $("#chips").hidden=true; $("#stars").hidden=true;
   $("#tools").hidden=!isList;
@@ -2900,7 +2918,7 @@ const SFX=(()=>{
 })();
 // 正解・不正解のとき
 { const _hit=hit, _miss=miss;
-  hit=function(id){ _hit(id); SFX.correct(); setTimeout(()=>SFX.stamp(),180); onLessonAnswer(); };
+  hit=function(id){ _hit(id); setTimeout(()=>updBerryTop(true),60); SFX.correct(); setTimeout(()=>SFX.stamp(),180); onLessonAnswer(); };
   miss=function(id,d){ _miss(id,d); SFX.wrong(); onLessonAnswer(); };
 }
 
@@ -3007,7 +3025,7 @@ const ICON_COURSE=`<svg class="hcico" viewBox="0 0 64 64" aria-hidden="true"><ci
 /* ═════════════ コースの画面 ═════════════ */
 function renderCourse(list){
   const cur=curIndex();
-  let html=`<div class="course"><div class="cbanner" id="cbanner"><div class="cbt"></div><button class="cguide" id="cguide" aria-label="このユニットのテキスト" title="このユニットのテキスト"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h9.5a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M8.5 9h6M8.5 12.5h6"/><path d="M5 17a3 3 0 0 1 3-3h9.5"/></svg></button><button class="cberries" id="cshop" title="いちごショップ（集めたいちごで衣装を買えます）"><span class="berrystar"></span><b id="cbn">${berryBalance()}</b><span class="cshopl">ショップ</span></button></div>`;
+  let html=`<div class="course"><div class="cbanner" id="cbanner"><div class="cbt"></div><button class="cguide" id="cguide" aria-label="このユニットのテキスト" title="このユニットのテキスト"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h9.5a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M8.5 9h6M8.5 12.5h6"/><path d="M5 17a3 3 0 0 1 3-3h9.5"/></svg></button></div>`;
   let gi=0;
   UNITS.forEach(u=>{
     const [col,dark]=CH_COLOR[u.c]||CH_COLOR[1];
@@ -3107,7 +3125,7 @@ function openNodePop(root,b,g,cur){
     if(n.type==="text"){ COURSE.text[u.pid]=1; saveCourse(); state.fromCourse=true; state.mode="cloze"; state.ch=u.c; state.sec=u.pid; state.optOrder={}; setNav("list"); return; }
     if(n.type==="chest"){ COURSE.chest[n.key]=1; saveCourse(); SFX.chest(); const w=b.closest(".cnode-wrap"); b.querySelector(".ci").innerHTML=CHEST_SVG(true); b.classList.add("done","opening"); pop.remove();
       const f=document.createElement("div"); f.className="cplus"; f.innerHTML=`<span class="berrystar"></span>+5`; w.appendChild(f); setTimeout(()=>f.remove(),1400);
-      const bn=root.querySelector("#cbn"); if(bn) bn.textContent=berryBalance(); setTimeout(()=>render(),1300); return; }
+      updBerryTop(true); setTimeout(()=>render(),1300); return; }
     const _ids=n.ids.slice(); for(let i=_ids.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [_ids[i],_ids[j]]=[_ids[j],_ids[i]]; } _ids.forEach(id=>delete state.ans["L|"+id]);
     state.lesson={g,ids:_ids,retry:true,finished:false};
     state.optOrder={}; setNav("lesson");
@@ -3412,11 +3430,15 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkLog
 try{ if(screen.orientation&&screen.orientation.lock) screen.orientation.lock("portrait").catch(()=>{}); }catch(e){}
 markLogin();
 setTimeout(checkLogin,50);
+
+function updBerryTop(pop){ const b=document.getElementById("berrytop"); if(!b) return; const n=berryBalance();
+  if(b.dataset.n!==String(n)){ b.innerHTML=`<span class="berrystar"></span><b>${n}</b>`; if(pop&&b.dataset.n){ b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump"); } b.dataset.n=n; } }
 /* ───────── 起動 ───────── */
 $("#back").onclick=()=>navBack();
 // 🏠は、どの画面からでも最初の画面へ戻る
 $("#homebtn").onclick=()=>{ stopSpeak(); stopSample(); navDir="back"; state.ch=0; state.sec=""; state.ret=null; setNav("home"); };
 $("#streakbtn").onclick=()=>{ SFX.pop(); if(state.nav==="streak"){ navBack(); return; } state.streakFrom=["home","course","lesson","list","qmenu","stats","shop"].includes(state.nav)?state.nav:"home"; state.calM=null; setNav("streak"); };
+$("#berrytop").onclick=()=>$("#shopbtn").click();
 $("#shopbtn").onclick=()=>{ SFX.pop(); if(state.nav==="shop"){ navBack(); return; } state.shopFrom=["home","course","lesson","list","qmenu","stats"].includes(state.nav)?state.nav:"home"; state.tryOn=null; setNav("shop"); };
 $("#gear").onclick=()=>{ if(state.nav==="list"&&state.mode==="settings"){ navBack(); return; }
   // 設定から戻ったら、開く前の画面に帰る
