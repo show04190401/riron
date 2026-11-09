@@ -1012,6 +1012,9 @@ table.stats th,table.stats td{padding:8px 6px}
 .bar>header{align-items:center!important}
 .bar>header .navbtn{align-self:center;margin-block:0}
 .bar>.cbanner .cbt b{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.35}
+
+button,.opt,.cnode,.cchara,a,[role=button]{touch-action:manipulation}
+html{touch-action:manipulation}
 </style>
 
 <div class="rotnote" aria-hidden="true"><div><svg viewBox="0 0 48 48"><rect x="15" y="6" width="18" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M38 30a14 14 0 0 1-8 10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><b>縦向きでお使いください</b><small>スマホを縦に戻すと、続きから使えます</small></div></div>
@@ -2897,19 +2900,31 @@ const SFX=(()=>{
   // 予備：Web Audio で同じ波形を鳴らす
   function viaWebAudio(k){ try{ const C=window.AudioContext||window.webkitAudioContext; if(!C) return; ac=ac||new C(); if(ac.state==="suspended") ac.resume();
     const f=pcm(k), b=ac.createBuffer(1,f.length,RATE); b.getChannelData(0).set(f); const s=ac.createBufferSource(); s.buffer=b; s.connect(ac.destination); s.start(); }catch(e){} }
+  const BUF={};
+  const buf=k=>{ if(!BUF[k]&&ac){ const f=pcm(k), b=ac.createBuffer(1,f.length,RATE); b.getChannelData(0).set(f); BUF[k]=b; } return BUF[k]; };
   function play(k){
     if(!ok()||!SPEC[k]) return;
+    // 遅れないWeb Audioで鳴らす（使えないときだけ<audio>）
+    if(ac&&ac.state==="running"){ try{ const s=ac.createBufferSource(); s.buffer=buf(k); s.connect(ac.destination); s.start(0); return; }catch(e){} }
     const P=pool(k), a=P.els[P.i++%POOLN];
     try{ a.muted=false; a.currentTime=0; const r=a.play(); if(r&&r.catch) r.catch(()=>viaWebAudio(k)); }catch(e){ viaWebAudio(k); }
   }
+  // iPhoneのマナーモードでもWeb Audioが鳴るように、無音の<audio>を小さく流しておく
+  let silent=null;
+  function keepSession(){ try{ if(!silent){ const n=RATE/2, f=new Float32Array(n); silent=new Audio(wav(f)); silent.loop=true; silent.volume=0.01; silent.setAttribute("playsinline",""); silent.setAttribute("x-webkit-airplay","deny"); }
+    if(ok()&&!document.hidden&&silent.paused){ const r=silent.play(); r&&r.catch&&r.catch(()=>{}); } }catch(e){} }
+  document.addEventListener("visibilitychange",()=>{ if(silent){ if(document.hidden) silent.pause(); else keepSession(); } });
   // 最初に画面へ触れたとき、全部の音を「鳴らせる状態」にしておく（iPhoneは、あとで自動で鳴らす音もこれが必要）
   function unlock(){
+    try{ const C=window.AudioContext||window.webkitAudioContext; if(C){ ac=ac||new C({latencyHint:"interactive"}); if(ac.state!=="running") ac.resume(); } }catch(e){}
+    keepSession();
     if(unlocked) return; unlocked=true;
+    setTimeout(()=>Object.keys(SPEC).forEach(buf),0);
     try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(e){}
     Object.keys(SPEC).forEach(k=>pool(k).els.forEach(a=>{ try{ a.muted=true; const r=a.play(); const done=()=>{ a.pause(); a.currentTime=0; a.muted=false; }; r&&r.then?r.then(done,()=>{ a.muted=false; }):done(); }catch(e){} }));
     try{ const C=window.AudioContext||window.webkitAudioContext; if(C){ ac=ac||new C(); ac.resume(); } }catch(e){}
   }
-  ["pointerdown","touchend","click","keydown"].forEach(t=>window.addEventListener(t,unlock,{capture:true,passive:true}));
+  ["pointerdown","touchstart","touchend","click","keydown"].forEach(t=>window.addEventListener(t,unlock,{capture:true,passive:true}));
   setTimeout(()=>Object.keys(SPEC).forEach(pool),400);
   const api={unlock};
   Object.keys(SPEC).forEach(k=>{ if(!/^star\d/.test(k)) api[k]=()=>play(k); });
@@ -3212,12 +3227,14 @@ const ITEMS=[
   {id:"crownp",slot:"petwear",name:"ちいさなおうかん",price:120},
   {id:"red",slot:"skin",name:"いつもの黒ニット",price:0,top:"#211E26",shade:"#15131A",crew:1},
   {id:"navy",slot:"skin",name:"ネイビーのえりつき",price:60,top:"#252B4A",shade:"#1A1F38"},
+  {id:"pj",slot:"skin",name:"いちごパジャマ",price:150,top:"#FBF8F5",shade:"#E6DDD7",pj:1},
   {id:"pink",slot:"skin",name:"ももいろニット",price:80,top:"#F59AB2",shade:"#E07A95"},
   {id:"berry",slot:"skin",name:"いちごニット",price:100,top:"#E8435E",shade:"#C42E48",dots:1},
   {id:"white",slot:"skin",name:"しろニット",price:120,top:"#F7F2EE",shade:"#E2D8D2"},
   {id:"gold",slot:"skin",name:"ゴールドニット",price:300,top:"#F2BE3A",shade:"#D29A1C"},
 ];
-const SLOTS=[["head","あたま"],["face","かお"],["neck","くび"],["hand","もちもの"],["skin","ふく"],["pet","ペット"],["petwear","ペットの服"]];
+const SLOTS=[["head","あたま"],["acc","アクセサリー"],["skin","ふく"],["pet","ペット"]];
+const TAB_SLOTS={head:["head"],acc:["face","neck","hand"],skin:["skin"],pet:["pet","petwear"]};
 const itemById=id=>ITEMS.find(i=>i.id===id);
 
 // 主人公（ちびキャラ）。顔の中心は (55,46)
@@ -3230,29 +3247,30 @@ function meSVG(eq){
   const HAIR="url(#ghair)", SKIN="#FCE6DA", SKIN2="#F6D2C2";
   return `<svg class="chara me girl" viewBox="0 0 110 112" aria-hidden="true">
     <ellipse class="shadow" cx="55" cy="107" rx="24" ry="3.6" fill="#000" opacity=".1"/>
-    <defs><linearGradient id="ghair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#271B1C"/><stop offset=".55" stop-color="#3A2620"/><stop offset="1" stop-color="#8A5434"/></linearGradient></defs>
+    <defs><linearGradient id="ghair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#231817"/><stop offset=".6" stop-color="#33231F"/><stop offset="1" stop-color="#5E3A29"/></linearGradient></defs>
     <g class="bodyg">
-      <path d="M55 14c-20 0-31 14-31 32v33c0 6 4 9 10 9h42c6 0 10-3 10-9V46c0-18-11-32-31-32z" fill="${HAIR}"/>
+      <path d="M55 14c-20 0-31.5 14-31.5 32v20c0 5 1.5 8.5 4.5 10.5q4 1.5 9-1.5l36 0q5 3 9 1.5c3-2 4.5-5.5 4.5-10.5V46c0-18-11.5-32-31.5-32z" fill="${HAIR}"/>
       <rect x="45.5" y="93" width="7" height="11" rx="2" fill="#1C1A20"/><rect x="57.5" y="93" width="7" height="11" rx="2" fill="#1C1A20"/>
       <ellipse cx="48" cy="105.5" rx="6" ry="3" fill="#3A2A26"/><ellipse cx="62" cy="105.5" rx="6" ry="3" fill="#3A2A26"/>
-      <path d="M38 83h34l5 13H33z" fill="#1E1B24"/>
+      <path d="M38 83h34l5 13H33z" fill="${sk.pj?top:"#1E1B24"}"/>${sk.pj?`<path d="M55 84v11" stroke="#E6DDD7" stroke-width="1"/><g fill="#E8435E">${[[42,88],[50,92],[60,88],[68,92]].map(([x,y])=>`<path transform="translate(${x} ${y}) scale(.17)" d="M12 22c-4.5-2-7-6-6-10 .8-2.6 3.2-3.4 6-2.4 2.8-1 5.2-.2 6 2.4 1 4-1.5 8-6 10z"/>`).join("")}</g>`:""}
       <path d="M31 72l9-9 3 11-7 5z" fill="${top}"/><path d="M79 72l-9-9-3 11 7 5z" fill="${top}"/>
-      ${sk.crew?"":`<path d="M31.5 73l5 5.6M78.5 73l-5 5.6" stroke="${trim}" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1.2 1.8"/>`}
+      ${sk.crew||sk.pj?"":`<path d="M31.5 73l5 5.6M78.5 73l-5 5.6" stroke="${trim}" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1.2 1.8"/>`}
       <path d="M36.5 78q-3 5-3.5 9" stroke="${SKIN2}" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M73.5 78q3 5 3.5 9" stroke="${SKIN2}" stroke-width="5" stroke-linecap="round" fill="none"/>
       <circle cx="33" cy="88" r="3.4" fill="${SKIN}"/><circle cx="77" cy="88" r="3.4" fill="${SKIN}"/>
       <path d="M40 63q15-5 30 0l3 22H37z" fill="${top}"/>
       <path d="M40 66q15-3 30 0" stroke="${shade}" stroke-width="1" fill="none" opacity=".6"/>
+      ${sk.pj?`<g fill="#E8435E">${[[44,70],[63,69],[48,79],[66,78],[56,84]].map(([x,y])=>`<g transform="translate(${x-2} ${y-2.6}) scale(.2)"><path d="M12 22c-4.5-2-7-6-6-10 .8-2.6 3.2-3.4 6-2.4 2.8-1 5.2-.2 6 2.4 1 4-1.5 8-6 10z"/><path d="M12 10.6 8 8.2l3 .1L9.6 5.2 12 7.6l2.4-2.4L13 8.3l3-.1z" fill="#3E9E5A"/></g>`).join("")}</g><path d="M55 66v19" stroke="#2C3A66" stroke-width=".9"/><path d="M47.5 63l7.5 6 7.5-6" fill="none" stroke="#2C3A66" stroke-width="1.3" stroke-linejoin="round"/><path d="M33 75l5-4.5M77 75l-5-4.5" stroke="#2C3A66" stroke-width="1.1"/>`:""}
       ${sk.dots?`<g fill="#FFE39A">${[[45,72],[55,70],[65,72],[49,79],[61,79],[55,84]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="1" ry="1.5"/>`).join("")}</g>`:""}
       <rect x="51.5" y="58" width="7" height="6" rx="2" fill="${SKIN2}"/>
-      ${sk.crew?`<path d="M48.5 62.6q6.5 5.2 13 0" fill="${SKIN2}"/><path d="M48 62.4q7 6 14 0" stroke="${shade}" stroke-width="1.4" fill="none"/>
+      ${sk.pj?`<path d="M49 62.6l6 5.2 6-5.2z" fill="${SKIN2}"/>`:sk.crew?`<path d="M48.5 62.6q6.5 5.2 13 0" fill="${SKIN2}"/><path d="M48 62.4q7 6 14 0" stroke="${shade}" stroke-width="1.4" fill="none"/>
       <path d="M50.6 61.6q4.4 4.4 8.8 0" stroke="#E2B04A" stroke-width=".55" fill="none"/><circle cx="55" cy="64.9" r=".75" fill="#F3CF6A"/>
       <circle cx="57.5" cy="73" r="1.15" fill="#E5BE5C" stroke="#B88A2C" stroke-width=".4"/><circle cx="57.5" cy="80.5" r="1.15" fill="#E5BE5C" stroke="#B88A2C" stroke-width=".4"/>`
       :`<path d="M55 63.5c-5-1.5-11-1-14 3 4 4.5 9.5 4.5 14 1z" fill="${top}" stroke="${trim}" stroke-width="1.5" stroke-dasharray="1.4 1.3" stroke-linecap="round"/>
       <path d="M55 63.5c5-1.5 11-1 14 3-4 4.5-9.5 4.5-14 1z" fill="${top}" stroke="${trim}" stroke-width="1.5" stroke-dasharray="1.4 1.3" stroke-linecap="round"/>`}
-      <ellipse cx="55" cy="42" rx="21" ry="22" fill="${SKIN}"/>
-      <path d="M33.5 38c-1.5 12-.5 25 2.5 35l5.5-1.5c-3-10-4.5-21-3.5-31z" fill="${HAIR}"/><path d="M76.5 38c1.5 12 .5 25-2.5 35l-5.5-1.5c3-10 4.5-21 3.5-31z" fill="${HAIR}"/>
-      <path d="M33.2 43C32.5 26 42 15.5 55 15.5S77.5 26 76.8 43c-1.6-2.4-3-3.8-4.4-4.4l-1.7 1.6-2.2-3.2-2.1 2.4-2.4-3-2.3 2.6-2.4-3.2L57 37.5 55.6 26h-1.2L53 37.5l-2.3-2.8-2.4 3.2-2.3-2.6-2.4 3-2.1-2.4-2.2 3.2-1.7-1.6c-1.4.6-2.8 2-4.4 4.4z" fill="${HAIR}"/>
-      <path d="M55 16.5v9.5" stroke="#5A4648" stroke-width="1" stroke-linecap="round" opacity=".7"/>
+      <ellipse cx="55" cy="42.5" rx="22" ry="21.2" fill="${SKIN}"/>
+      <path d="M33 37c-1.8 11-1 21 1.6 30q1.2 2.4 3.2 1.6l3-1c-3-8-4.6-18-3.6-28.5z" fill="${HAIR}"/><path d="M77 37c1.8 11 1 21-1.6 30q-1.2 2.4-3.2 1.6l-3-1c3-8 4.6-18 3.6-28.5z" fill="${HAIR}"/>
+      <path d="M33.2 43C32.5 26 42 15.5 55 15.5S77.5 26 76.8 43c-1.4-5-3.4-9-6-11.6Q63 26.6 55 26.2Q47 26.6 39.2 31.4c-2.6 2.6-4.6 6.6-6 11.6z" fill="${HAIR}"/><path d="M37.9 30.9Q35.9 38.7 36.5 45.0Q37.8 38.0 40.4 30.9ZM41.4 29.1Q39.4 36.5 40.0 42.5Q41.3 35.8 43.9 29.1ZM45.0 27.7Q43.0 35.0 43.6 41.0Q44.9 34.3 47.5 27.7ZM48.4 26.7Q46.4 34.1 47.0 40.2Q48.3 33.5 50.9 26.7ZM52.0 26.3Q50.0 33.5 50.6 39.4Q51.9 32.8 54.5 26.3ZM69.7 30.9Q72.9 38.7 73.5 45.0Q74.8 38.0 72.2 30.9ZM66.2 29.1Q69.4 36.5 70.0 42.5Q71.3 35.8 68.7 29.1ZM62.6 27.7Q65.8 35.0 66.4 41.0Q67.7 34.3 65.1 27.7ZM59.1 26.7Q62.4 34.1 63.0 40.2Q64.3 33.5 61.6 26.7ZM55.5 26.3Q58.8 33.5 59.4 39.4Q60.7 32.8 58.0 26.3Z" fill="#2C1E1B" opacity=".92"/>
+      <path d="M55 16.5v9" stroke="#5A4648" stroke-width="1" stroke-linecap="round" opacity=".7"/>
       <path d="M41 24c3-4 7-6 11-6.5M69 24c-3-4-7-6-11-6.5" stroke="#5A4648" stroke-width="1.4" stroke-linecap="round" fill="none" opacity=".55"/>
       <ellipse cx="47.5" cy="46.5" rx="2.7" ry="3.3" fill="#2B1E23"/><ellipse cx="62.5" cy="46.5" rx="2.7" ry="3.3" fill="#2B1E23"/>
       <circle cx="48.3" cy="45.4" r=".9" fill="#fff"/><circle cx="63.3" cy="45.4" r=".9" fill="#fff"/>
@@ -3284,9 +3302,9 @@ function meSVG_berry(eq){
 }
 const ICON_SHOP=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.2 10.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8z"/><path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2"/></svg>`;
 function renderShop(list){
-  state.shopTab=state.shopTab||"head";
+  state.shopTab=TAB_SLOTS[state.shopTab]?state.shopTab:"head";
   const tryEq=Object.assign({},COURSE.equip,state.tryOn||{});
-  const tab=state.shopTab, items=ITEMS.filter(i=>i.slot===tab);
+  const tab=state.shopTab, items=ITEMS.filter(i=>TAB_SLOTS[tab].includes(i.slot));
   const owned=id=>id==="red"||(id==="collar"&&!!COURSE.owned.chi)||!!COURSE.owned[id], worn=(it)=>(COURSE.equip[it.slot]||(it.slot==="skin"?"red":it.slot==="petwear"&&COURSE.owned.chi?"collar":""))===it.id;
   const sel=state.shopSel?itemById(state.shopSel):null;
   list.innerHTML=`<div class="shop">
