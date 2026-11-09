@@ -1037,6 +1037,25 @@ html{touch-action:manipulation}
 .lbd.got{opacity:.55}
 .lbd.now{background:#E8435E;color:#fff;box-shadow:0 3px 0 #B9314A;transform:translateY(-2px)}
 .lbck{position:absolute;top:-4px;right:-2px;font-style:normal;font-size:11px;background:#3E9E5A;color:#fff;border-radius:50%;width:16px;height:16px;display:grid;place-items:center}
+
+.cme .leash{position:absolute;left:-30px;top:0;width:120px;height:64px;overflow:visible;pointer-events:none;opacity:0;transition:opacity .25s}
+.cme .leash path{fill:none;stroke:#E8435E;stroke-width:1.6;stroke-linecap:round}
+.cme .leash .lR,.cme.toL .leash .lL{display:none}
+.cme.toL .leash .lR{display:inline}
+.cme.walking .leash{opacity:1}
+.cme.toL .pet.follow{left:auto;right:-26px;scale:-1 1}
+.cme .pet.follow{transition:left .2s,right .2s}
+.cme.walking .chara.girl .bodyg{animation:gWalk .6s ease-in-out infinite}
+.cme.walking .chara.girl .legL{animation:gLeg .6s ease-in-out infinite}
+.cme.walking .chara.girl .legR{animation:gLeg .6s ease-in-out infinite -.3s}
+.cme.walking .pet.follow{animation:pTrot .3s ease-in-out infinite}
+.cme.walking .leash path{animation:lSway .6s ease-in-out infinite}
+@keyframes gWalk{0%,100%{transform:translateY(0) rotate(-2.5deg)}25%,75%{transform:translateY(-2.6px) rotate(0)}50%{transform:translateY(0) rotate(2.5deg)}}
+@keyframes gLeg{0%,100%{transform:translateY(0)}25%{transform:translateY(-3px)}50%{transform:translateY(0)}}
+@keyframes pTrot{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-3.5px) rotate(3deg)}}
+@keyframes lSway{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+.chara.girl .legL,.chara.girl .legR{transform-box:fill-box;transform-origin:center bottom}
+@media (prefers-reduced-motion:reduce){.cme.walking *{animation:none!important}}
 </style>
 
 <div class="rotnote" aria-hidden="true"><div><svg viewBox="0 0 48 48"><rect x="15" y="6" width="18" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M38 30a14 14 0 0 1-8 10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><b>縦向きでお使いください</b><small>スマホを縦に戻すと、続きから使えます</small></div></div>
@@ -2885,6 +2904,8 @@ const SFX=(()=>{
     star1:[T(1319,.22,{type:"triangle",vol:.18}),T(2638,.16,{vol:.05,at:.03})],
     star2:[T(1568,.22,{type:"triangle",vol:.18}),T(3136,.16,{vol:.05,at:.03})],
     fanfare:[...[523,659,784].map((f,i)=>T(f,.14,{type:"triangle",vol:.18,at:i*.1})),...[523,659,784,1047].map(f=>T(f,.55,{type:"triangle",vol:.09,at:.32}))],
+    step:[N(.04,{vol:.07,freq:650})],
+    paw:[T(1500,.03,{vol:.035,to:1200})],
     squeak:[T(880,.07,{to:1320,vol:.14}),T(1320,.08,{to:990,vol:.1,at:.07})],
     bark:[T(780,.11,{type:"sawtooth",to:420,vol:.2,lp:1}),T(820,.12,{type:"sawtooth",to:440,vol:.18,at:.16,lp:1})],
   };
@@ -3086,17 +3107,31 @@ function renderCourse(list){
   list.innerHTML=html;
   const root=list.querySelector(".course");
   // 自分（いちごちゃん）を、いまのレッスンの横に立たせる
-  const me=document.createElement("div"); me.className="cme"; me.innerHTML=meSVG()+petSVG(null,"follow"); root.appendChild(me);
+  const me=document.createElement("div"); me.className="cme"+(COURSE.equip.pet?" haspet":""); me.innerHTML=meSVG()+petSVG(null,"follow")+(COURSE.equip.pet?`<svg class="leash" viewBox="-30 0 120 64" aria-hidden="true"><path class="lL" d="M17 47Q4 62-9 48"/><path class="lR" d="M41 47Q54 62 67 48"/></svg>`:""); root.appendChild(me);
   const place=(g,anim)=>{
     const b=root.querySelector(`.cnode[data-g="${g}"]`); if(!b) return;
     const r=b.getBoundingClientRect(), rr=root.getBoundingClientRect();
     const x=b.closest(".cnode-wrap").style.getPropertyValue("--x"), side=parseFloat(x)>0?-1:1;
     const tx=r.left-rr.left+r.width/2+side*62-29, ty=r.top-rr.top+r.height/2-46;
     if(!anim){ me.style.transform=`translate(${tx}px,${ty}px)`; me.dataset.x=tx; me.dataset.y=ty; return Promise.resolve(); }
+    if(anim==="walk") return walkSeg(tx,ty);
     const fx=+me.dataset.x||tx, fy=+me.dataset.y||ty;
     me.dataset.x=tx; me.dataset.y=ty;
     SFX.hop();
     return me.animate([{transform:`translate(${fx}px,${fy}px)`},{transform:`translate(${(fx+tx)/2}px,${Math.min(fy,ty)-70}px) scale(1.06,.94)`,offset:.5},{transform:`translate(${tx}px,${ty}px)`}],{duration:620,easing:"cubic-bezier(.3,.7,.4,1)"}).finished.then(()=>{ me.style.transform=`translate(${tx}px,${ty}px)`; SFX.land(); me.classList.remove("landed"); void me.offsetWidth; me.classList.add("landed"); });
+  };
+  const walkSeg=(tx,ty)=>{
+    const fx=+me.dataset.x, fy=+me.dataset.y, dx=tx-fx, dy=ty-fy, dist=Math.hypot(dx,dy);
+    me.dataset.x=tx; me.dataset.y=ty;
+    if(Math.abs(dx)>4) me.classList.toggle("toL",dx<0);
+    const dur=Math.max(520,dist/.16);
+    return me.animate([{transform:`translate(${fx}px,${fy}px)`},{transform:`translate(${tx}px,${ty}px)`}],{duration:dur,easing:"linear"}).finished.then(()=>{ me.style.transform=`translate(${tx}px,${ty}px)`; });
+  };
+  const walkTo=async(from,to)=>{
+    me.classList.add("walking"); let k=0;
+    const steps=setInterval(()=>{ SFX.step(); if(COURSE.equip.pet&&(k++%2)) setTimeout(()=>SFX.paw(),90); },300);
+    try{ for(let g=Math.max(from+1,to-5);g<=to;g++) await place(g,"walk"); }
+    finally{ clearInterval(steps); me.classList.remove("walking"); me.classList.remove("landed"); void me.offsetWidth; me.classList.add("landed"); SFX.land(); }
   };
   const prev=COURSE.pos==null?cur:Math.min(COURSE.pos,cur);
   requestAnimationFrame(()=>{
@@ -3105,7 +3140,7 @@ function renderCourse(list){
     if(node) window.scrollTo({top:Math.max(0,node.getBoundingClientRect().top+window.scrollY-window.innerHeight*.45),behavior:prev===cur?"auto":"smooth"});
     if(prev<cur){
       const newUnit=ALLNODES[prev].unit!==ALLNODES[cur].unit;
-      setTimeout(()=>place(cur,true).then(()=>{ if(newUnit){ SFX.fanfare(); toast(`新しいユニット「${ALLNODES[cur].unit.name}」へ進みました`); } }),450);
+      setTimeout(()=>walkTo(prev,cur).then(()=>{ if(newUnit){ SFX.fanfare(); toast(`新しいユニット「${ALLNODES[cur].unit.name}」へ進みました`); } }),450);
     }
     COURSE.pos=cur; saveCourse();
   });
@@ -3269,11 +3304,10 @@ function meSVG(eq){
   const HAIR="url(#ghair)", SKIN="#FCE6DA", SKIN2="#F6D2C2";
   return `<svg class="chara me girl" viewBox="0 0 110 112" aria-hidden="true">
     <ellipse class="shadow" cx="55" cy="107" rx="24" ry="3.6" fill="#000" opacity=".1"/>
-    <defs><linearGradient id="ghair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#231817"/><stop offset=".6" stop-color="#33231F"/><stop offset="1" stop-color="#5E3A29"/></linearGradient></defs>
+    <defs><linearGradient id="giris" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A1817"/><stop offset=".55" stop-color="#5A3426"/><stop offset="1" stop-color="#A06A4C"/></linearGradient><linearGradient id="ghair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#231817"/><stop offset=".6" stop-color="#33231F"/><stop offset="1" stop-color="#5E3A29"/></linearGradient></defs>
     <g class="bodyg">
       <path d="M55 14c-20 0-31.5 14-31.5 32v20c0 5 1.5 8.5 4.5 10.5q4 1.5 9-1.5l36 0q5 3 9 1.5c3-2 4.5-5.5 4.5-10.5V46c0-18-11.5-32-31.5-32z" fill="${HAIR}"/>
-      <rect x="45.5" y="93" width="7" height="11" rx="2" fill="#1C1A20"/><rect x="57.5" y="93" width="7" height="11" rx="2" fill="#1C1A20"/>
-      <ellipse cx="48" cy="105.5" rx="6" ry="3" fill="#3A2A26"/><ellipse cx="62" cy="105.5" rx="6" ry="3" fill="#3A2A26"/>
+      <g class="legL"><rect x="45.5" y="93" width="7" height="11" rx="2" fill="#1C1A20"/><ellipse cx="48" cy="105.5" rx="6" ry="3" fill="#3A2A26"/></g><g class="legR"><rect x="57.5" y="93" width="7" height="11" rx="2" fill="#1C1A20"/><ellipse cx="62" cy="105.5" rx="6" ry="3" fill="#3A2A26"/></g>
       <path d="M38 83h34l5 13H33z" fill="${sk.pj?top:"#1E1B24"}"/>${sk.pj?`<path d="M55 84v11" stroke="#E6DDD7" stroke-width="1"/><g fill="#E8435E">${[[42,88],[50,92],[60,88],[68,92]].map(([x,y])=>`<path transform="translate(${x} ${y}) scale(.17)" d="M12 22c-4.5-2-7-6-6-10 .8-2.6 3.2-3.4 6-2.4 2.8-1 5.2-.2 6 2.4 1 4-1.5 8-6 10z"/>`).join("")}</g>`:""}
       <path d="M31 72l9-9 3 11-7 5z" fill="${top}"/><path d="M79 72l-9-9-3 11 7 5z" fill="${top}"/>
       ${sk.crew||sk.pj?"":`<path d="M31.5 73l5 5.6M78.5 73l-5 5.6" stroke="${trim}" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1.2 1.8"/>`}
@@ -3291,17 +3325,17 @@ function meSVG(eq){
       <path d="M55 63.5c5-1.5 11-1 14 3-4 4.5-9.5 4.5-14 1z" fill="${top}" stroke="${trim}" stroke-width="1.5" stroke-dasharray="1.4 1.3" stroke-linecap="round"/>`}
       <ellipse cx="55" cy="42.5" rx="22" ry="21.2" fill="${SKIN}"/>
       <path d="M33 37c-1.8 11-1 21 1.6 30q1.2 2.4 3.2 1.6l3-1c-3-8-4.6-18-3.6-28.5z" fill="${HAIR}"/><path d="M77 37c1.8 11 1 21-1.6 30q-1.2 2.4-3.2 1.6l-3-1c3-8 4.6-18 3.6-28.5z" fill="${HAIR}"/>
-      <path d="M33.2 43C32.5 26 42 15.5 55 15.5S77.5 26 76.8 43c-1.4-5-3.4-9-6-11.6Q63 26.6 55 26.2Q47 26.6 39.2 31.4c-2.6 2.6-4.6 6.6-6 11.6z" fill="${HAIR}"/><path d="M37.9 30.9Q35.9 38.7 36.5 45.0Q37.8 38.0 40.4 30.9ZM41.4 29.1Q39.4 36.5 40.0 42.5Q41.3 35.8 43.9 29.1ZM45.0 27.7Q43.0 35.0 43.6 41.0Q44.9 34.3 47.5 27.7ZM48.4 26.7Q46.4 34.1 47.0 40.2Q48.3 33.5 50.9 26.7ZM52.0 26.3Q50.0 33.5 50.6 39.4Q51.9 32.8 54.5 26.3ZM69.7 30.9Q72.9 38.7 73.5 45.0Q74.8 38.0 72.2 30.9ZM66.2 29.1Q69.4 36.5 70.0 42.5Q71.3 35.8 68.7 29.1ZM62.6 27.7Q65.8 35.0 66.4 41.0Q67.7 34.3 65.1 27.7ZM59.1 26.7Q62.4 34.1 63.0 40.2Q64.3 33.5 61.6 26.7ZM55.5 26.3Q58.8 33.5 59.4 39.4Q60.7 32.8 58.0 26.3Z" fill="#2C1E1B" opacity=".92"/>
+      <path d="M33.4 44.5C32.6 27 42 15.8 55 15.8S77.4 27 76.6 44.5Q75.2 43.0 73.2 44.4Q71.8 39.8 69.6 43.6Q68.0 39.0 65.9 43.1Q64.2 38.4 62.2 42.6Q60.6 38.0 58.7 42.1Q57.4 37.6 55.0 33.6Q52.6 37.6 51.3 42.1Q49.4 38.0 47.8 42.6Q45.8 38.4 44.1 43.1Q42.0 39.0 40.4 43.6Q38.2 39.8 36.8 44.4Q34.8 43.0 33.4 44.5Z" fill="${HAIR}"/><path d="M48.5 30q-1.6 5-1.8 9.6M61.5 30q1.6 5 1.8 9.6M42.5 33q-1.6 4-2 7.6M67.5 33q1.6 4 2 7.6" stroke="#4A3229" stroke-width=".7" fill="none" stroke-linecap="round" opacity=".7"/>
       <path d="M55 16.5v9" stroke="#5A4648" stroke-width="1" stroke-linecap="round" opacity=".7"/>
       <path d="M41 24c3-4 7-6 11-6.5M69 24c-3-4-7-6-11-6.5" stroke="#5A4648" stroke-width="1.4" stroke-linecap="round" fill="none" opacity=".55"/>
-      <ellipse cx="47.5" cy="46.5" rx="2.7" ry="3.3" fill="#2B1E23"/><ellipse cx="62.5" cy="46.5" rx="2.7" ry="3.3" fill="#2B1E23"/>
-      <circle cx="48.3" cy="45.4" r=".9" fill="#fff"/><circle cx="63.3" cy="45.4" r=".9" fill="#fff"/>
+      <ellipse cx="47.3" cy="47.2" rx="3.5" ry="4.3" fill="url(#giris)"/><ellipse cx="47.3" cy="47.6" rx="1.6" ry="2.1" fill="#1A0F10"/><circle cx="48.55" cy="45.5" r="1.35" fill="#fff"/><circle cx="46.099999999999994" cy="49.1" r=".65" fill="#fff" opacity=".85"/><path d="M43.0 45.0q4.3-3.9 8.6 0" stroke="#24161A" stroke-width="1.55" fill="none" stroke-linecap="round"/><path d="M43.199999999999996 44.7l-1.5 -1.3" stroke="#24161A" stroke-width="1.1" stroke-linecap="round"/><path d="M45.099999999999994 51.800000000000004q2.2 .8 4.4 0" stroke="#C99A8E" stroke-width=".55" fill="none" stroke-linecap="round" opacity=".8"/><ellipse cx="62.7" cy="47.2" rx="3.5" ry="4.3" fill="url(#giris)"/><ellipse cx="62.7" cy="47.6" rx="1.6" ry="2.1" fill="#1A0F10"/><circle cx="63.95" cy="45.5" r="1.35" fill="#fff"/><circle cx="61.5" cy="49.1" r=".65" fill="#fff" opacity=".85"/><path d="M58.400000000000006 45.0q4.3-3.9 8.6 0" stroke="#24161A" stroke-width="1.55" fill="none" stroke-linecap="round"/><path d="M66.8 44.7l1.5 -1.3" stroke="#24161A" stroke-width="1.1" stroke-linecap="round"/><path d="M60.5 51.800000000000004q2.2 .8 4.4 0" stroke="#C99A8E" stroke-width=".55" fill="none" stroke-linecap="round" opacity=".8"/>
       
-      <path d="M44.2 43.4q3.3-1.9 6.6 0M59.2 43.4q3.3-1.9 6.6 0" stroke="#2B1E23" stroke-width="1" fill="none" stroke-linecap="round"/>
-      <path d="M44 40.6q3-1.2 6 -.4M60 40.2q3-.8 6 .4" stroke="#3A2620" stroke-width=".9" fill="none" stroke-linecap="round" opacity=".7"/>
-      <ellipse cx="42.5" cy="54.5" rx="3.4" ry="2" fill="#FF9FB0" opacity=".55"/><ellipse cx="67.5" cy="54.5" rx="3.4" ry="2" fill="#FF9FB0" opacity=".55"/>
-      <path d="M55 51.6v1.4" stroke="#E7B8A6" stroke-width="1.1" stroke-linecap="round"/>
-      <path d="M50.8 56q4.2 1.2 8.4 0q-1.2 3-4.2 3t-4.2-3z" fill="#C8434E"/><path d="M50.6 55.9q.4-.4.9-.2M59.4 55.9q-.4-.4-.9-.2" stroke="#B5525A" stroke-width=".6" fill="none" stroke-linecap="round"/>
+      
+      
+      <path d="M44 40.6q3-1.2 6 -.4M60 40.2q3-.8 6 .4" stroke="#3A2620" stroke-width=".9" fill="none" stroke-linecap="round" opacity="0"/>
+      <ellipse cx="41.6" cy="54.3" rx="3.9" ry="2.2" fill="#FF8FA6" opacity=".5"/><ellipse cx="68.4" cy="54.3" rx="3.9" ry="2.2" fill="#FF8FA6" opacity=".5"/>
+      <path d="M54.6 52.6q.4.4.8 0" stroke="#E2AE9E" stroke-width=".9" fill="none" stroke-linecap="round"/>
+      <path d="M52.3 55.7q2.7 1 5.4 0q-.9 2.4-2.7 2.4t-2.7-2.4z" fill="#E86A80"/><path d="M53.6 57.2q1.4.5 2.8 0" stroke="#FFB3C0" stroke-width=".5" fill="none" stroke-linecap="round"/>
       <g transform="translate(69 26) rotate(18) scale(.42)"><path d="M12 22c-4.5-2-7-6-6-10 .8-2.6 3.2-3.4 6-2.4 2.8-1 5.2-.2 6 2.4 1 4-1.5 8-6 10z" fill="#E8435E"/><path d="M12 10.6 8 8.2l3 .1L9.6 5.2 12 7.6l2.4-2.4L13 8.3l3-.1z" fill="#3E9E5A"/><g fill="#FFE39A"><circle cx="10" cy="14" r=".8"/><circle cx="14" cy="14" r=".8"/><circle cx="12" cy="17.5" r=".8"/></g></g>
       ${put("face")}${put("neck")}${put("head")}
     </g>
