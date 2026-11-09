@@ -942,14 +942,70 @@ table.stats th,table.stats td{padding:8px 6px}
 .bar>header .shopbtn{order:3;width:42px;height:38px;margin-right:6px}
 .bar>header .shopbtn svg{width:23px;height:23px}
 .bar>header .shopbtn.on{background:#FCE3EA;color:#B32A4A}
+
+.bar>header .streakbtn{order:3;height:38px;width:auto;padding:0 11px 0 8px;margin-right:6px;display:flex;align-items:center;gap:3px;font-weight:800;font-size:15px;color:#D2463C}
+.bar>header .streakbtn .flame{width:22px;height:22px;stroke:none}
+.bar>header .streakbtn.on{background:#FFE9E3}
+.cguide{flex:none;width:36px;height:36px;border-radius:12px;border:0;background:rgba(255,255,255,.22);color:#fff;display:grid;place-items:center;cursor:pointer;margin-right:2px}
+.cguide svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.cjump{position:fixed;right:max(16px,calc(50% - 300px));bottom:calc(22px + env(safe-area-inset-bottom,0px));z-index:9;width:50px;height:50px;border-radius:16px;border:2px solid #F2C5D1;background:#fff;color:#C4577A;display:grid;place-items:center;box-shadow:0 4px 0 #F2C5D1;cursor:pointer}
+.cjump svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.cjump.down svg{transform:rotate(180deg)}
+.streak{padding:8px 0 40px}
+.skhero{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#FF8A7A,#E8435E);color:#fff;border-radius:22px;padding:18px 22px;box-shadow:0 5px 0 #B9314A}
+.skclub{display:inline-block;font-size:11.5px;font-weight:800;background:rgba(255,255,255,.25);border-radius:8px;padding:3px 8px}
+.sknum{display:block;font-size:64px;line-height:1;font-weight:900;margin-top:6px;letter-spacing:-.02em}
+.skunit{font-weight:800;font-size:16px;opacity:.95}
+.skflame svg{width:96px;height:96px;filter:drop-shadow(0 4px 0 rgba(0,0,0,.12))}
+.skflame svg path:first-child{fill:#FFF3EE}
+.skmsg{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:14px 0;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;font-weight:700}
+.skmsg small{flex-basis:100%;color:var(--muted);font-weight:600;padding-left:30px}
+.skpar{font-size:20px}
+.skcal{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px}
+.skmh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.skmh b{font-size:17px}
+.skarr{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-size:20px;font-weight:800;color:var(--ink);cursor:pointer;margin-left:6px}
+.skstat{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.skstat>div{border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:8px}
+.skstat b{font-size:18px}.skstat small{grid-column:1/-1;color:var(--muted);font-size:11.5px}
+.skstat .dot{width:12px;height:12px;border-radius:50%;background:#E8435E}.skstat .dot.bl{background:#F59AB2}
+.skgrid{display:grid;grid-template-columns:repeat(7,1fr);row-gap:6px;text-align:center}
+.skgrid .wd{font-size:12px;color:var(--muted);font-weight:700;padding-bottom:2px}
+.cd{position:relative;height:34px;display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--muted)}
+.cd i{font-style:normal;position:relative;z-index:1;width:30px;height:30px;display:grid;place-items:center;border-radius:50%}
+.cd.on i{background:#E8435E;color:#fff}
+.cd.on.l::before,.cd.on.r::after{content:"";position:absolute;top:2px;bottom:2px;background:#E8435E;width:50%}
+.cd.on.l::before{left:0}.cd.on.r::after{right:0}
+.cd.today i{box-shadow:0 0 0 2px #fff,0 0 0 4px #E8435E}
+.cd.today:not(.on) i{color:#E8435E}
+.skh{margin:22px 4px 10px;font-size:17px}
+.skgoal{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px}
+.gbar{flex:1;height:14px;border-radius:99px;background:#F6DCE3;overflow:hidden}
+.gbar i{display:block;height:100%;background:linear-gradient(90deg,#FF8A7A,#E8435E);border-radius:99px;min-width:14px}
+.gm{font-weight:800;font-size:13px;background:#F6DCE3;color:#9C3B5A;border-radius:8px;padding:4px 8px}
+.gm.on{background:#E8435E;color:#fff}
+.skgnote{color:var(--muted);margin:8px 6px;font-size:13.5px}
+.skgnote b{color:#E8435E}
+
+.rotnote{display:none}
+@media (orientation:landscape) and (max-height:520px) and (pointer:coarse){
+  .rotnote{display:grid;place-items:center;position:fixed;inset:0;z-index:9999;background:#F6E4E9;color:#C4577A;text-align:center}
+  .rotnote>div{display:grid;gap:8px;justify-items:center}
+  .rotnote svg{width:64px;height:64px;animation:rotph 1.6s ease-in-out infinite}
+  .rotnote b{font-size:18px;color:#5A2A3A}.rotnote small{color:#8A5A6A}
+  .wrap{visibility:hidden}
+}
+@keyframes rotph{0%,20%{transform:rotate(90deg)}60%,100%{transform:rotate(0)}}
 </style>
 
+<div class="rotnote" aria-hidden="true"><div><svg viewBox="0 0 48 48"><rect x="15" y="6" width="18" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M38 30a14 14 0 0 1-8 10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><b>縦向きでお使いください</b><small>スマホを縦に戻すと、続きから使えます</small></div></div>
 <div class="wrap">
   <div class="bar">
     <header>
       <button class="navbtn backbtn" id="back" aria-label="戻る" title="戻る" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
       <button class="navbtn homebtn" id="homebtn" aria-label="最初の画面へ" title="最初の画面へ" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7"/><path d="M6 9.6V20h12V9.6"/><path d="M10 20v-5h4v5"/></svg></button>
       <span class="eyebrow"><span class="eb-l">FP2級</span></span>
+      <button class="navbtn streakbtn" id="streakbtn" aria-label="連続ログイン日数" title="連続ログイン日数"></button>
       <button class="navbtn shopbtn" id="shopbtn" aria-label="ショップ" title="ショップ"></button>
       <button class="navbtn gearbtn" id="gear" aria-label="設定" title="設定" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
       <span class="sync" id="sync"></span>
@@ -1381,6 +1437,7 @@ function render(){
   const home=state.nav==="home", isList=state.nav==="list";
   const qlist=isList&&QMODES.includes(state.mode);
   $("#back").hidden=home; $("#homebtn").hidden=home; $("#gear").hidden=false;
+  { const st=$("#streakbtn"); if(st){ st.innerHTML=`${ICON_FLAME}<b>${streakNow()}</b>`; st.classList.toggle("on",state.nav==="streak"); } }
   { const sb=$("#shopbtn"); if(sb){ if(!sb.firstChild) sb.innerHTML=ICON_SHOP; sb.classList.toggle("on",state.nav==="shop"); } }
   $("#chips").hidden=true; $("#stars").hidden=true;
   $("#tools").hidden=!isList;
@@ -1394,6 +1451,7 @@ function render(){
   if(state.nav==="course"){ renderCourse(list); dockBanner(); counts(); return; }
   if(state.nav==="lesson"){ renderLesson(list); counts(); return; }
   if(state.nav==="shop"){ renderShop(list); counts(); return; }
+  if(state.nav==="streak"){ renderStreak(list); counts(); return; }
   if(state.nav==="chapters"){ renderChapters(list); counts(); return; }
   if(state.query){
     const hs=searchHits();
@@ -2705,6 +2763,7 @@ function navBack(){
   stopSpeak(); stopSample(); navDir="back";
   if(state.nav==="lesson"){ setNav("course"); return; }
   if(state.nav==="shop"){ const f=state.shopFrom||"home"; state.shopFrom=null; setNav(f); return; }
+  if(state.nav==="streak"){ const f=state.streakFrom||"home"; state.streakFrom=null; setNav(f); return; }
   if(state.nav==="list"&&state.fromCourse){ state.fromCourse=false; state.ch=0; state.sec=""; setNav("course"); return; }
   if(state.nav==="list"){
     if(state.mode==="settings"&&state.ret){ const r=state.ret; state.ret=null; state.ch=r.ch; state.sec=r.sec; setNav(r.nav,r.mode); return; }
@@ -2948,7 +3007,7 @@ const ICON_COURSE=`<svg class="hcico" viewBox="0 0 64 64" aria-hidden="true"><ci
 /* ═════════════ コースの画面 ═════════════ */
 function renderCourse(list){
   const cur=curIndex();
-  let html=`<div class="course"><div class="cbanner" id="cbanner"><div class="cbt"></div><button class="cberries" id="cshop" title="いちごショップ（集めたいちごで衣装を買えます）"><span class="berrystar"></span><b id="cbn">${berryBalance()}</b><span class="cshopl">ショップ</span></button></div>`;
+  let html=`<div class="course"><div class="cbanner" id="cbanner"><div class="cbt"></div><button class="cguide" id="cguide" aria-label="このユニットのテキスト" title="このユニットのテキスト"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h9.5a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M8.5 9h6M8.5 12.5h6"/><path d="M5 17a3 3 0 0 1 3-3h9.5"/></svg></button><button class="cberries" id="cshop" title="いちごショップ（集めたいちごで衣装を買えます）"><span class="berrystar"></span><b id="cbn">${berryBalance()}</b><span class="cshopl">ショップ</span></button></div>`;
   let gi=0;
   UNITS.forEach(u=>{
     const [col,dark]=CH_COLOR[u.c]||CH_COLOR[1];
@@ -2997,7 +3056,7 @@ function renderCourse(list){
   });
   // 上の帯：いまの位置のユニット名
   const banner=root.querySelector("#cbanner"), bar=document.querySelector(".bar");
-  const setBanner=u=>{ const [col,dark]=CH_COLOR[u.c]; banner.style.setProperty("--uc",col); banner.style.setProperty("--ud",dark);
+  const setBanner=u=>{ const [col,dark]=CH_COLOR[u.c]; banner.style.setProperty("--uc",col); banner.style.setProperty("--ud",dark); banner.dataset.uu=u.idx;
     banner.querySelector(".cbt").innerHTML=`<small>分野${u.c}・ユニット${u.no}</small><b>${esc(u.name)}</b>`; };
   const fixTop=()=>{};
   setBanner(ALLNODES[cur].unit);
@@ -3007,6 +3066,12 @@ function renderCourse(list){
     for(const s of secs){ if(s.getBoundingClientRect().top<y) u=s; else break; }
     const uu=UNITS[+u.dataset.u]; if(banner.dataset.u!==String(uu.idx)){ banner.dataset.u=uu.idx; setBanner(uu); } };
   window.addEventListener("scroll",onScroll,{passive:true});
+  { const gb=banner.querySelector("#cguide"); if(gb) gb.onclick=e=>{ e.stopPropagation(); SFX.pop(); const u=UNITS[+banner.dataset.uu||0]; COURSE.text[u.pid]=1; saveCourse(); state.fromCourse=true; state.mode="cloze"; state.ch=u.c; state.sec=u.pid; state.optOrder={}; setNav("list"); }; }
+  { const jb=document.createElement("button"); jb.className="cjump"; jb.hidden=true; jb.setAttribute("aria-label","いまの場所へ"); jb.innerHTML=`<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>`; root.appendChild(jb);
+    const curEl=()=>root.querySelector(`.cnode[data-g="${curIndex()}"]`);
+    const upd=()=>{ if(state.nav!=="course"){ window.removeEventListener("scroll",upd); return; } const c=curEl(); if(!c) return; const r=c.getBoundingClientRect(); const off=r.bottom<120||r.top>innerHeight-60; jb.hidden=!off; jb.classList.toggle("down",r.top>innerHeight-60); };
+    jb.onclick=e=>{ e.stopPropagation(); SFX.hop(); const c=curEl(); if(c) c.scrollIntoView({behavior:"smooth",block:"center"}); };
+    window.addEventListener("scroll",upd,{passive:true}); setTimeout(upd,600); }
   // ノードを押したとき
   root.querySelectorAll(".cnode").forEach(b=>b.onclick=e=>{ e.stopPropagation(); SFX.pop(); openNodePop(root,b,+b.dataset.g,cur); });
   root.querySelectorAll(".cchara").forEach(c=>c.onclick=e=>{ e.stopPropagation(); SFX.squeak();
@@ -3295,10 +3360,63 @@ function petSVG(eq,cls){
   </g></svg>`;
 }
 
+
+/* ═════════════ 連続ログイン ═════════════ */
+const ICON_FLAME=`<svg class="flame" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c.6 3.2 3.4 4.8 4.9 7.6 1.9 3.5.6 9.4-4.9 10.9-5.5-1.5-6.8-7.4-4.9-10.9.6-1.2 1.4-1.9 2.1-2.6.2 1.6.9 2.7 2 3.1-.5-2.6-.1-5.6.8-8.1z" fill="#FF6F61"/><path d="M12 11.2c.4 1.7 2.2 2.6 2.4 4.6.2 2.1-1 3.6-2.4 4-1.4-.4-2.6-1.9-2.4-4 .1-1.1.7-1.8 1.2-2.4.2.8.6 1.3 1.1 1.5-.2-1.3 0-2.6.1-3.7z" fill="#FFD36B"/></svg>`;
+const STREAK_KEY="fp2-streak-v1";
+const dkey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+let STREAK=(()=>{ try{ const s=JSON.parse(localStorage.getItem(STREAK_KEY)||"null"); if(s&&Array.isArray(s.days)) return s; }catch(e){} return {days:[],best:0}; })();
+function saveStreak(){ try{ localStorage.setItem(STREAK_KEY,JSON.stringify(STREAK)); }catch(e){} }
+function markLogin(){
+  const k=dkey(new Date()); if(STREAK.days.includes(k)) return false;
+  STREAK.days.push(k); STREAK.days.sort(); if(STREAK.days.length>800) STREAK.days=STREAK.days.slice(-800);
+  STREAK.best=Math.max(STREAK.best||0,streakNow()); saveStreak(); return true;
+}
+function streakNow(){
+  const set=new Set(STREAK.days), d=new Date(); if(!set.has(dkey(d))) d.setDate(d.getDate()-1);
+  let n=0; while(set.has(dkey(d))){ n++; d.setDate(d.getDate()-1); } return n;
+}
+const STREAK_GOALS=[3,7,14,30,50,100,200,365,500,1000];
+function renderStreak(list){
+  const n=streakNow(), set=new Set(STREAK.days), now=new Date();
+  const m=state.calM||{y:now.getFullYear(),m:now.getMonth()}; state.calM=m;
+  const first=new Date(m.y,m.m,1), days=new Date(m.y,m.m+1,0).getDate(), lead=first.getDay();
+  const inMonth=STREAK.days.filter(k=>k.startsWith(`${m.y}-${String(m.m+1).padStart(2,"0")}`)).length;
+  let cells=""; for(let i=0;i<lead;i++) cells+=`<span class="cd empty"></span>`;
+  for(let d=1;d<=days;d++){
+    const dt=new Date(m.y,m.m,d), on=set.has(dkey(dt)), wd=dt.getDay();
+    const pv=new Date(m.y,m.m,d-1), nx=new Date(m.y,m.m,d+1);
+    const l=on&&wd>0&&d>1&&set.has(dkey(pv)), r=on&&wd<6&&d<days&&set.has(dkey(nx)), today=dkey(dt)===dkey(now);
+    cells+=`<span class="cd${on?" on":""}${l?" l":""}${r?" r":""}${today?" today":""}"><i>${d}</i></span>`;
+  }
+  const next=STREAK_GOALS.find(g=>g>n)||n+100, prevG=[...STREAK_GOALS].reverse().find(g=>g<=n)||0;
+  const pct=Math.round((n-prevG)/(next-prevG)*100);
+  const msg=n>=100?"100日以上つづいています。すごい！":n>=30?"1か月以上つづいています。この調子！":n>=7?"1週間以上つづいています！":n>=2?"いい調子。明日もひらこう！":"今日から記録スタート！";
+  list.innerHTML=`<div class="streak">
+    <div class="skhero"><div><span class="skclub">連続ログイン</span><b class="sknum">${n}</b><span class="skunit">日連続！</span></div><div class="skflame">${ICON_FLAME}</div></div>
+    <div class="skmsg"><span class="skpar">🍓</span>${msg}${STREAK.best>n?`<small>これまでの最高：${STREAK.best}日</small>`:""}</div>
+    <div class="skcal"><div class="skmh"><b>${m.y}年${m.m+1}月</b><span><button class="skarr" data-d="-1" aria-label="前の月">‹</button><button class="skarr" data-d="1" aria-label="次の月">›</button></span></div>
+      <div class="skstat"><div><span class="dot"></span><b>${inMonth}</b><small>ログインした日数</small></div><div><span class="dot bl"></span><b>${STREAK.days.length}</b><small>合計日数</small></div></div>
+      <div class="skgrid">${"日月火水木金土".split("").map(w=>`<span class="wd">${w}</span>`).join("")}${cells}</div></div>
+    <h3 class="skh">連続ログインの目標</h3>
+    <div class="skgoal"><span class="gm">${prevG}</span><div class="gbar"><i style="width:${pct}%"></i></div><span class="gm on">${next}</span></div>
+    <p class="skgnote">あと<b>${next-n}日</b>で ${next}日連続 を達成します</p>
+  </div>`;
+  list.querySelectorAll(".skarr").forEach(b=>b.onclick=()=>{ SFX.pop(); let mm=m.m+ +b.dataset.d, yy=m.y; if(mm<0){mm=11;yy--;} if(mm>11){mm=0;yy++;} state.calM={y:yy,m:mm}; render(); });
+}
+// 開いたとき（日付が変わってから戻ってきたときも）に記録する
+function checkLogin(){ const fresh=markLogin(); const st=$("#streakbtn"); if(st) st.innerHTML=`${ICON_FLAME}<b>${streakNow()}</b>`;
+  if(fresh&&STREAK.days.length>1){ const n=streakNow(); setTimeout(()=>toast(n>1?`${n}日連続ログイン！🔥`:"今日もログインしました"),600); } }
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkLogin(); });
+
+try{ if(screen.orientation&&screen.orientation.lock) screen.orientation.lock("portrait").catch(()=>{}); }catch(e){}
+markLogin();
+setTimeout(checkLogin,50);
 /* ───────── 起動 ───────── */
 $("#back").onclick=()=>navBack();
 // 🏠は、どの画面からでも最初の画面へ戻る
 $("#homebtn").onclick=()=>{ stopSpeak(); stopSample(); navDir="back"; state.ch=0; state.sec=""; state.ret=null; setNav("home"); };
+$("#streakbtn").onclick=()=>{ SFX.pop(); if(state.nav==="streak"){ navBack(); return; } state.streakFrom=["home","course","lesson","list","qmenu","stats","shop"].includes(state.nav)?state.nav:"home"; state.calM=null; setNav("streak"); };
 $("#shopbtn").onclick=()=>{ SFX.pop(); if(state.nav==="shop"){ navBack(); return; } state.shopFrom=["home","course","lesson","list","qmenu","stats"].includes(state.nav)?state.nav:"home"; state.tryOn=null; setNav("shop"); };
 $("#gear").onclick=()=>{ if(state.nav==="list"&&state.mode==="settings"){ navBack(); return; }
   // 設定から戻ったら、開く前の画面に帰る
