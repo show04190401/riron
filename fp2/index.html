@@ -988,14 +988,7 @@ table.stats th,table.stats td{padding:8px 6px}
 .skgnote b{color:#E8435E}
 
 .rotnote{display:none}
-@media (orientation:landscape) and (max-height:520px) and (pointer:coarse){
-  .rotnote{display:grid;place-items:center;position:fixed;inset:0;z-index:9999;background:#F6E4E9;color:#C4577A;text-align:center}
-  .rotnote>div{display:grid;gap:8px;justify-items:center}
-  .rotnote svg{width:64px;height:64px;animation:rotph 2s ease-in-out infinite}
-  .rotnote b{font-size:18px;color:#5A2A3A}.rotnote small{color:#8A5A6A}
-  .wrap{visibility:hidden}
-}
-@keyframes rotph{0%,20%{transform:rotate(90deg)}60%,100%{transform:rotate(0)}}
+
 
 .bar>header .berrytop{order:3;height:38px;width:auto;padding:0 10px 0 7px;margin-right:6px;display:flex;align-items:center;gap:3px;font-weight:800;font-size:15px;color:#B32A4A}
 .bar>header .berrytop .berrystar{width:19px;height:19px}
@@ -1065,7 +1058,6 @@ html{touch-action:manipulation}
 .bar>header .berrytop.on .bagi{background:#fff}
 </style>
 
-<div class="rotnote" aria-hidden="true"><div><svg viewBox="0 0 48 48"><rect x="16" y="5" width="16" height="30" rx="3.5" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="30" r="1.6" fill="currentColor"/><path d="M10 40q14 8 28 0M34 36l4 4-5 2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><b>縦向きでお使いください</b><small>スマホを縦に戻すと、続きから使えます<br>回転しないようにするには、コントロールセンターの「画面縦向きのロック」をオンにしてください</small></div></div>
 <div class="wrap">
   <div class="bar">
     <header>
@@ -3527,7 +3519,6 @@ function showBonus(){
 }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkLogin(); });
 
-try{ if(screen.orientation&&screen.orientation.lock) screen.orientation.lock("portrait").catch(()=>{}); }catch(e){}
 markLogin();
 setTimeout(checkLogin,50);
 
