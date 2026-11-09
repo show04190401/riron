@@ -1015,6 +1015,28 @@ table.stats th,table.stats td{padding:8px 6px}
 
 button,.opt,.cnode,.cchara,a,[role=button]{touch-action:manipulation}
 html{touch-action:manipulation}
+
+.lbwrap{position:fixed;inset:0;z-index:60;background:rgba(60,20,35,.45);display:grid;place-items:center;padding:16px;animation:lbin .25s ease}
+.lbwrap.out{opacity:0;transition:opacity .3s}
+@keyframes lbin{from{opacity:0}}
+.lbcard{width:min(360px,100%);background:var(--surface,#fff);border-radius:24px;padding:20px 16px 18px;text-align:center;box-shadow:0 6px 0 #E3B5C3;animation:lbpop .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes lbpop{from{transform:scale(.7)}}
+.lbt{font-weight:900;font-size:18px;color:#C4577A;letter-spacing:.06em}
+.lbhero{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 4px}
+.lbhero .berrystar{width:64px;height:64px;animation:lbspin 1.2s ease}
+@keyframes lbspin{0%{transform:scale(0) rotate(-30deg)}60%{transform:scale(1.2) rotate(8deg)}100%{transform:none}}
+.lbhero b{font-size:44px;font-weight:900;color:#B32A4A}
+.lbsub{margin:4px 0 14px;font-weight:700;line-height:1.6}
+.lbstrip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:16px}
+.lbstrip.inpage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px;margin-bottom:4px}
+.lbd{position:relative;display:grid;justify-items:center;gap:1px;padding:6px 0 7px;border-radius:12px;background:#F8E6EC;color:#9C3B5A}
+.lbd small{font-size:9.5px;font-weight:700;white-space:nowrap}
+.lbd .berrystar{width:20px;height:20px}
+.lbd b{font-size:12px}
+.lbd.big{background:#FFE7B8;color:#9A5B00}
+.lbd.got{opacity:.55}
+.lbd.now{background:#E8435E;color:#fff;box-shadow:0 3px 0 #B9314A;transform:translateY(-2px)}
+.lbck{position:absolute;top:-4px;right:-2px;font-style:normal;font-size:11px;background:#3E9E5A;color:#fff;border-radius:50%;width:16px;height:16px;display:grid;place-items:center}
 </style>
 
 <div class="rotnote" aria-hidden="true"><div><svg viewBox="0 0 48 48"><rect x="15" y="6" width="18" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M38 30a14 14 0 0 1-8 10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><b>縦向きでお使いください</b><small>スマホを縦に戻すと、続きから使えます</small></div></div>
@@ -3186,7 +3208,7 @@ function showLessonDone(){
 
 
 /* ═════════════ いちごショップ ═════════════ */
-const berryBalance=()=>Math.max(0,berryCount()-(COURSE.spent||0));
+const berryBalance=()=>Math.max(0,berryCount()+((typeof STREAK!=="undefined"&&STREAK.bonus)||0)-(COURSE.spent||0));
 COURSE.owned=COURSE.owned||{}; COURSE.equip=COURSE.equip||{};
 const W=(x,y)=>[x,y];
 const ITEMS=[
@@ -3217,7 +3239,7 @@ const ITEMS=[
   {id:"house",slot:"hand",name:"おうち",price:60,svg:()=>PROPS.house},
   {id:"omamori",slot:"hand",name:"合格おまもり",price:150,svg:()=>`<g transform="translate(78 44)"><path d="M10 0c-3-5-7-5-7 0" stroke="#F5B83D" stroke-width="2" fill="none"/><rect y="2" width="20" height="28" rx="4" fill="#E8435E"/><rect x="2.5" y="5" width="15" height="22" rx="2.5" fill="none" stroke="#F5C33B" stroke-width="1.4"/><text x="10" y="15" text-anchor="middle" font-size="7" font-weight="900" fill="#FFF3C4" font-family="sans-serif">合</text><text x="10" y="24" text-anchor="middle" font-size="7" font-weight="900" fill="#FFF3C4" font-family="sans-serif">格</text></g>`},
   // いろ
-  {id:"chi",slot:"pet",name:"ロングコートチワワ",price:150},
+  {id:"chi",slot:"pet",name:"ルイくん",price:150},
   {id:"collar",slot:"petwear",name:"ししゅうのえり",price:0},
   {id:"ribbonp",slot:"petwear",name:"大きなリボン",price:30},
   {id:"bandana",slot:"petwear",name:"いちごバンダナ",price:40},
@@ -3330,11 +3352,11 @@ function renderShop(list){
   if(act) act.onclick=()=>{
     const it=sel, o=owned(it.id), w=worn(it);
     if(!o){
-      if(it.slot==="petwear"&&!COURSE.owned.chi){ SFX.wrong(); toast("先に「ペット」でチワワをお迎えしてね"); return; }
+      if(it.slot==="petwear"&&!COURSE.owned.chi){ SFX.wrong(); toast("先に「ペット」でルイくんをお迎えしてね"); return; }
       if(berryBalance()<it.price){ SFX.wrong(); toast(`いちごがあと${it.price-berryBalance()}こ 足りません`); return; }
       COURSE.spent=(COURSE.spent||0)+it.price; COURSE.owned[it.id]=1; COURSE.equip[it.slot]=it.id;
       if(it.id==="chi"){ COURSE.equip.petwear=COURSE.equip.petwear||"collar"; } if(it.slot==="petwear") COURSE.equip.pet="chi"; saveCourse(); if(it.slot==="pet"||it.slot==="petwear") setTimeout(()=>SFX.bark(),350);
-      SFX.chest(); state.tryOn=null; const y=window.scrollY; render(); window.scrollTo({top:y}); celebrate(it.id==="chi"?"チワワをお迎えしました！ コースでもいっしょに進みます":it.slot==="petwear"?`チワワに「${it.name}」を着せました！`:`「${it.name}」を買って、着替えました！`); return;
+      SFX.chest(); state.tryOn=null; const y=window.scrollY; render(); window.scrollTo({top:y}); celebrate(it.id==="chi"?"ルイくん（ロングコートチワワ）をお迎えしました！ コースでもいっしょに進みます":it.slot==="petwear"?`ルイくんに「${it.name}」を着せました！`:`「${it.name}」を買って、着替えました！`); return;
     }
     if(w){ if(it.slot==="skin"||(it.slot==="petwear"&&it.id==="collar")){ return; } if(it.slot==="petwear") COURSE.equip.petwear="collar"; else delete COURSE.equip[it.slot]; SFX.pop(); }
     else { COURSE.equip[it.slot]=it.id; if(it.slot==="petwear") COURSE.equip.pet="chi"; (it.slot==="pet"||it.slot==="petwear")?SFX.bark():SFX.squeak(); }
@@ -3342,12 +3364,12 @@ function renderShop(list){
   };
 }
 function shopAction(it,o,w){
-  if(it.slot==="petwear"&&!COURSE.owned.chi) return `<span class="sname2">${esc(it.name)}</span><span class="shint">先に「ペット」でチワワをお迎えしてね</span>`;
+  if(it.slot==="petwear"&&!COURSE.owned.chi) return `<span class="sname2">${esc(it.name)}</span><span class="shint">先に「ペット」でルイくんをお迎えしてね</span>`;
   if(it.slot==="petwear"&&it.id==="collar"&&w) return `<span class="sname2">${esc(it.name)}</span><span class="shint">きています</span>`;
   const short=Math.max(0,it.price-berryBalance());
   if(!o) return `<span class="sname2">${esc(it.name)}</span><button class="cpbtn big" id="sact"${short?' data-short="1"':""}><span class="berrystar"></span>${it.price}こで買う${short?`（あと${short}こ）`:""}</button>`;
   if(w) return `<span class="sname2">${esc(it.name)}</span>${it.slot==="skin"?`<span class="shint">きています</span>`:`<button class="cpbtn sub" id="sact">${it.slot==="pet"?"おるすばん":"はずす"}</button>`}`;
-  return `<span class="sname2">${esc(it.name)}</span><button class="cpbtn big" id="sact">${it.slot==="pet"?"いっしょに連れていく":it.slot==="petwear"?"チワワに着せる":"きがえる"}</button>`;
+  return `<span class="sname2">${esc(it.name)}</span><button class="cpbtn big" id="sact">${it.slot==="pet"?"いっしょに連れていく":it.slot==="petwear"?"ルイくんに着せる":"きがえる"}</button>`;
 }
 function bounceStage(){ const s=document.querySelector(".sstage .chara"); if(s){ s.classList.remove("jump"); void s.offsetWidth; s.classList.add("jump"); } }
 function celebrate(msg){
@@ -3406,7 +3428,9 @@ function saveStreak(){ try{ localStorage.setItem(STREAK_KEY,JSON.stringify(STREA
 function markLogin(){
   const k=dkey(new Date()); if(STREAK.days.includes(k)) return false;
   STREAK.days.push(k); STREAK.days.sort(); if(STREAK.days.length>800) STREAK.days=STREAK.days.slice(-800);
-  STREAK.best=Math.max(STREAK.best||0,streakNow()); saveStreak(); return true;
+  const n=streakNow(); STREAK.best=Math.max(STREAK.best||0,n);
+  const amt=loginBonus(n); STREAK.pending={n,amt};
+  saveStreak(); return true;
 }
 function streakNow(){
   const set=new Set(STREAK.days), d=new Date(); if(!set.has(dkey(d))) d.setDate(d.getDate()-1);
@@ -3434,6 +3458,7 @@ function renderStreak(list){
     <div class="skcal"><div class="skmh"><b>${m.y}年${m.m+1}月</b><span><button class="skarr" data-d="-1" aria-label="前の月">‹</button><button class="skarr" data-d="1" aria-label="次の月">›</button></span></div>
       <div class="skstat"><div><span class="dot"></span><b>${inMonth}</b><small>ログインした日数</small></div><div><span class="dot bl"></span><b>${STREAK.days.length}</b><small>合計日数</small></div></div>
       <div class="skgrid">${"日月火水木金土".split("").map(w=>`<span class="wd">${w}</span>`).join("")}${cells}</div></div>
+    <h3 class="skh">ログインボーナス</h3><div class="lbstrip inpage">${bonusStrip(Math.max(1,n))}</div><p class="skgnote">毎日ひらくと いちご5こ、7日目ごとに25こ、30日ごとにさらに50こ もらえます</p>
     <h3 class="skh">連続ログインの目標</h3>
     <div class="skgoal"><span class="gm">${prevG}</span><div class="gbar"><i style="width:${pct}%"></i></div><span class="gm on">${next}</span></div>
     <p class="skgnote">あと<b>${next-n}日</b>で ${next}日連続 を達成します</p>
@@ -3441,8 +3466,25 @@ function renderStreak(list){
   list.querySelectorAll(".skarr").forEach(b=>b.onclick=()=>{ SFX.pop(); let mm=m.m+ +b.dataset.d, yy=m.y; if(mm<0){mm=11;yy--;} if(mm>11){mm=0;yy++;} state.calM={y:yy,m:mm}; render(); });
 }
 // 開いたとき（日付が変わってから戻ってきたときも）に記録する
-function checkLogin(){ const fresh=markLogin(); const st=$("#streakbtn"); if(st) st.innerHTML=`${ICON_FLAME}<b>${streakNow()}</b>`;
-  if(fresh&&STREAK.days.length>1){ const n=streakNow(); setTimeout(()=>toast(n>1?`${n}日連続ログイン！🔥`:"今日もログインしました"),600); } }
+function checkLogin(){ markLogin(); const st=$("#streakbtn"); if(st) st.innerHTML=`${ICON_FLAME}<b>${streakNow()}</b>`;
+  if(STREAK.pending) setTimeout(showBonus,500); }
+// 1日目〜6日目は5こ、7日目ごとに25こ、30日ごとにさらに+50こ
+function loginBonus(n){ return (n%7===0?25:5)+(n%30===0?50:0); }
+function bonusStrip(n){ const base=Math.floor((n-1)/7)*7; let s="";
+  for(let d=1;d<=7;d++){ const day=base+d, a=loginBonus(day), st=day<n?"got":day===n?"now":"";
+    s+=`<div class="lbd ${st}${d===7?" big":""}"><small>${day}日目</small><span class="berrystar"></span><b>+${a}</b>${day<n?'<i class="lbck">✓</i>':""}</div>`; }
+  return s; }
+function showBonus(){
+  const P=STREAK.pending; if(!P||document.querySelector(".lbwrap")) return;
+  const w=document.createElement("div"); w.className="lbwrap";
+  w.innerHTML=`<div class="lbcard" role="dialog" aria-label="ログインボーナス"><div class="lbt">ログインボーナス</div>
+    <div class="lbhero"><span class="berrystar"></span><b>+${P.amt}</b></div>
+    <p class="lbsub">${P.n>1?`🔥 ${P.n}日連続ログイン！`:"今日もきてくれてありがとう！"}${P.n%7===0?"<br>7日つづいたので大きなボーナス！":`<br>あと${7-P.n%7}日で +25こ のボーナス`}</p>
+    <div class="lbstrip">${bonusStrip(P.n)}</div><button class="cpbtn big" id="lbget">うけとる</button></div>`;
+  document.body.appendChild(w); SFX.open();
+  w.querySelector("#lbget").onclick=()=>{ STREAK.bonus=(STREAK.bonus||0)+P.amt; STREAK.pending=null; saveStreak(); SFX.chest(); updBerryTop(true);
+    const sb=document.getElementById("sbal"); if(sb) sb.textContent=berryBalance(); w.classList.add("out"); setTimeout(()=>w.remove(),300); };
+}
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkLogin(); });
 
 try{ if(screen.orientation&&screen.orientation.lock) screen.orientation.lock("portrait").catch(()=>{}); }catch(e){}
