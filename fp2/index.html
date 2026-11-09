@@ -814,7 +814,9 @@ table.stats th,table.stats td{padding:8px 6px}
 :root[data-theme="dark"] .cnode.locked{background:#3D2D33;box-shadow:0 7px 0 #2A1F24;color:#6E5A62}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .cnode.locked{background:#3D2D33;box-shadow:0 7px 0 #2A1F24;color:#6E5A62} }
 .cnode.t-chest{background:none;box-shadow:none;width:76px;height:66px}
-.cnode.t-chest .ci{width:70px;height:62px}
+.cnode.t-chest .ci{width:70px;height:78px;margin-top:-16px}
+.cnode.t-chest .ci svg{overflow:visible}
+.cnode-wrap:has(.cstart){margin-top:34px}
 .cnode.t-chest.locked{filter:grayscale(.85) opacity(.7)}
 .cnode.t-chest:not(.locked):not(.done){animation:chestWiggle 2.4s ease-in-out infinite}
 .cnode.opening .ci{animation:chestPop .6s cubic-bezier(.3,1.6,.5,1)}
@@ -880,6 +882,43 @@ table.stats th,table.stats td{padding:8px 6px}
 .ldstars i{width:38px;height:38px;background:#E6D9DD;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);transition:background .2s}
 .ldstars i.on{background:#F5B83D;animation:chestPop .45s cubic-bezier(.3,1.6,.5,1)}
 @media (prefers-reduced-motion: reduce){ .course *,.ldone *{animation:none!important} }
+
+/* ═══════ いちごショップ ═══════ */
+.cberries{border:0;cursor:pointer}
+.cshopl{font-size:11px;font-weight:800;margin-left:2px;padding-left:6px;border-left:1.5px solid #F2C5D1}
+.shop{padding-bottom:110px}
+.shead{display:flex;align-items:center;gap:14px;padding:16px;border-radius:20px;background:var(--surface);box-shadow:var(--shadow-2);margin-bottom:12px}
+.sstage{position:relative;width:132px;height:136px;flex:none;display:grid;place-items:end center;border-radius:16px;background:radial-gradient(circle at 50% 85%,#FCE3EA,transparent 70%)}
+.sstage .chara{width:122px;height:124px}
+.sfloor{position:absolute;bottom:6px;left:18px;right:18px;height:10px;border-radius:50%;background:rgba(196,87,122,.12)}
+.sinfo{display:grid;gap:6px;min-width:0}
+.sinfo b{font-size:17px}
+.sbal{display:inline-flex;align-items:center;gap:4px;font-weight:800;color:#B32A4A;background:#FCE3EA;border-radius:999px;padding:5px 12px;width:max-content}
+.sbal .berrystar{width:20px;height:20px}
+.sbal b{font-size:20px}
+.sinfo small{color:var(--muted);font-size:12px;line-height:1.5}
+.stabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.stab{flex:none}
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sitem{border:2px solid var(--line);background:var(--surface);border-radius:16px;padding:8px 4px 10px;display:grid;justify-items:center;gap:3px;cursor:pointer;box-shadow:0 3px 0 var(--line);transition:transform .08s}
+.sitem:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line)}
+.sitem.sel{border-color:var(--accent);box-shadow:0 3px 0 var(--accent)}
+.sitem.worn{background:var(--accent-soft)}
+.sprev{width:74px;height:76px;display:block}
+.sprev .chara{width:100%;height:100%}
+.sprev .chara .bodyg,.sprev .chara .prop{animation:none}
+.sname{font-size:12px;font-weight:700;text-align:center;line-height:1.3;min-height:2.6em;display:grid;place-items:center}
+.sprice{display:inline-flex;align-items:center;gap:2px;font-size:12.5px;font-weight:800;color:#B32A4A}
+.sitem.worn .sprice{color:var(--accent-2)}
+.sprice .berrystar{width:15px;height:15px}
+.sbar{position:fixed;left:0;right:0;bottom:0;z-index:9;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface);box-shadow:0 -6px 18px -10px rgba(90,30,50,.35);display:flex;align-items:center;gap:12px;max-width:760px;margin:0 auto;border-radius:18px 18px 0 0}
+.sbar .cpbtn{margin:0;flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.sbar .cpbtn .berrystar{width:18px;height:18px;filter:brightness(1.4)}
+.sbar .cpbtn[data-short]{opacity:.55}
+.sname2{font-weight:800;font-size:14px;max-width:40%}
+.shint{color:var(--muted);font-size:13px;flex:1;text-align:center}
+.sconf{position:absolute;left:50%;top:45%;width:8px;height:12px;border-radius:2px;animation:conf 1.1s cubic-bezier(.2,.7,.3,1) forwards;pointer-events:none}
+@keyframes conf{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--dx),calc(var(--dy) + 140px)) rotate(var(--r));opacity:0}}
 </style>
 
 <div class="wrap">
@@ -1328,6 +1367,7 @@ function render(){
   if(state.nav==="qmenu"){ renderQMenu(list); counts(); return; }
   if(state.nav==="course"){ renderCourse(list); counts(); return; }
   if(state.nav==="lesson"){ renderLesson(list); counts(); return; }
+  if(state.nav==="shop"){ renderShop(list); counts(); return; }
   if(state.nav==="chapters"){ renderChapters(list); counts(); return; }
   if(state.query){
     const hs=searchHits();
@@ -2638,6 +2678,7 @@ function openRandom(){
 function navBack(){
   stopSpeak(); stopSample(); navDir="back";
   if(state.nav==="lesson"){ setNav("course"); return; }
+  if(state.nav==="shop"){ const f=state.shopFrom||"home"; state.shopFrom=null; setNav(f); return; }
   if(state.nav==="list"&&state.fromCourse){ state.fromCourse=false; state.ch=0; state.sec=""; setNav("course"); return; }
   if(state.nav==="list"){
     if(state.mode==="settings"&&state.ret){ const r=state.ret; state.ret=null; state.ch=r.ch; state.sec=r.sec; setNav(r.nav,r.mode); return; }
@@ -2657,12 +2698,13 @@ function renderHome(list){
       <button class="homecard" data-go="qmenu">${ICON_QUIZ}<span class="hcname">問題集</span></button>
     </div>
     <div class="homerow">
+      <button class="homeround" data-go="shop"><span class="hrico">${ICON_SHOP}</span><span class="hrname">ショップ</span></button>
       <button class="homeround" data-go="stats"><span class="hrico">${ICON_TROPHY}</span><span class="hrname">学習</span></button>
     </div>
   </div>`;
   list.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{
     const g=b.dataset.go;
-    if(g==="qmenu") setNav("qmenu"); else if(g==="course"){ SFX.pop(); setNav("course"); } else openMode(g);
+    if(g==="qmenu") setNav("qmenu"); else if(g==="course"){ SFX.pop(); setNav("course"); } else if(g==="shop"){ SFX.pop(); state.shopFrom="home"; setNav("shop"); } else openMode(g);
   });
 }
 function renderQMenu(list){
@@ -2838,13 +2880,13 @@ const NODE_ICON={
   trophy:`<svg viewBox="0 0 24 24"><path d="M7 3h10v4a5 5 0 0 1-10 0zM7 4H3.5a3.5 3.5 0 0 0 4 4.5M17 4h3.5a3.5 3.5 0 0 1-4 4.5M10 12.5h4l.5 4H9.5zM7.5 20h9v1.5h-9zM9 16.5h6V20H9z" fill="#fff" stroke="#fff" stroke-width=".6" stroke-linejoin="round"/></svg>`,
   lock:`<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="2.4" fill="none"/></svg>`,
 };
-const CHEST_SVG=(open)=>`<svg class="chestsvg${open?" open":""}" viewBox="0 0 64 56"><rect x="6" y="24" width="52" height="28" rx="5" fill="#E0A03F" stroke="#9C6420" stroke-width="3"/><rect x="6" y="34" width="52" height="5" fill="#9C6420"/><g class="lid"><path d="M6 26V18a9 9 0 0 1 9-9h34a9 9 0 0 1 9 9v8z" fill="#F0B654" stroke="#9C6420" stroke-width="3"/></g><rect x="27" y="29" width="10" height="12" rx="2" fill="#FFE08A" stroke="#9C6420" stroke-width="2.4"/>${open?`<g class="gems"><circle cx="24" cy="20" r="4" fill="#E8435E"/><circle cx="34" cy="15" r="4.5" fill="#E8435E"/><circle cx="43" cy="21" r="3.6" fill="#E8435E"/></g>`:""}</svg>`;
+const CHEST_SVG=(open)=>`<svg class="chestsvg${open?" open":""}" viewBox="0 -16 64 72" overflow="visible"><rect x="6" y="24" width="52" height="28" rx="5" fill="#E0A03F" stroke="#9C6420" stroke-width="3"/><rect x="6" y="34" width="52" height="5" fill="#9C6420"/><g class="lid"><path d="M6 26V18a9 9 0 0 1 9-9h34a9 9 0 0 1 9 9v8z" fill="#F0B654" stroke="#9C6420" stroke-width="3"/></g><rect x="27" y="29" width="10" height="12" rx="2" fill="#FFE08A" stroke="#9C6420" stroke-width="2.4"/>${open?`<g class="gems"><circle cx="24" cy="20" r="4" fill="#E8435E"/><circle cx="34" cy="15" r="4.5" fill="#E8435E"/><circle cx="43" cy="21" r="3.6" fill="#E8435E"/></g>`:""}</svg>`;
 const ICON_COURSE=`<svg class="hcico" viewBox="0 0 64 64" aria-hidden="true"><circle cx="20" cy="50" r="7" fill="#F5B83D"/><circle cx="34" cy="36" r="7" fill="#F5B83D"/><circle cx="24" cy="21" r="7" fill="#C4577A"/><circle cx="24" cy="21" r="10.5" fill="none" stroke="#C4577A" stroke-width="2.5" opacity=".45"/><g transform="translate(36 6) scale(.25)">${ME.body}</g></svg>`;
 
 /* ═════════════ コースの画面 ═════════════ */
 function renderCourse(list){
   const cur=curIndex();
-  let html=`<div class="course"><div class="cbanner" id="cbanner"><div class="cbt"></div><div class="cberries" title="集めたいちご（正解数＋宝箱）"><span class="berrystar"></span><b id="cbn">${berryCount()}</b></div></div>`;
+  let html=`<div class="course"><div class="cbanner" id="cbanner"><div class="cbt"></div><button class="cberries" id="cshop" title="いちごショップ（集めたいちごで衣装を買えます）"><span class="berrystar"></span><b id="cbn">${berryBalance()}</b><span class="cshopl">ショップ</span></button></div>`;
   let gi=0;
   UNITS.forEach(u=>{
     const [col,dark]=CH_COLOR[u.c]||CH_COLOR[1];
@@ -2864,11 +2906,11 @@ function renderCourse(list){
     });
     html+=`</div></section>`;
   });
-  html+=`<div class="cgoal">${charSVG(ME,{me:true})}<p>ゴール！ 全部のユニットを回ったら、本番の準備はばっちり。</p></div></div>`;
+  html+=`<div class="cgoal">${meSVG()}<p>ゴール！ 全部のユニットを回ったら、本番の準備はばっちり。</p></div></div>`;
   list.innerHTML=html;
   const root=list.querySelector(".course");
   // 自分（いちごちゃん）を、いまのレッスンの横に立たせる
-  const me=document.createElement("div"); me.className="cme"; me.innerHTML=charSVG(ME,{me:true,prop:false}); root.appendChild(me);
+  const me=document.createElement("div"); me.className="cme"; me.innerHTML=meSVG(); root.appendChild(me);
   const place=(g,anim)=>{
     const b=root.querySelector(`.cnode[data-g="${g}"]`); if(!b) return;
     const r=b.getBoundingClientRect(), rr=root.getBoundingClientRect();
@@ -2910,6 +2952,7 @@ function renderCourse(list){
     const bb=c.querySelector(".cbubble"); bb.textContent=CHEER[Math.floor(Math.random()*CHEER.length)]; bb.hidden=false;
     clearTimeout(c._t); c._t=setTimeout(()=>bb.hidden=true,2400); });
   root.addEventListener("click",()=>closePop(root));
+  const cs=root.querySelector("#cshop"); if(cs) cs.onclick=e=>{ e.stopPropagation(); SFX.pop(); state.shopFrom="course"; setNav("shop"); };
 }
 function closePop(root){ const p=root.querySelector(".cpop"); if(p){ p.closest(".cnode-wrap").classList.remove("popon"); p.remove(); } }
 function openNodePop(root,b,g,cur){
@@ -2936,7 +2979,7 @@ function openNodePop(root,b,g,cur){
     if(n.type==="text"){ COURSE.text[u.pid]=1; saveCourse(); state.fromCourse=true; state.mode="cloze"; state.ch=u.c; state.sec=u.pid; state.optOrder={}; setNav("list"); return; }
     if(n.type==="chest"){ COURSE.chest[n.key]=1; saveCourse(); SFX.chest(); const w=b.closest(".cnode-wrap"); b.querySelector(".ci").innerHTML=CHEST_SVG(true); b.classList.add("done","opening"); pop.remove();
       const f=document.createElement("div"); f.className="cplus"; f.innerHTML=`<span class="berrystar"></span>+5`; w.appendChild(f); setTimeout(()=>f.remove(),1400);
-      const bn=root.querySelector("#cbn"); if(bn) bn.textContent=berryCount(); setTimeout(()=>render(),1300); return; }
+      const bn=root.querySelector("#cbn"); if(bn) bn.textContent=berryBalance(); setTimeout(()=>render(),1300); return; }
     state.lesson={g,ids:n.ids.slice(),done0:n.ids.filter(id=>store.answered[id]).length,finished:false};
     if(done||n.ids.every(id=>store.answered[id])) state.lesson.retry=true;
     state.optOrder={}; setNav("lesson");
@@ -2969,7 +3012,7 @@ function showLessonDone(){
   const L=state.lesson, box=document.getElementById("ldone"); if(!L||!box) return;
   const n=ALLNODES[L.g], ok=L.ids.filter(id=>(state.ans["L|"+id]?store.answered[id]&&store.answered[id].r==="ok":store.answered[id]&&store.answered[id].r==="ok")).length;
   const r=ok/L.ids.length, st=r===1?3:r>=.7?2:r>=.4?1:0;
-  box.innerHTML=`<div class="ldone"><div class="ldchar">${charSVG(ME,{me:true,prop:false})}</div><h3>${st>=2?"レッスン合格！":"もう少し！"}</h3>
+  box.innerHTML=`<div class="ldone"><div class="ldchar">${meSVG()}</div><h3>${st>=2?"レッスン合格！":"もう少し！"}</h3>
     <div class="ldstars">${[0,1,2].map(k=>`<i data-k="${k}"></i>`).join("")}</div>
     <p>${L.ids.length}問中 <b>${ok}問</b> 正解${st===3?"。パーフェクト！":st===2?"。合格！ 次のレッスンへ進めます。":"。<br>★2以上（正解7割以上）で次へ進めます。もう一度挑戦しよう！"}</p>
     ${st<2?`<button class="cpbtn big" id="ldretry">もう一度挑戦</button><button class="cpbtn sub" id="ldnext">コースへ戻る</button>`:`<button class="cpbtn big" id="ldnext">コースへ戻る</button>`}</div>`;
@@ -2978,6 +3021,111 @@ function showLessonDone(){
   [...box.querySelectorAll(".ldstars i")].forEach((s,k)=>{ if(k<st) setTimeout(()=>{ s.classList.add("on"); SFX.star(k); },700+k*320); });
   box.querySelector("#ldnext").onclick=()=>{ SFX.pop(); state.lesson=null; setNav("course"); };
   const rt=box.querySelector("#ldretry"); if(rt) rt.onclick=()=>{ SFX.pop(); const g=L.g; L.ids.forEach(id=>{ delete state.ans["L|"+id]; }); state.lesson={g,ids:L.ids.slice(),retry:true,finished:false}; state.optOrder={}; render(); window.scrollTo({top:0}); };
+}
+
+
+/* ═════════════ いちごショップ ═════════════ */
+const berryBalance=()=>Math.max(0,berryCount()-(COURSE.spent||0));
+COURSE.owned=COURSE.owned||{}; COURSE.equip=COURSE.equip||{};
+const W=(x,y)=>[x,y];
+const ITEMS=[
+  // ぼうし・あたま
+  {id:"ribbon",slot:"head",name:"リボン",price:30,svg:(x,y)=>ACC[2](x,y)},
+  {id:"cap",slot:"head",name:"キャップ",price:40,svg:(x,y)=>ACC[3](x,y)},
+  {id:"beret",slot:"head",name:"ベレー帽",price:50,svg:(x,y)=>`<g transform="translate(${x+2} ${y-29}) rotate(-10)"><ellipse rx="21" ry="8" fill="#7A4FBF"/><ellipse cy="-3" rx="17" ry="7" fill="#9466D9"/><path d="M0-10v-5" stroke="#5A3796" stroke-width="3" stroke-linecap="round"/></g>`},
+  {id:"flower",slot:"head",name:"花かんむり",price:60,svg:(x,y)=>`<g transform="translate(${x} ${y-27})">${[-18,-9,0,9,18].map((dx,i)=>`<g transform="translate(${dx} ${Math.abs(dx)*.22})">${[0,72,144,216,288].map(a=>`<ellipse cx="0" cy="-3.6" rx="2.6" ry="3.6" transform="rotate(${a})" fill="${["#FFD1DC","#FFF3B0","#CDE7FF","#FFD1DC","#FFF3B0"][i]}"/>`).join("")}<circle r="2" fill="#F5B83D"/></g>`).join("")}</g>`},
+  {id:"party",slot:"head",name:"パーティーぼうし",price:70,svg:(x,y)=>`<g transform="translate(${x+4} ${y-27}) rotate(12)"><path d="M-11 0L0-30 11 0z" fill="#4FC3F7"/><path d="M-7-10l9-4M-4-19l7-3M-10-2l15-6" stroke="#FFD966" stroke-width="2.6" stroke-linecap="round"/><circle cy="-31" r="4" fill="#FF6F91"/><ellipse rx="12" ry="2.5" fill="#29A3D6"/></g>`},
+  {id:"phones",slot:"head",name:"ヘッドホン",price:80,svg:(x,y)=>ACC[6](x,y)},
+  {id:"hachi",slot:"head",name:"合格はちまき",price:100,svg:(x,y)=>`<g transform="translate(${x} ${y-15})"><path d="M-27 -2q27-7 54 0v7q-27-7-54 0z" fill="#fff" stroke="#E5D9DC" stroke-width="1"/><circle cx="0" cy="0" r="4.2" fill="#E8435E"/><path d="M27 1l8-5 2 9zM27 3l9 6-7 3z" fill="#fff" stroke="#E5D9DC" stroke-width="1"/><text x="-16" y="3.6" font-size="7.5" font-weight="900" fill="#2B1E23" font-family="sans-serif">合</text><text x="9" y="3.6" font-size="7.5" font-weight="900" fill="#2B1E23" font-family="sans-serif">格</text></g>`},
+  {id:"crown",slot:"head",name:"おうかん",price:150,svg:(x,y)=>ACC[5](x,y)},
+  {id:"grad",slot:"head",name:"角帽",price:200,svg:(x,y)=>`<g transform="translate(${x} ${y-30})"><path d="M-14 2v6q14 6 28 0V2z" fill="#2B2B3A"/><path d="M-26 0L0-10 26 0 0 10z" fill="#3A3A4F"/><path d="M0 0l16 4v12" stroke="#F5B83D" stroke-width="2" fill="none"/><path d="M14 16h4l-1 6h-2z" fill="#F5B83D"/><circle r="2.2" fill="#F5B83D"/></g>`},
+  // かお
+  {id:"glasses",slot:"face",name:"まるめがね",price:30,svg:(x,y)=>ACC[1](x,y)},
+  {id:"sun",slot:"face",name:"サングラス",price:60,svg:(x,y)=>`<g transform="translate(${x} ${y})"><path d="M-18-5h14q2 0 1 3l-2 6q-2 4-6 4h-2q-6 0-7-6z" fill="#2B1E23"/><path d="M18-5H4q-2 0-1 3l2 6q2 4 6 4h2q6 0 7-6z" fill="#2B1E23"/><path d="M-4-3h8" stroke="#2B1E23" stroke-width="2.4"/><path d="M-14-2l4 0" stroke="#fff" stroke-width="1.6" opacity=".6" stroke-linecap="round"/></g>`},
+  {id:"heart",slot:"face",name:"ハートのほっぺ",price:40,svg:(x,y)=>`<g fill="#FF4F7B">${[-16,16].map(dx=>`<path transform="translate(${x+dx} ${y+8}) scale(.9)" d="M0 3.5C-4 1-5.5-1.5-4-3.4c1.3-1.6 3.4-1 4 .6.6-1.6 2.7-2.2 4-.6C5.5-1.5 4 1 0 3.5z"/>`).join("")}</g>`},
+  // くび
+  {id:"bow",slot:"neck",name:"ちょうネクタイ",price:40,svg:(x,y)=>ACC[4](x,y)},
+  {id:"scarf",slot:"neck",name:"マフラー",price:50,svg:(x,y)=>`<g transform="translate(${x} ${y+21})"><path d="M-21-3q21 7 42 0l1 7q-22 8-44 0z" fill="#4FA3E0"/><path d="M8 3l-2 16h8l1-15z" fill="#2C76B0"/><path d="M-16 0v5M-8 2v5M0 3v5M8 2v5M16 0v5" stroke="#fff" stroke-width="1.6" opacity=".55"/></g>`},
+  {id:"medal",slot:"neck",name:"金メダル",price:120,svg:(x,y)=>`<g transform="translate(${x} ${y+14})"><path d="M-9-2l6 16h6l6-16" stroke="#E8435E" stroke-width="4" fill="none" stroke-linejoin="round"/><circle cy="20" r="8" fill="#F5C33B" stroke="#C98A16" stroke-width="2"/><path d="M0 15.5l1.4 2.9 3.2.4-2.3 2.2.6 3.1L0 22.6l-2.9 1.5.6-3.1-2.3-2.2 3.2-.4z" fill="#C98A16"/></g>`},
+  // もちもの
+  {id:"pencil",slot:"hand",name:"えんぴつ",price:20,svg:()=>`<g transform="translate(86 48) rotate(25)"><rect x="-3.5" y="0" width="7" height="26" fill="#F5C33B"/><path d="M-3.5 26L0 34l3.5-8z" fill="#F2D2A9"/><path d="M-1 31l1 3 1-3z" fill="#2B1E23"/><rect x="-3.5" y="-5" width="7" height="5" rx="1.5" fill="#FF8FA8"/></g>`},
+  {id:"book",slot:"hand",name:"テキスト",price:30,svg:()=>`<g transform="translate(74 48)"><rect width="22" height="27" rx="2.5" fill="#C4577A"/><rect x="3" y="3" width="16" height="21" rx="1.5" fill="#FFF7F9"/><text x="11" y="17" text-anchor="middle" font-size="8" font-weight="900" fill="#C4577A" font-family="sans-serif">FP</text></g>`},
+  {id:"coin",slot:"hand",name:"コイン",price:40,svg:()=>PROPS.coin},
+  {id:"umbrella",slot:"hand",name:"かさ",price:50,svg:()=>PROPS.umbrella},
+  {id:"house",slot:"hand",name:"おうち",price:60,svg:()=>PROPS.house},
+  {id:"omamori",slot:"hand",name:"合格おまもり",price:150,svg:()=>`<g transform="translate(78 44)"><path d="M10 0c-3-5-7-5-7 0" stroke="#F5B83D" stroke-width="2" fill="none"/><rect y="2" width="20" height="28" rx="4" fill="#E8435E"/><rect x="2.5" y="5" width="15" height="22" rx="2.5" fill="none" stroke="#F5C33B" stroke-width="1.4"/><text x="10" y="15" text-anchor="middle" font-size="7" font-weight="900" fill="#FFF3C4" font-family="sans-serif">合</text><text x="10" y="24" text-anchor="middle" font-size="7" font-weight="900" fill="#FFF3C4" font-family="sans-serif">格</text></g>`},
+  // いろ
+  {id:"red",slot:"skin",name:"あかいちご",price:0,color:"#E8435E"},
+  {id:"pink",slot:"skin",name:"ももいろいちご",price:80,color:"#FF8FA8"},
+  {id:"white",slot:"skin",name:"しろいちご",price:120,color:"#FFF1E8",seed:"#F2B8C6"},
+  {id:"gold",slot:"skin",name:"ゴールドいちご",price:300,color:"#F5C33B",seed:"#FFF7D6"},
+];
+const SLOTS=[["head","あたま"],["face","かお"],["neck","くび"],["hand","もちもの"],["skin","いろ"]];
+const itemById=id=>ITEMS.find(i=>i.id===id);
+// いちごちゃんを衣装つきで描く（equipを渡すと、試着の見本を描ける）
+function meSVG(eq){
+  eq=eq||COURSE.equip;
+  const sk=itemById(eq.skin||"red")||itemById("red");
+  let body=ME.body.replace('fill="#E8435E"',`fill="${sk.color}"`);
+  if(sk.seed) body=body.replace('<g fill="#FFE39A">',`<g fill="${sk.seed}">`);
+  const [fx,fy]=ME.face, put=s=>{ const it=itemById(eq[s]); return it&&it.svg?it.svg(fx,fy):""; };
+  return `<svg class="chara me" viewBox="0 0 110 112" aria-hidden="true">
+    <ellipse class="shadow" cx="50" cy="106" rx="26" ry="4" fill="#000" opacity=".1"/>
+    ${FEET}${ARM(22,70,-10,8)}${ARM(78,70,10,-6)}
+    <g class="bodyg">${body}${FACE(fx,fy)}${put("face")}${put("neck")}${put("head")}</g>
+    ${eq.hand?`<g class="prop">${put("hand")}</g>`:""}
+  </svg>`;
+}
+const ICON_SHOP=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.2 10.2a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8z"/><path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2"/></svg>`;
+function renderShop(list){
+  state.shopTab=state.shopTab||"head";
+  const tryEq=Object.assign({},COURSE.equip,state.tryOn||{});
+  const tab=state.shopTab, items=ITEMS.filter(i=>i.slot===tab);
+  const owned=id=>id==="red"||!!COURSE.owned[id], worn=(it)=>(COURSE.equip[it.slot]||(it.slot==="skin"?"red":""))===it.id;
+  const sel=state.shopSel?itemById(state.shopSel):null;
+  list.innerHTML=`<div class="shop">
+    <div class="shead"><div class="sstage">${meSVG(tryEq)}<div class="sfloor"></div></div>
+      <div class="sinfo"><b>いちごちゃん</b><span class="sbal"><span class="berrystar"></span><b id="sbal">${berryBalance()}</b>こ</span>
+      <small>正解1問でいちご1こ、宝箱で5こ もらえます</small></div></div>
+    <div class="stabs" role="tablist">${SLOTS.map(([k,l])=>`<button class="chip stab" role="tab" aria-pressed="${k===tab}" data-t="${k}">${l}</button>`).join("")}</div>
+    <div class="sgrid">${items.map(it=>{
+      const o=owned(it.id), w=worn(it), s=state.shopSel===it.id;
+      const eq=it.slot==="skin"?{skin:it.id}:{[it.slot]:it.id};
+      return `<button class="sitem${s?" sel":""}${w?" worn":""}" data-i="${it.id}"><span class="sprev">${meSVG(eq)}</span><span class="sname">${esc(it.name)}</span>
+        <span class="sprice">${w?"きている":o?"もっている":`<span class="berrystar"></span>${it.price}`}</span></button>`; }).join("")}</div>
+    <div class="sbar" id="sbar">${sel?shopAction(sel,owned(sel.id),worn(sel)):`<span class="shint">アイテムを押すと、試着できます</span>`}</div>
+  </div>`;
+  list.querySelectorAll(".stab").forEach(b=>b.onclick=()=>{ SFX.pop(); state.shopTab=b.dataset.t; state.shopSel=null; state.tryOn=null; render(); });
+  list.querySelectorAll(".sitem").forEach(b=>b.onclick=()=>{
+    const it=itemById(b.dataset.i);
+    if(state.shopSel===it.id){ state.shopSel=null; state.tryOn=null; SFX.pop(); }
+    else { state.shopSel=it.id; state.tryOn={[it.slot]:it.id}; SFX.squeak(); }
+    const y=window.scrollY; render(); window.scrollTo({top:y}); bounceStage();
+  });
+  const act=list.querySelector("#sact");
+  if(act) act.onclick=()=>{
+    const it=sel, o=owned(it.id), w=worn(it);
+    if(!o){
+      if(berryBalance()<it.price){ SFX.wrong(); toast(`いちごがあと${it.price-berryBalance()}こ 足りません`); return; }
+      COURSE.spent=(COURSE.spent||0)+it.price; COURSE.owned[it.id]=1; COURSE.equip[it.slot]=it.id; saveCourse();
+      SFX.chest(); state.tryOn=null; const y=window.scrollY; render(); window.scrollTo({top:y}); celebrate(`「${it.name}」を買って、着替えました！`); return;
+    }
+    if(w){ if(it.slot==="skin"){ return; } delete COURSE.equip[it.slot]; SFX.pop(); }
+    else { COURSE.equip[it.slot]=it.id; SFX.squeak(); }
+    saveCourse(); state.tryOn=null; const y=window.scrollY; render(); window.scrollTo({top:y}); bounceStage();
+  };
+}
+function shopAction(it,o,w){
+  const short=Math.max(0,it.price-berryBalance());
+  if(!o) return `<span class="sname2">${esc(it.name)}</span><button class="cpbtn big" id="sact"${short?' data-short="1"':""}><span class="berrystar"></span>${it.price}こで買う${short?`（あと${short}こ）`:""}</button>`;
+  if(w) return `<span class="sname2">${esc(it.name)}</span>${it.slot==="skin"?`<span class="shint">きています</span>`:`<button class="cpbtn sub" id="sact">はずす</button>`}`;
+  return `<span class="sname2">${esc(it.name)}</span><button class="cpbtn big" id="sact">きがえる</button>`;
+}
+function bounceStage(){ const s=document.querySelector(".sstage .chara"); if(s){ s.classList.remove("jump"); void s.offsetWidth; s.classList.add("jump"); } }
+function celebrate(msg){
+  const st=document.querySelector(".sstage"); if(!st) return; bounceStage();
+  for(let i=0;i<16;i++){ const c=document.createElement("i"); c.className="sconf"; c.style.setProperty("--dx",(Math.random()*220-110)+"px"); c.style.setProperty("--dy",(-60-Math.random()*90)+"px"); c.style.setProperty("--r",(Math.random()*540-270)+"deg"); c.style.background=["#E8435E","#F5B83D","#5DBB63","#4FA3E0","#FF8FA8"][i%5]; c.style.animationDelay=(Math.random()*.12)+"s"; st.appendChild(c); setTimeout(()=>c.remove(),1300); }
+  toast(msg);
 }
 
 /* ───────── 起動 ───────── */
