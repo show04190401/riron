@@ -2948,22 +2948,36 @@ const SFX=(()=>{
     if(!ok()||!SPEC[k]) return;
     // 遅れないWeb Audioで鳴らす（使えないときだけ<audio>）
     const go=()=>{ try{ const s=ac.createBufferSource(); s.buffer=buf(k); s.connect(ac.destination); s.start(0); }catch(e){} };
-    if(ac&&ac.state==="running"){ go(); return; }
-    if(ac){ ac.resume().then(go,()=>{}); return; }
+    if(ac&&ac.state==="running"&&!stale){ go(); return; }
+    fresh(); if(ac){ if(ac.state==="running") go(); else ac.resume().then(go,()=>{}); return; }
     viaWebAudio(k);
   }
   // iPhoneのマナーモードでもWeb Audioが鳴るように、無音の<audio>を小さく流しておく
   let silent=null;
   function keepSession(){ try{ if(!silent){ const n=RATE/2, f=new Float32Array(n); silent=new Audio(wav(f)); silent.loop=true; silent.volume=0.01; silent.setAttribute("playsinline",""); silent.setAttribute("x-webkit-airplay","deny"); }
     if(ok()&&!document.hidden&&silent.paused){ const r=silent.play(); r&&r.catch&&r.catch(()=>{}); } }catch(e){} }
-  document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&ac&&ac.state!=="running") ac.resume().catch(()=>{}); });
+  document.addEventListener("visibilitychange",()=>{ if(document.hidden){ if(ac) stale=true; } });
+  window.addEventListener("pageshow",e=>{ if(e.persisted&&ac) stale=true; });
+  window.addEventListener("focus",()=>{ if(ac&&ac.state!=="running") stale=true; });
   // 最初に画面へ触れたとき、全部の音を「鳴らせる状態」にしておく（iPhoneは、あとで自動で鳴らす音もこれが必要）
+  // iPhoneは、別のアプリに切り替えると音の部品（AudioContext）が「中断」のまま戻らないことがある。
+  // 戻ってきたら印をつけ、次に画面に触れたとき作り直す
+  let stale=false;
+  function fresh(){
+    try{ const C=window.AudioContext||window.webkitAudioContext; if(!C) return;
+      if(ac&&(stale||ac.state==="interrupted"||ac.state==="closed")){ try{ ac.close(); }catch(e){} ac=null; for(const k in BUF) delete BUF[k]; }
+      stale=false;
+      if(!ac) ac=new C({latencyHint:"interactive"});
+      if(ac.state!=="running") ac.resume().catch(()=>{});
+      // 触れた瞬間に無音を一瞬だけ鳴らして、音を出せる状態にする
+      const s=ac.createBufferSource(); s.buffer=ac.createBuffer(1,1,RATE); s.connect(ac.destination); s.start(0);
+    }catch(e){}
+  }
   function unlock(){
-    try{ const C=window.AudioContext||window.webkitAudioContext; if(C){ ac=ac||new C({latencyHint:"interactive"}); if(ac.state!=="running") ac.resume(); } }catch(e){}
+    if(!ac||stale||ac.state!=="running") fresh();
     if(unlocked) return; unlocked=true;
     setTimeout(()=>Object.keys(SPEC).forEach(buf),0);
     try{ if(navigator.audioSession) navigator.audioSession.type="ambient"; }catch(e){}
-    try{ const C=window.AudioContext||window.webkitAudioContext; if(C){ ac=ac||new C(); ac.resume(); } }catch(e){}
   }
   try{ if(navigator.audioSession) navigator.audioSession.type="ambient"; }catch(e){}
   ["pointerdown","touchstart","touchend","click","keydown"].forEach(t=>window.addEventListener(t,unlock,{capture:true,passive:true}));
