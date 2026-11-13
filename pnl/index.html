@@ -244,6 +244,11 @@ svg{display:block;max-width:100%}
 .gsec .n{font:600 14px var(--font-num)}
 .gsec:focus-visible{outline:2px solid var(--gold-fill);outline-offset:2px}
 .curtag{font-style:normal;font-size:11px;font-weight:700;color:var(--gold);border:1px solid var(--gold-fill);border-radius:99px;padding:0 6px;margin-left:6px;vertical-align:2px}
+.r2d{grid-template-columns:minmax(0,1fr) auto 4.2rem;padding:12px 0}
+.r2d .d{display:flex;align-items:baseline;gap:8px;font-size:15px}
+.r2d .d small{display:inline;font-size:12px}
+.r2d .pcell{font-size:16px}
+.dcum{font-size:12px;color:var(--muted);text-align:right;padding-right:4.6rem}
 .mcat{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:12px;color:var(--muted);padding:0 0 6px}
 .mcat b{font:600 12.5px var(--font-num)}
 .mhead small{color:var(--muted);font-weight:400;font-size:12px;margin-left:8px}
@@ -718,7 +723,7 @@ details.inner[open]>summary::after{content:"－"}
   /* ---------- state ---------- */
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', history: [], excludeHolidays: true, saved: false },
-    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'cash', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gOpen: {}, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
+    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'cash', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gOpen: {}, dOpen: {}, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
   };
   var backend = null;
@@ -1163,7 +1168,7 @@ details.inner[open]>summary::after{content:"－"}
         (buckets[p0.key] = buckets[p0.key] || { p: p0, days: [] }).days.push(d);
       });
       var order = per.concat([other]).filter(function (p) { return buckets[p.key]; });
-      body += '<div class="row head r4"><span>日付</span><span class="n">損益</span><span class="n">累積</span><span></span></div>';
+      body += '<div class="row head r2d"><span>日付</span><span class="n">損益</span><span></span></div>';
       order.forEach(function (p) {
         var days = buckets[p.key].days, sum = 0, w = 0, l = 0, ct = {};
         days.forEach(function (d) { var x = E[d].pnl; sum += x; if (x > 0) w++; else if (x < 0) l++; itemsOf(E[d]).forEach(function (it) { if (PCAT[it.cat]) ct[it.cat] = (ct[it.cat] || 0) + it.pnl; }); });
@@ -1179,11 +1184,11 @@ details.inner[open]>summary::after{content:"－"}
         days.forEach(function (d, k) {
           var e = E[d], wk = mondayOf(d), isWk = k > 0 && wk !== prevWk;
           prevWk = wk;
-          body += '<div class="row r4' + (isWk ? ' wk' : '') + '"><div class="d">' + md(d) + '<small>' + WD[dow(d)] + '曜</small></div>' +
-            '<div class="n pcell ' + cls(e.pnl) + '">' + sgn(e.pnl) + bar(e.pnl, mx) + '</div>' +
-            '<div class="n cumc">' + sgn(c.cum[d]) + '</div>' +
-            (v.demo || itemsOf(e).length > 1 ? '<span></span>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(itemsOf(e)[0].id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') +
-            (itemsOf(e).length > 1 ? catSubs(d, e, v.demo) : (e.memo ? '<div class="memo">' + esc(e.memo) + '</div>' : '')) + '</div>';
+          var dop = !!state.dOpen[d], its = itemsOf(e);
+          body += '<div class="row r2d' + (isWk ? ' wk' : '') + '"><div class="d">' + md(d) + '<small>' + WD[dow(d)] + '</small></div>' +
+            '<div class="n pcell ' + cls(e.pnl) + '">' + sgn(e.pnl) + '</div>' +
+            '<button type="button" class="lnk" data-dopen="' + d + '" aria-expanded="' + dop + '">' + (dop ? '閉じる' : '詳細') + '</button>' +
+            (dop ? (its.length > 1 ? catSubs(d, e, v.demo) : '<div class="subs"><div class="subl"><span>' + esc(pLabel(its[0]) || '記録') + '</span><span class="n ' + cls(its[0].pnl) + '">' + sgn(its[0].pnl) + '</span>' + (v.demo ? '<span></span>' : '<button type="button" class="lnk" data-edit="' + d + '|' + esc(its[0].id) + '" aria-label="' + md(d) + 'の記録を編集">編集</button>') + '</div></div>') + '<div class="subs dcum">累積 ' + sgn(c.cum[d]) + '</div>' : '') + '</div>';
         });
       });
     } else {
@@ -2286,7 +2291,7 @@ details.inner[open]>summary::after{content:"－"}
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.cDay) { state.cDay = ''; render(); } });
   document.addEventListener('click', function (e) {
-    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-gsec],[data-delgoal],[data-editgoal],[data-gesave],[data-gecancel],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-popen],[data-rmon],[data-rmonsave],[data-rmonreset],[data-rmoncancel],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
+    var t = e.target.closest ? e.target.closest('[data-view],[data-cm],[data-cday],[data-cadd],[data-ex],[data-delx],[data-tsel],[data-mode],[data-gsec],[data-dopen],[data-delgoal],[data-editgoal],[data-gesave],[data-gecancel],[data-crpick],[data-crloan],[data-fold],[data-openrec],[data-opencash],[data-openrec2],[data-clpick],[data-ccpick],[data-oedit],[data-osave],[data-ocancel],[data-lname],[data-popen],[data-rmon],[data-rmonsave],[data-rmonreset],[data-rmoncancel],[data-lint],[data-lintsave],[data-lintreset],[data-lintcancel],[data-closeday],[data-ei],[data-er],[data-el],[data-delitem],[data-delrec],[data-delloan],[data-tab],[data-edit],[data-more],#hero-edit') : null;
     if (!t) return;
     if (t.dataset.view) setView(t.dataset.view);
     else if (t.dataset.cm !== undefined) {
@@ -2380,6 +2385,7 @@ details.inner[open]>summary::after{content:"－"}
       var ep = t.dataset.edit.split('|'), ee = state.entries[ep[0]], eit = itemsOf(ee).filter(function (it) { return it.id === ep[1]; })[0];
       if (eit) { $('f-date').value = ep[0]; state.pEdit = { date: ep[0], id: eit.id }; $('f-amount').value = nf.format(Math.abs(eit.pnl)); setSign(eit.pnl < 0); $('f-memo').value = eit.memo || ''; $('f-cat').value = eit.cat || 'stock'; updateFormButtons(); msg('f-msg', ''); toForm(); $('f-amount').focus({ preventScroll: true }); }
     }
+    else if (t.dataset.dopen) { state.dOpen[t.dataset.dopen] = !state.dOpen[t.dataset.dopen]; var v4 = view(); renderHistory(compute(v4.entries), v4); }
     else if (t.dataset.gsec) { var gk = t.dataset.gsec; state.gOpen[gk] = t.getAttribute('aria-expanded') !== 'true'; var v3 = view(); renderHistory(compute(v3.entries), v3); }
     else if (t.hasAttribute('data-more')) { state.limit += 31; var v2 = view(); renderHistory(compute(v2.entries), v2); }
     else if (t.id === 'hero-edit') { $('settings').open = true; $('settings').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' }); }
