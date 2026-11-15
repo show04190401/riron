@@ -1,5 +1,5 @@
 // オフライン用：アプリのファイルを端末に保存し、通信がなくても開けるようにする
-const VERSION="20261115-cb1fe1266f";
+const VERSION="20261115-3070ce42ab";
 const PREFIX="riron-shohi-";
 const CACHE=PREFIX+VERSION;
 const FILES=["./","index.html","app.bin","key.json","manifest.webmanifest","icon3-180.png","icon3-192.png","icon3-512.png"];
