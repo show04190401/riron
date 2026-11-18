@@ -261,6 +261,7 @@ svg{display:block;max-width:100%}
 
 /* Cash flow (daily) */
 #cash-grid{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);grid-template-areas:"chero" "ctable" "cloans" "clist" "cform"}
+#cash-grid:has(>#c-form[hidden]){grid-template-areas:"chero" "ctable" "cloans" "clist"}
 #c-hero{grid-area:chero} #c-table{grid-area:ctable} #c-loans{grid-area:cloans} #c-list{grid-area:clist} #c-form{grid-area:cform}
 @media (min-width:820px){
   #cash-grid{grid-template-columns:minmax(0,1fr) 340px;grid-template-areas:"chero cform" "ctable cform" "cloans cform" "clist cform";align-items:start}
@@ -396,6 +397,27 @@ input,select,textarea{font-size:16px}
 .pbar{display:block;height:5px;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;overflow:hidden;margin-top:7px}
 .pbar i{display:block;height:100%;background:var(--gold-fill)}
 .row .n small{display:block;font:400 11px var(--font-ui);color:var(--muted)}
+/* 給与 */
+.sal-lock{display:flex;gap:8px;align-items:center;margin-top:12px}
+.sal-lock input{flex:1 1 0;min-width:0;min-height:44px;padding:8px 12px;background:var(--surface-2);color:var(--fg);border:1px solid var(--line);border-radius:9px;font:500 16px var(--font-num);letter-spacing:.3em}
+.sal-lock .addbtn{padding:0 18px}
+.sal-row{border-top:1px solid var(--line);padding:12px 0}
+.sal-row:first-of-type{border-top:0}
+.sal-h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:700;font-size:14.5px}
+.sal-h .lnk{min-height:36px}
+.sal-dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;margin:4px 0 0}
+.sal-dl dt{font-size:12px;color:var(--muted)}
+.sal-dl dd{margin:0;font:600 15px var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.sal-dl dd small{display:block;font:500 12.5px var(--font-num);margin-top:1px}
+.sal-dl .wide{grid-column:1/-1}
+.sal-dl dd.txt{font:500 14px var(--font-ui)}
+.sal-dl dd.none{color:var(--muted);font-weight:400}
+.sal-ed{background:var(--surface-2);border-radius:10px;padding:4px 12px 12px;margin:8px 0}
+.sal-ed .field{margin-top:10px}
+.sal-ed input[type=text]{background:var(--surface)}
+.sal-ed .amt{background:var(--surface)}
+.sal-ed .amt input{font-size:18px;min-height:44px}
+.sal-top{display:flex;justify-content:flex-end;gap:16px;margin-top:4px}
 details.inner{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
 details.inner>summary{cursor:pointer;font-weight:700;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:36px}
 details.inner>summary::-webkit-details-marker{display:none}
@@ -617,6 +639,10 @@ details.inner[open]>summary::after{content:"－"}
     </section>
     </div>
   </div>
+  <details class="card" id="sal-card" style="margin-top:14px">
+    <summary>給与</summary>
+    <div id="sal-body"></div>
+  </details>
   <details class="card" id="io-card" style="margin-top:14px">
     <summary>データの書き出し・読み込み</summary>
     <p class="hint" style="margin-top:8px">Claude上の収支noteと、ホーム画面のアプリのデータは別々です。片方で「書き出す」を押してコードをコピーし、もう片方の「読み込む」に貼り付けると、同じデータになります。</p>
@@ -724,6 +750,7 @@ details.inner[open]>summary::after{content:"－"}
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', history: [], excludeHolidays: true, saved: false },
     cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'cash', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gOpen: {}, dOpen: {}, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
+    salary: { rows: [] }, sal: { open: false, edit: '', msg: '', arm: '' },
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
   };
   var backend = null;
@@ -759,7 +786,7 @@ details.inner[open]>summary::after{content:"－"}
     lsSet(BK_KEY, JSON.stringify(arr.slice(0, 7)));
   }
   function lsSave() {
-    var body = JSON.stringify({ entries: state.entries, settings: state.settings, cash: state.cash });
+    var body = JSON.stringify({ entries: state.entries, settings: state.settings, cash: state.cash, salary: state.salary });
     dailySnap(lsGet(LS_KEY));
     var ok = lsSet(LS_KEY, body);
     if (!ok && autoBackups().length > 1) { lsSet(BK_KEY, JSON.stringify(autoBackups().slice(0, 1))); ok = lsSet(LS_KEY, body); }
@@ -807,6 +834,17 @@ details.inner[open]>summary::after{content:"－"}
     if (s && typeof s.targetAmount === 'number' && s.targetAmount > 0) o.targetAmount = s.targetAmount;
     if (s && typeof s.targetDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.targetDate)) o.targetDate = s.targetDate;
     if (s && typeof s.excludeHolidays === 'boolean') o.excludeHolidays = s.excludeHolidays;
+    return o;
+  }
+  function cleanSalary(v) {
+    var o = { rows: [] }, seen = {};
+    var num = function (x) { return typeof x === 'number' && isFinite(x) && x >= 0 ? Math.round(x) : null; };
+    if (v && Array.isArray(v.rows)) v.rows.slice(0, 60).forEach(function (r, i) {
+      if (!r || !Number.isInteger(r.year) || r.year < 1950 || r.year > 2200 || seen[r.year]) return;
+      seen[r.year] = 1;
+      o.rows.push({ id: typeof r.id === 'string' && r.id ? r.id.slice(0, 40) : 's' + r.year, year: r.year, annual: num(r.annual), base: num(r.base), bonus: typeof r.bonus === 'string' ? r.bonus.slice(0, 80) : '' });
+    });
+    o.rows.sort(function (a, b) { return b.year - a.year; });
     return o;
   }
   function cleanCash(v) {
@@ -875,7 +913,8 @@ details.inner[open]>summary::after{content:"－"}
       saveDay: function (date, items) { state.entries[date] = mkDay(items); state.loaded = true; render(); return lsDone(); },
       removeEntry: function (date) { delete state.entries[date]; render(); return lsDone(); },
       saveSettings: function (s) { state.settings = cleanSettings(s); render(); return lsDone(); },
-      saveCash: function (cs) { state.cash = cleanCash(cs); render(); return lsDone(); }
+      saveCash: function (cs) { state.cash = cleanCash(cs); render(); return lsDone(); },
+      saveSalary: function (sv) { state.salary = cleanSalary(sv); renderSal(true); return lsDone(); }
     };
     state.loaded = true;
     render();
@@ -891,6 +930,7 @@ details.inner[open]>summary::after{content:"－"}
       }
       if (j.settings) state.settings = cleanSettings(j.settings);
       if (j.cash && j.cash.saved) state.cash = cleanCash(j.cash);
+      if (j.salary) state.salary = cleanSalary(j.salary);
     }
   }
   function startDb(db, uid) {
@@ -902,15 +942,17 @@ details.inner[open]>summary::after{content:"－"}
       saveDay: function (date, items) { var d = mkDay(items); return col.doc('d-' + date).set({ date: date, pnl: d.pnl, memo: d.memo, items: items }); },
       removeEntry: function (date) { return col.doc('d-' + date).delete(); },
       saveSettings: function (s) { return col.doc('settings').set({ targetAmount: s.targetAmount, targetDate: s.targetDate, targetFrom: s.targetFrom || '', history: s.history || [], excludeHolidays: s.excludeHolidays }); },
-      saveCash: function (cs) { return col.doc('cashflow').set({ startDate: cs.startDate, opening: cs.opening, items: cs.items, recurring: cs.recurring, loans: cs.loans || [], startFix: true }); }
+      saveCash: function (cs) { return col.doc('cashflow').set({ startDate: cs.startDate, opening: cs.opening, items: cs.items, recurring: cs.recurring, loans: cs.loans || [], startFix: true }); },
+      saveSalary: function (sv) { return col.doc('salary').set({ rows: cleanSalary(sv).rows }); }
     };
     col.onSnapshot(function (snap) {
-      var e = {}, s = null, cs = null;
+      var e = {}, s = null, cs = null, sv = null;
       snap.docs.forEach(function (d) {
         var v = d.data();
         if (!v) return;
         if (d.id === 'settings') s = v;
         else if (d.id === 'cashflow') cs = v;
+        else if (d.id === 'salary') sv = v;
         else if (d.id.indexOf('d-') === 0 && typeof v.pnl === 'number' && typeof v.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.date)) {
           e[v.date] = normDay(v) || { pnl: v.pnl, memo: '' };
         }
@@ -918,6 +960,7 @@ details.inner[open]>summary::after{content:"－"}
       state.entries = e;
       if (s) state.settings = cleanSettings(s);
       if (cs) state.cash = cleanCash(cs);
+      state.salary = cleanSalary(sv);
       state.dbError = false; state.loaded = true;
       render();
     }, function () { state.dbError = true; state.loaded = true; render(); });
@@ -1817,7 +1860,7 @@ details.inner[open]>summary::after{content:"－"}
     var onCash = state.view === 'cash', showDemo = onCash ? (v.demo && !state.cash.saved) : v.demo;
     banner.hidden = !showDemo;
     if (showDemo) banner.textContent = onCash ? 'いまはサンプルの資金繰りを表示しています。日別表の前月繰越の残高をタップして入力すると、あなたのデータに切り替わります。' : 'いまはサンプルデータを表示しています。最初の記録を保存すると、あなたのデータに切り替わります。';
-    renderHero(c, v); renderStats(c, v); renderCharts(c, v); renderHistory(c, v); renderCash(v);
+    renderHero(c, v); renderStats(c, v); renderCharts(c, v); renderHistory(c, v); renderCash(v); renderSal(false);
     fillSettings(); updateFormButtons(); syncRepUI(); syncFormCard(); syncTabSels();
     if (!state.initDone) { state.initDone = true; $('settings').open = false; }
   }
@@ -1876,7 +1919,7 @@ details.inner[open]>summary::after{content:"－"}
   function b64u(u8) { var b = ''; for (var i = 0; i < u8.length; i += 8192) b += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return btoa(b).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function unb64u(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
   async function exportCode() {
-    var obj = { entries: state.entries, settings: state.settings, cash: cashPayload({}) };
+    var obj = { entries: state.entries, settings: state.settings, cash: cashPayload({}), salary: { rows: state.salary.rows } };
     var raw = new TextEncoder().encode(JSON.stringify(obj));
     if (typeof CompressionStream === 'function') {
       try { var z = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); return 'PNL1:' + b64u(z); } catch (e) {}
@@ -1991,6 +2034,8 @@ details.inner[open]>summary::after{content:"－"}
     await backend.saveSettings({ targetAmount: st.targetAmount, targetDate: st.targetDate, targetFrom: st.targetFrom, history: st.history, excludeHolidays: st.excludeHolidays });
     var cc = cleanCash(o.cash || {});
     await backend.saveCash({ startFix: true, startDate: cc.startDate || defaultStart(), opening: cc.opening, items: cc.items, recurring: cc.recurring, loans: cc.loans });
+    /* 給与は、読み込むデータに含まれているときだけ置き換える（古いコードでは今の給与を残す） */
+    if (o.salary && Array.isArray(o.salary.rows) && backend.saveSalary) await backend.saveSalary(cleanSalary(o.salary));
     $('io-undo').hidden = !(state.undo || lsGet(UNDO_KEY));
     msg('io-msg', doneText.replace('{n}', dates.length));
     renderAutoList();
@@ -2041,7 +2086,7 @@ details.inner[open]>summary::after{content:"－"}
   var stamp = function () { return todayStr().replace(/-/g, ''); };
   $('io-file-save').addEventListener('click', async function () {
     msg('io-msg', '');
-    var body = JSON.stringify({ app: 'pnl-notebook', format: 1, exportedAt: new Date().toISOString(), data: { entries: state.entries, settings: state.settings, cash: cashPayload({}) } }, null, 1);
+    var body = JSON.stringify({ app: 'pnl-notebook', format: 1, exportedAt: new Date().toISOString(), data: { entries: state.entries, settings: state.settings, cash: cashPayload({}), salary: { rows: state.salary.rows } } }, null, 1);
     try { var r = await saveFile('収支note_バックアップ_' + stamp() + '.json', body, 'application/json'); msg('io-msg', r === 'declined' ? '保存を取りやめました。' : 'バックアップのファイルを用意しました（損益 ' + Object.keys(state.entries).length + '日分と資金繰り）。'); }
     catch (e) { msg('io-msg', 'ファイルに保存できませんでした。' + (e && e.message || ''), true); }
   });
@@ -2405,9 +2450,91 @@ details.inner[open]>summary::after{content:"－"}
   $('ci-cat').innerHTML = CATS.map(function (c) { return '<option value="' + c[0] + '">' + c[1] + '</option>'; }).join(''); $('cr-cat').innerHTML = '<option value="oout">支出</option><option value="oin">収入</option><option value="rep">返済</option>'; $('ci-date').value = t0;
   fillSettings(); render();
   setTimeout(function () { if (state.kind === 'pending' && !(window.claude && typeof window.claude.use === 'function')) startLocal(); }, 2500);
+  /* ---------- 給与（パスワードで開く） ---------- */
+  var SAL_HASH = '747ad1db126a954a4c23ad79aa71eef66768ece8f664d810921017c812f5acaf';
+  async function sha256hex(t) {
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+    return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+  function salLock() { state.sal = { open: false, edit: '', msg: '', arm: '' }; renderSal(true); }
+  function salRows() { return state.salary.rows.slice().sort(function (a, b) { return b.year - a.year; }); }
+  function salInc(r) {
+    var prev = state.salary.rows.filter(function (x) { return x.year === r.year - 1; })[0];
+    if (!prev || r.base == null || prev.base == null || !prev.base) return '';
+    var d = r.base - prev.base, pc = Math.floor(Math.abs(d) / prev.base * 1000) / 10;
+    return '<small class="' + cls(d) + '">' + (d >= 0 ? '+' : '−') + nf.format(Math.abs(d)) + '（' + (d < 0 ? '−' : '') + pc.toFixed(1) + '%）</small>';
+  }
+  function salEditor(r) {
+    var v = function (x) { return x == null ? '' : nf.format(x); };
+    return '<div class="sal-ed" id="sal-ed">' +
+      '<div class="field"><label for="se-year">年（西暦）</label><input id="se-year" type="text" inputmode="numeric" autocomplete="off" value="' + (r ? r.year : '') + '"></div>' +
+      '<div class="field"><label for="se-annual">年収（円・任意）</label><div class="amt"><span>¥</span><input id="se-annual" type="text" inputmode="numeric" autocomplete="off" value="' + v(r && r.annual) + '"></div></div>' +
+      '<div class="field"><label for="se-base">基本給（円・任意）</label><div class="amt"><span>¥</span><input id="se-base" type="text" inputmode="numeric" autocomplete="off" value="' + v(r && r.base) + '"></div></div>' +
+      '<div class="field"><label for="se-bonus">賞与（任意・自由入力）</label><input id="se-bonus" type="text" maxlength="80" autocomplete="off" value="' + esc(r && r.bonus || '') + '"></div>' +
+      '<div class="btnrow"><button type="button" class="btn" data-salsave="1">保存</button><button type="button" class="btn ghost" data-salcancel="1">やめる</button></div>' +
+      (r ? '<button type="button" class="btn ghost' + (state.sal.arm === r.id ? ' armed' : '') + '" data-saldel="' + esc(r.id) + '">' + (state.sal.arm === r.id ? '本当に削除する（もう一度タップ）' : 'この年を削除') + '</button>' : '') +
+      '</div>';
+  }
+  function renderSal(force) {
+    var box = $('sal-body'); if (!box) return;
+    if (!force && state.sal.edit && box.querySelector('#sal-ed')) return; /* 入力中は描き直さない */
+    if (!state.sal.open) {
+      box.innerHTML = '<p class="hint" style="margin-top:8px">パスワードを入れると表示します。</p><form class="sal-lock" id="sal-lockform" novalidate><input id="sal-pw" type="password" inputmode="numeric" autocomplete="off" aria-label="パスワード"><button type="submit" class="addbtn">開く</button></form><p id="sal-msg" class="msg' + (state.sal.msg ? ' err' : '') + '" role="status">' + esc(state.sal.msg) + '</p>';
+      return;
+    }
+    var rows = salRows(), minY = rows.length ? rows[rows.length - 1].year : 0;
+    var html = '<div class="sal-top">' + (state.sal.edit ? '' : '<button type="button" class="lnk" data-saladd="1">＋ 年を追加</button>') + '<button type="button" class="lnk" data-sallock="1">閉じる（ロック）</button></div>';
+    if (state.sal.edit === '__new') html += salEditor(null);
+    html += rows.length ? rows.map(function (r) {
+      if (state.sal.edit === r.id) return '<div class="sal-row"><div class="sal-h"><span>' + (r.year - minY + 1) + '年目：' + r.year + '年</span></div>' + salEditor(r) + '</div>';
+      return '<div class="sal-row"><div class="sal-h"><span>' + (r.year - minY + 1) + '年目：' + r.year + '年</span>' + (state.sal.edit ? '' : '<button type="button" class="lnk" data-saledit="' + esc(r.id) + '">編集</button>') + '</div>' +
+        '<dl class="sal-dl"><div><dt>年収</dt><dd' + (r.annual == null ? ' class="none">—' : '>' + yen(r.annual)) + '</dd></div>' +
+        '<div><dt>基本給</dt><dd' + (r.base == null ? ' class="none">—' : '>' + yen(r.base) + salInc(r)) + '</dd></div>' +
+        '<div class="wide"><dt>賞与</dt><dd class="txt' + (r.bonus ? '' : ' none') + '">' + (r.bonus ? esc(r.bonus) : '—') + '</dd></div></dl></div>';
+    }).join('') : (state.sal.edit ? '' : '<p class="empty">まだ登録がありません。「＋ 年を追加」から入力してください。</p>');
+    html += '<p id="sal-msg" class="msg' + (/でき|入れて|すでに/.test(state.sal.msg) ? ' err' : '') + '" role="status">' + esc(state.sal.msg) + '</p>';
+    box.innerHTML = html;
+  }
+  $('sal-body').addEventListener('submit', async function (e) {
+    if (e.target.id !== 'sal-lockform') return;
+    e.preventDefault();
+    var pw = $('sal-pw').value.replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).trim(), ok = false;
+    try { ok = (await sha256hex(pw)) === SAL_HASH; } catch (er) { state.sal.msg = 'この画面では開けませんでした。'; renderSal(true); return; }
+    if (!ok) { state.sal.msg = 'パスワードが違います。'; renderSal(true); var f = $('sal-pw'); if (f) f.focus(); return; }
+    state.sal = { open: true, edit: '', msg: '', arm: '' }; renderSal(true);
+  });
+  $('sal-body').addEventListener('click', async function (e) {
+    var t = e.target.closest('[data-saladd],[data-saledit],[data-salcancel],[data-salsave],[data-saldel],[data-sallock]'); if (!t || !state.sal.open) return;
+    var d = t.dataset;
+    if (d.sallock) return salLock();
+    if (d.saladd) { state.sal.edit = '__new'; state.sal.msg = ''; state.sal.arm = ''; renderSal(true); var y = $('se-year'), rs = salRows(); if (y) { y.value = rs.length ? rs[0].year + 1 : +todayStr().slice(0, 4); if (rs.length && rs[0].base != null) $('se-base').value = nf.format(rs[0].base); } return; }
+    if (d.saledit) { state.sal.edit = d.saledit; state.sal.msg = ''; state.sal.arm = ''; renderSal(true); return; }
+    if (d.salcancel) { state.sal.edit = ''; state.sal.msg = ''; state.sal.arm = ''; renderSal(true); return; }
+    if (!backend || !backend.saveSalary) { state.sal.msg = '読み込み中です。少し待ってからもう一度お試しください。'; renderSal(true); return; }
+    var rows = state.salary.rows.map(function (r) { return Object.assign({}, r); });
+    if (d.saldel) {
+      if (state.sal.arm !== d.saldel) { state.sal.arm = d.saldel; renderSal(true); return; }
+      rows = rows.filter(function (r) { return r.id !== d.saldel; });
+    } else if (d.salsave) {
+      var yv = parseAmount($('se-year').value).value;
+      if (!(yv >= 1950 && yv <= 2200)) { state.sal.msg = '年を西暦（例：2026）で入れてください。'; var keep = { y: $('se-year').value, a: $('se-annual').value, b: $('se-base').value, c: $('se-bonus').value }; renderSal(true); $('se-year').value = keep.y; $('se-annual').value = keep.a; $('se-base').value = keep.b; $('se-bonus').value = keep.c; return; }
+      if (rows.some(function (r) { return r.year === yv && r.id !== state.sal.edit; })) { state.sal.msg = yv + '年はすでにあります。'; $('sal-msg').textContent = state.sal.msg; $('sal-msg').className = 'msg err'; return; }
+      var amt = function (id) { var p = parseAmount($(id).value); return isNaN(p.value) ? null : p.value; };
+      var rec = { id: state.sal.edit === '__new' ? 's' + Date.now().toString(36) : state.sal.edit, year: yv, annual: amt('se-annual'), base: amt('se-base'), bonus: $('se-bonus').value.trim() };
+      if (state.sal.edit === '__new') rows.push(rec); else rows = rows.map(function (r) { return r.id === rec.id ? rec : r; });
+    } else return;
+    t.disabled = true;
+    try { await backend.saveSalary({ rows: rows }); if (state.kind === 'db') state.salary = cleanSalary({ rows: rows }); state.sal.edit = ''; state.sal.arm = ''; state.sal.msg = d.saldel ? '削除しました。' : '保存しました。'; }
+    catch (er) { state.sal.msg = '保存できませんでした。'; t.disabled = false; return renderSal(false) || ($('sal-msg') && ($('sal-msg').textContent = state.sal.msg, $('sal-msg').className = 'msg err')); }
+    renderSal(true);
+  });
+  /* 別のアプリに切り替えたら、給与は自動でロック */
+  document.addEventListener('visibilitychange', function () { if (document.hidden && state.sal.open) salLock(); });
+  $('sal-card').addEventListener('toggle', function () { if (!this.open && state.sal.open) salLock(); else renderSal(false); });
   initStorage();
 })();
 </script>
+
 
 <script>if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script>
 </body>
