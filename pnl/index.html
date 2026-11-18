@@ -839,10 +839,21 @@ details.inner[open]>summary::after{content:"－"}
   function cleanSalary(v) {
     var o = { rows: [] }, seen = {};
     var num = function (x) { return typeof x === 'number' && isFinite(x) && x >= 0 ? Math.round(x) : null; };
+    var digits = function (t) { var d = String(t || '').replace(/[^0-9]/g, ''); return d ? parseInt(d, 10) : null; };
+    /* 以前の自由入力（例：「¥1,000,000+¥100,000インフレ」）を、賞与とインフレ手当の金額に分ける */
+    var split = function (r) {
+      if (typeof r.bonus !== 'string') return { bonus: num(r.bonus), infl: num(r.infl) };
+      var t = r.bonus.replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }), inf = num(r.infl);
+      var m = t.match(/[¥￥]?\s*([0-9][0-9,，]*)\s*円?\s*(?:の)?インフレ(?:手当)?/);
+      if (m) { if (inf == null) inf = digits(m[1]); t = t.replace(m[0], ''); }
+      var b = t.match(/[0-9][0-9,，]*/);
+      return { bonus: b ? digits(b[0]) : null, infl: inf };
+    };
     if (v && Array.isArray(v.rows)) v.rows.slice(0, 60).forEach(function (r, i) {
       if (!r || !Number.isInteger(r.year) || r.year < 1950 || r.year > 2200 || seen[r.year]) return;
       seen[r.year] = 1;
-      o.rows.push({ id: typeof r.id === 'string' && r.id ? r.id.slice(0, 40) : 's' + r.year, year: r.year, annual: num(r.annual), base: num(r.base), bonus: typeof r.bonus === 'string' ? r.bonus.slice(0, 80) : '' });
+      var bi = split(r);
+      o.rows.push({ id: typeof r.id === 'string' && r.id ? r.id.slice(0, 40) : 's' + r.year, year: r.year, annual: num(r.annual), base: num(r.base), bonus: bi.bonus, infl: bi.infl });
     });
     o.rows.sort(function (a, b) { return b.year - a.year; });
     return o;
@@ -2470,7 +2481,8 @@ details.inner[open]>summary::after{content:"－"}
       '<div class="field"><label for="se-year">年（西暦）</label><input id="se-year" type="text" inputmode="numeric" autocomplete="off" value="' + (r ? r.year : '') + '"></div>' +
       '<div class="field"><label for="se-annual">年収（円・任意）</label><div class="amt"><span>¥</span><input id="se-annual" type="text" inputmode="numeric" autocomplete="off" value="' + v(r && r.annual) + '"></div></div>' +
       '<div class="field"><label for="se-base">基本給（円・任意）</label><div class="amt"><span>¥</span><input id="se-base" type="text" inputmode="numeric" autocomplete="off" value="' + v(r && r.base) + '"></div></div>' +
-      '<div class="field"><label for="se-bonus">賞与（任意・自由入力）</label><input id="se-bonus" type="text" maxlength="80" autocomplete="off" value="' + esc(r && r.bonus || '') + '"></div>' +
+      '<div class="field"><label for="se-bonus">賞与（円・任意）</label><div class="amt"><span>¥</span><input id="se-bonus" type="text" inputmode="numeric" autocomplete="off" value="' + v(r && r.bonus) + '"></div></div>' +
+      '<div class="field"><label for="se-infl">インフレ手当（円・任意）</label><div class="amt"><span>¥</span><input id="se-infl" type="text" inputmode="numeric" autocomplete="off" value="' + v(r && r.infl) + '"></div></div>' +
       '<div class="btnrow"><button type="button" class="btn" data-salsave="1">保存</button><button type="button" class="btn ghost" data-salcancel="1">やめる</button></div>' +
       (r ? '<button type="button" class="btn ghost' + (state.sal.arm === r.id ? ' armed' : '') + '" data-saldel="' + esc(r.id) + '">' + (state.sal.arm === r.id ? '本当に削除する（もう一度タップ）' : 'この年を削除') + '</button>' : '') +
       '</div>';
@@ -2490,7 +2502,8 @@ details.inner[open]>summary::after{content:"－"}
       return '<div class="sal-row"><div class="sal-h"><span>' + (r.year - minY + 1) + '年目：' + r.year + '年</span>' + (state.sal.edit ? '' : '<button type="button" class="lnk" data-saledit="' + esc(r.id) + '">編集</button>') + '</div>' +
         '<dl class="sal-dl"><div><dt>年収</dt><dd' + (r.annual == null ? ' class="none">—' : '>' + yen(r.annual)) + '</dd></div>' +
         '<div><dt>基本給</dt><dd' + (r.base == null ? ' class="none">—' : '>' + yen(r.base) + salInc(r)) + '</dd></div>' +
-        '<div class="wide"><dt>賞与</dt><dd class="txt' + (r.bonus ? '' : ' none') + '">' + (r.bonus ? esc(r.bonus) : '—') + '</dd></div></dl></div>';
+        '<div><dt>賞与</dt><dd' + (r.bonus == null ? ' class="none">—' : '>' + yen(r.bonus)) + '</dd></div>' +
+        '<div><dt>インフレ手当</dt><dd' + (r.infl == null ? ' class="none">—' : '>' + yen(r.infl)) + '</dd></div></dl></div>';
     }).join('') : (state.sal.edit ? '' : '<p class="empty">まだ登録がありません。「＋ 年を追加」から入力してください。</p>');
     html += '<p id="sal-msg" class="msg' + (/でき|入れて|すでに/.test(state.sal.msg) ? ' err' : '') + '" role="status">' + esc(state.sal.msg) + '</p>';
     box.innerHTML = html;
@@ -2517,10 +2530,10 @@ details.inner[open]>summary::after{content:"－"}
       rows = rows.filter(function (r) { return r.id !== d.saldel; });
     } else if (d.salsave) {
       var yv = parseAmount($('se-year').value).value;
-      if (!(yv >= 1950 && yv <= 2200)) { state.sal.msg = '年を西暦（例：2026）で入れてください。'; var keep = { y: $('se-year').value, a: $('se-annual').value, b: $('se-base').value, c: $('se-bonus').value }; renderSal(true); $('se-year').value = keep.y; $('se-annual').value = keep.a; $('se-base').value = keep.b; $('se-bonus').value = keep.c; return; }
+      if (!(yv >= 1950 && yv <= 2200)) { state.sal.msg = '年を西暦（例：2026）で入れてください。'; var keep = { y: $('se-year').value, a: $('se-annual').value, b: $('se-base').value, c: $('se-bonus').value, i: $('se-infl').value }; renderSal(true); $('se-year').value = keep.y; $('se-annual').value = keep.a; $('se-base').value = keep.b; $('se-bonus').value = keep.c; $('se-infl').value = keep.i; return; }
       if (rows.some(function (r) { return r.year === yv && r.id !== state.sal.edit; })) { state.sal.msg = yv + '年はすでにあります。'; $('sal-msg').textContent = state.sal.msg; $('sal-msg').className = 'msg err'; return; }
       var amt = function (id) { var p = parseAmount($(id).value); return isNaN(p.value) ? null : p.value; };
-      var rec = { id: state.sal.edit === '__new' ? 's' + Date.now().toString(36) : state.sal.edit, year: yv, annual: amt('se-annual'), base: amt('se-base'), bonus: $('se-bonus').value.trim() };
+      var rec = { id: state.sal.edit === '__new' ? 's' + Date.now().toString(36) : state.sal.edit, year: yv, annual: amt('se-annual'), base: amt('se-base'), bonus: amt('se-bonus'), infl: amt('se-infl') };
       if (state.sal.edit === '__new') rows.push(rec); else rows = rows.map(function (r) { return r.id === rec.id ? rec : r; });
     } else return;
     t.disabled = true;
