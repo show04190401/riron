@@ -133,6 +133,8 @@ details.more .meta{margin-top:6px}
 .pace-meta dt{font-size:12px;color:var(--muted)}
 .pace-meta dd{font:600 15px var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .pace-meta dd small{display:block;font:400 12px var(--font-ui);color:var(--muted);margin-top:1px}
+.seg.gcat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:10px;width:100%;max-width:360px}
+.seg.gcat button{padding:6px 8px;min-height:38px;font-size:13.5px}
 .pace-meta+.charthead{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
 
 /* Stats */
@@ -753,6 +755,7 @@ details.inner[open]>summary::after{content:"－"}
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', history: [], excludeHolidays: true, saved: false },
     cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'cash', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gOpen: {}, dOpen: {}, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
+    gcat: (function () { try { return localStorage.getItem('pnl-notebook-gcat') || 'all'; } catch (e) { return 'all'; } })(),
     salary: { rows: [] }, sal: { open: false, edit: '', msg: '', arm: '' },
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
   };
@@ -1168,6 +1171,25 @@ details.inner[open]>summary::after{content:"－"}
       tile('累積', c.total, win + '勝' + lose + '敗・' + c.dates.length + '日');
   }
 
+  /* グラフの区分（全体／株式のみ／Pのみ） */
+  var GCATS = [['all', '全体'], ['stock', '株式のみ'], ['p', 'Pのみ']];
+  function catEntries(entries, cat) {
+    if (cat === 'all') return entries;
+    var o = {};
+    Object.keys(entries).forEach(function (d) {
+      var its = itemsOf(entries[d]).filter(function (it) { return it.cat === cat; });
+      if (its.length) o[d] = { pnl: its.reduce(function (a, it) { return a + it.pnl; }, 0), memo: '', items: its };
+    });
+    return o;
+  }
+  function gcatSeg() {
+    return '<div class="seg gcat" role="group" aria-label="グラフの区分">' + GCATS.map(function (g) { return '<button type="button" data-gcat="' + g[0] + '" aria-pressed="' + (state.gcat === g[0]) + '" aria-selected="' + (state.gcat === g[0]) + '">' + g[1] + '</button>'; }).join('') + '</div>';
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-gcat]'); if (!b) return;
+    state.gcat = b.dataset.gcat; try { localStorage.setItem('pnl-notebook-gcat', state.gcat); } catch (er) {}
+    renderCharts();
+  });
   var lastW = 0;
   function renderCharts(c, v) {
     var el = $('pace');
@@ -1175,6 +1197,9 @@ details.inner[open]>summary::after{content:"－"}
     var w = Math.max(260, Math.floor(el.clientWidth - 34)) || 560;
     lastW = w;
     var gs = gset(c, v), g = goal(gs.c, gs.v), s = state.settings;
+    var gc = GCATS.some(function (x) { return x[0] === state.gcat; }) ? state.gcat : 'all', glab = gc === 'all' ? '' : '（' + (gc === 'p' ? 'P' : '株式') + 'のみ）';
+    var ge = catEntries(gs.v.entries, gc), gcc = compute(ge);
+    var de = catEntries(v.entries, gc), dc = compute(de);
     el.innerHTML =
       '<h2>ペース</h2>' +
       '<dl class="pace-meta">' +
@@ -1182,12 +1207,12 @@ details.inner[open]>summary::after{content:"－"}
         '<div><dt>平均損益</dt><dd class="' + (g.avg !== null ? cls(g.avg) : '') + '">' + (g.avg !== null ? sgn(g.avg) + '/日' : '—') + '<small>記録' + g.n + '日の平均</small></dd></div>' +
         '<div><dt>目標日</dt><dd>' + md(s.targetDate) + '<small>' + (g.daysLeft >= 0 ? 'あと' + g.daysLeft + '日' : (-g.daysLeft) + '日経過') + '</small></dd></div>' +
       '</dl>' +
-      '<div class="charthead"><h2>累積損益と目標ペース</h2></div>' +
-      '<div class="legend"><span><i class="sw"></i>累積損益</span><span><i class="sw dash"></i>目標ペース</span></div>' +
-      '<div class="chartbox">' + (gs.c.dates.length ? chartCum(gs.c, w) : '<p class="empty">' + md(s.targetFrom) + ' 以降の記録がまだありません。</p>') + '</div>';
+      '<div class="charthead"><h2>累積損益と目標ペース</h2></div>' + gcatSeg() +
+      '<div class="legend"><span><i class="sw"></i>累積損益' + glab + '</span><span><i class="sw dash"></i>目標ペース（全体の目標）</span></div>' +
+      '<div class="chartbox">' + (gcc.dates.length ? chartCum(gcc, w) : '<p class="empty">' + (gc !== 'all' ? (s.targetFrom ? md(s.targetFrom) + ' 以降の' : '') + (gc === 'p' ? 'P' : '株式') + 'の記録がまだありません。' : md(s.targetFrom) + ' 以降の記録がまだありません。') + '</p>') + '</div>';
     $('chart-daily').innerHTML =
-      '<div class="charthead"><h2>日々の損益</h2><span class="sub">直近' + Math.min(30, c.dates.length) + '日</span></div>' +
-      '<div class="chartbox">' + chartDaily(c, v, w) + '</div>';
+      '<div class="charthead"><h2>日々の損益' + glab + '</h2><span class="sub">直近' + Math.min(30, dc.dates.length) + '日</span></div>' + gcatSeg() +
+      '<div class="chartbox">' + (dc.dates.length ? chartDaily(dc, { entries: de }, w) : '<p class="empty">' + (gc === 'p' ? 'P' : '株式') + 'の記録がまだありません。</p>') + '</div>';
   }
 
   function group(c, v, keyFn) {
