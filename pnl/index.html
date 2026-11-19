@@ -368,6 +368,7 @@ table.cf{border-collapse:separate;border-spacing:0;width:100%;min-width:max-cont
 .loanbox .schbox{margin:0 0 12px;padding-top:6px}
 .cf-wrap.sch .cf tr.sel td{background:transparent}
 .cf-wrap.sch .cf tr.dmov td.rl{color:var(--gold)}
+.cf-wrap.sch .cf td.rl .ldate{font:inherit;color:inherit}
 .lint-ed input[type=date]{width:11em;text-align:left;min-height:38px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font:500 16px var(--font-num)}
 .sheet .recbox{margin:6px 0 10px}
 .recbox .lint-ed,.recbox{max-width:100%}
@@ -1536,7 +1537,7 @@ details.inner[open]>summary::after{content:"－"}
             var key = L.id + '|' + r.m, editing = !r.x && state.lEdit === key, editingP = !r.x && state.lEdit === key + '|p' && state.lWhere === 'sch';
             var pcell = cf.demo ? cell(r.pay) : r.x ? '<button type="button" class="lint lpay" data-ex="' + esc(r.id) + '" aria-label="' + md(r.d) + 'の追加返済を編集">' + cell(r.pay) + '</button>' : '<button type="button" class="lint lpay' + (r.pov ? ' ov' : '') + '" data-lint="' + esc(key + '|p') + '" aria-label="' + ym(r.m) + 'の返済額を編集">' + cell(r.pay) + '</button>';
             var icell = (cf.demo || r.x) ? cell(r.interest) : '<button type="button" class="lint' + (r.ov ? ' ov' : '') + '" data-lint="' + esc(key) + '" aria-label="' + ym(r.m) + 'の利息を編集">' + cell(r.interest) + '</button>';
-            tr += '<tr class="' + (r.dov ? 'dmov ' : '') + (r.d < today ? 'paid ' : '') + (r.m < cf.selM ? 'prevm ' : '') + (r.m === cf.selM ? 'sel ' : '') + (i === firstNext ? 'today' : '') + '"><td class="rl">' + md(r.d) + '<small>' + (r.b ? '借入' : r.x ? '追加' : nos[i] + '回目') + '</small><small>' + r.d.slice(0, 4) + '年</small></td><td class="pc">' + (r.b ? '<span class="pos">+</span>' : '') + pcell + '<small>' + (r.b ? '<span>借入（残高が増えます）</span>' : '<span>元本 ' + cell(r.principal) + '</span><span>利息 ' + icell + '</span>') + '</small></td><td class="bc">' + cell(r.bal) + '</td></tr>';
+            tr += '<tr class="' + (r.dov ? 'dmov ' : '') + (r.d < today ? 'paid ' : '') + (r.m < cf.selM ? 'prevm ' : '') + (r.m === cf.selM ? 'sel ' : '') + (i === firstNext ? 'today' : '') + '"><td class="rl">' + (cf.demo || r.x || r.b ? md(r.d) : '<button type="button" class="lint ldate" data-lint="' + esc(key + '|p') + '" aria-label="' + ym(r.m) + 'の返済日・返済額を変更">' + md(r.d) + '</button>') + '<small>' + (r.b ? '借入' : r.x ? '追加' : nos[i] + '回目') + '</small><small>' + r.d.slice(0, 4) + '年</small></td><td class="pc">' + (r.b ? '<span class="pos">+</span>' : '') + pcell + '<small>' + (r.b ? '<span>借入（残高が増えます）</span>' : '<span>元本 ' + cell(r.principal) + '</span><span>利息 ' + icell + '</span>') + '</small></td><td class="bc">' + cell(r.bal) + '</td></tr>';
             if (editingP) tr += '<tr class="lined"><td colspan="3"><div class="lint-ed"><label for="lint-date">' + ym(r.m) + 'の返済日</label><input id="lint-date" type="date" value="' + r.d + '"><label for="lint-in">返済額（円）</label><input id="lint-in" type="text" inputmode="numeric" autocomplete="off" value="' + r.pay + '">' +
               '<button type="button" class="lnk" data-lintsave="' + esc(key + '|p') + '">保存</button>' + (r.pov || r.dov ? '<button type="button" class="lnk" data-lintreset="' + esc(key + '|p') + '">通常に戻す</button>' : '') + '<button type="button" class="lnk" data-lintcancel>やめる</button></div>' +
               (state.lMsg ? '<p class="msg err">' + esc(state.lMsg) + '</p>' : '') + '</td></tr>';
@@ -1549,7 +1550,7 @@ details.inner[open]>summary::after{content:"－"}
           }).join('');
           var lo = !!state.lOpen[L.id];
           var sched = sch.length && lo ? '<div class="inner schbox">' +
-            (cf.demo || !(L.payment > 0) ? '' : '<p class="hint" style="margin-top:8px">返済額をタップするとその月の返済日と返済額を、利息をタップするとその月の利息を直せます。直した金額は金色の文字で表示し、日別資金繰り表にも反映されます。</p>') +
+            (cf.demo || !(L.payment > 0) ? '' : '<p class="hint" style="margin-top:8px">返済日か返済額をタップするとその月だけの返済日と返済額を、利息をタップするとその月の利息を直せます。直した金額は金色の文字で表示し、日別資金繰り表にも反映されます。</p>') +
             '<div class="cf-wrap sch"><table class="cf" aria-label="' + esc(L.name) + 'の月別返済残高"><thead><tr><th class="rl" scope="col">返済日</th><th scope="col">返済額（内訳）</th><th scope="col">返済後の残高</th></tr></thead><tbody>' + tr + '</tbody></table></div></div>' : '';
           return '<div class="loanbox"><div class="row r3b"><div class="d">' + (sch.length ? '<button type="button" class="lname" data-lname="' + esc(L.id) + '" aria-expanded="' + lo + '">' + esc(L.name) + '<i aria-hidden="true">' + (lo ? '▾' : '▸') + '</i></button>' : esc(L.name)) + '<small>' + sub + '</small><span class="pbar" title="返済済み ' + paid + '%"><i style="width:' + paid + '%"></i></span></div>' +
             '<div class="n">' + (now < 0 ? '貸し ' : '') + yen(now) + '<small>' + (+sm.slice(5)) + '月の返済後</small></div>' + cashBtns(cf.demo, 'data-el="' + esc(L.id) + '"', 'data-delloan="' + esc(L.id) + '"', 'l' + L.id) + '</div>' + sched + '</div>';
@@ -1572,11 +1573,11 @@ details.inner[open]>summary::after{content:"－"}
         else if (l.k === 'xbrw') { sub = '借入後 ' + balTxt(l.remain); btns = cashBtns(cf.demo, 'data-ex="' + esc(l.id) + '"', 'data-delx="' + esc(l.id) + '"', 'x' + l.id); }
         else { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest); btns = cashBtns(cf.demo, 'data-el="' + esc(l.id) + '"', 'data-delloan="' + esc(l.id) + '"', 'l' + l.id); }
         amt = '<div class="n ' + (l.out ? 'neg' : 'pos') + '">' + recAmt(l, cf.demo, (l.out ? '−' : '+') + yen(l.amt)) + '</div>';
-        if (l.via) { sub = ''; amt = '<div class="n muted">（' + yen(l.amt) + '）</div>'; }
+        if (l.via) { sub = ''; amt = '<div class="n muted">' + recAmt(l, cf.demo, '（' + yen(l.amt) + '）') + '</div>'; }
         if ((l.k === 'item' || l.k === 'rec') && (l.cat === 'rak' || l.cat === 'amz')) { var vi = viaIn(cf.days[x.d], l.cat); if (vi) sub = (sub ? sub + ' ' : '') + vi; }
         return '<div class="row r5"><div class="d">' + md(x.d) + '<small>' + WD[dow(x.d)] + '曜</small></div>' +
           '<div class="d">' + esc(l.label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + amt + btns + '</div>' + recEd(l, x.d, 'list');
-      }).join('') + '</div>' + (items.some(function (x) { return x.l.k === 'rec' || x.l.k === 'loan'; }) && !cf.demo ? '<p class="hint" style="margin-top:8px">定期や返済の金額をタップすると、その月だけ日付と金額を変えられます。</p>' : '') : '<p class="empty">この月の記録はありません。</p>');
+      }).join('') + '</div>' + (items.some(function (x) { return x.l.k === 'rec' || x.l.k === 'loan'; }) && !cf.demo ? '<p class="hint" style="margin-top:8px">定期や返済の金額をタップすると、その月だけ日付と金額を変えられます（カード払いの返済も同じです）。予定表では、返済日をタップしても変えられます。</p>' : '') : '<p class="empty">この月の記録はありません。</p>');
 
     var rr = cf.src.recurring;
     $('c-rec-list').innerHTML = rr.length ? '<div class="table">' + rr.map(function (r) {
@@ -1654,7 +1655,7 @@ details.inner[open]>summary::after{content:"－"}
         else if (l.k === 'xrep') { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest) + '・' + balTxt(l.remain); btns = cashBtns(demo, 'data-ex="' + esc(l.id) + '"', 'data-delx="' + esc(l.id) + '"', 'x' + l.id); }
         else { sub = '元本 ' + yen(l.principal) + '・利息 ' + yen(l.interest) + '・' + balTxt(l.remain); btns = cashBtns(demo, 'data-el="' + esc(l.id) + '"', 'data-delloan="' + esc(l.id) + '"', 'l' + l.id); amt = '<span class="neg">' + recAmt(l, demo, '−' + yen(l.amt)) + '</span>'; }
       }
-      if (l.via) { sub = ''; amt = '<span class="muted">（' + yen(l.amt) + '）</span>'; }
+      if (l.via) { sub = ''; amt = '<span class="muted">' + recAmt(l, demo, '（' + yen(l.amt) + '）') + '</span>'; }
       if ((l.k === 'item' || l.k === 'rec') && (l.cat === 'rak' || l.cat === 'amz')) { var vi = viaIn(x, l.cat); if (vi) sub = (sub ? sub + ' ' : '') + vi; }
       lns += '<div class="dline"><div>' + esc(l.label) + '<small>' + esc(sub) + '</small></div><div class="dl-n">' + amt + '</div>' + (btns || '<span></span>') + '</div>' + recEd(l, d, 'sheet');
     });
