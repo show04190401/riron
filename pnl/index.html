@@ -192,7 +192,8 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),
 details.card>summary,details.inner>summary,details.adv>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}
 details.card>summary{font:600 16px var(--font-head);letter-spacing:.06em;margin:-8px 0}
 details>summary::-webkit-details-marker{display:none}
-details.card>summary::after,details.inner>summary::after,details.adv>summary::after,.chev{content:"";width:16px;height:16px;flex:none;background:currentColor;color:var(--muted);
+details.card>summary::after,details.inner>summary::after,details.adv>summary::after{content:none}
+.chev{content:"";width:16px;height:16px;flex:none;background:currentColor;color:var(--muted);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center/16px no-repeat;
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") center/16px no-repeat;
   transition:transform var(--dur) var(--ease)}
@@ -236,7 +237,7 @@ svg{display:block;max-width:100%}
 .seg.gcat button{padding:0 8px}
 
 /* ---------- history / lists ---------- */
-.histhead{display:flex;justify-content:space-between;align-items:center;gap:8px 16px;flex-wrap:wrap}
+.histhead{margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:8px 16px;flex-wrap:wrap}
 .table{margin-top:8px}
 .row{display:grid;align-items:center;gap:4px 16px;padding:12px 0;border-top:1px solid var(--line)}
 .row.head{border-top:0;padding:8px 0 4px;color:var(--muted);font-size:12px}
@@ -308,7 +309,7 @@ svg{display:block;max-width:100%}
 .addbtn{min-height:44px;padding:0 24px;border-radius:var(--rs);border:0;background:var(--btn-bg);color:var(--btn-fg);font:500 14px var(--font-ui);letter-spacing:.08em;cursor:pointer;white-space:nowrap}
 .fold{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font:inherit;color:inherit;min-height:44px}
 .fold .chev{color:var(--muted)}
-.cfhead:has(>h2>.fold){position:relative;padding-right:32px}
+.cfhead:has(>h2>.fold){position:relative}
 .cfhead>h2>.fold>.chev{position:absolute;right:0;top:14px}
 .fold:focus-visible{outline:2px solid var(--gold-fill);outline-offset:2px}
 .card.collapsed > :not(.cfhead){display:none!important}
@@ -1353,7 +1354,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var de = ge, dc = gcc; /* 日々の損益も、今回の目標期間で表示する */
     var pw = { w: 0, l: 0 }; gs.c.dates.forEach(function (d) { var x = gs.v.entries[d].pnl; if (x > 0) pw.w++; else if (x < 0) pw.l++; });
     el.innerHTML =
-      '<div class="charthead"><h2>ペース</h2><span class="sub">今回の目標 ' + periodLab() + '</span></div>' +
+      '<div class="cfhead"><h2>' + foldBtn('pace', 'ペース') + '</h2><span class="sub">今回の目標 ' + periodLab() + '</span></div>' +
       '<dl class="pace-meta">' +
         '<div><dt>平均損益</dt><dd class="' + (g.avg !== null ? cls(g.avg) : '') + '">' + (g.avg !== null ? sgn(g.avg) : '—') + '<small>記録した日の平均</small></dd></div>' +
         '<div><dt>勝ち負け</dt><dd>' + pw.w + '勝' + pw.l + '敗<small>記録' + g.n + '日</small></dd></div>' +
@@ -1363,8 +1364,9 @@ details.inner>summary{font:500 14px var(--font-ui)}
       '<div class="legend"><span><i class="sw"></i>累積損益' + glab + '</span><span><i class="sw dash"></i>目標ペース（全体の目標）</span></div>' +
       '<div class="chartbox">' + (gcc.dates.length ? chartCum(gcc, w) : '<p class="empty">' + (gc !== 'all' ? (s.targetFrom ? md(s.targetFrom) + ' 以降の' : '') + (gc === 'p' ? 'P' : '株式') + 'の記録がまだありません。' : periodLab() + ' の記録はまだありません。') + '</p>') + '</div>';
     $('chart-daily').innerHTML =
-      '<div class="charthead"><h2>日々の損益' + glab + '</h2><span class="sub">' + periodLab() + (dc.dates.length > 30 ? '・直近30日' : '') + '</span></div>' + gcatSeg() +
+      '<div class="cfhead"><h2>' + foldBtn('daily', '日々の損益' + glab) + '</h2><span class="sub">' + periodLab() + (dc.dates.length > 30 ? '・直近30日' : '') + '</span></div>' + gcatSeg() +
       '<div class="chartbox">' + (dc.dates.length ? chartDaily(dc, { entries: de }, w) : '<p class="empty">' + periodLab() + ' の' + (gc === 'all' ? '' : gc === 'p' ? 'P の' : '株式の') + '記録はまだありません。</p>') + '</div>';
+    $('pace').classList.toggle('collapsed', !!state.fold.pace); $('chart-daily').classList.toggle('collapsed', !!state.fold.daily);
   }
 
   function group(c, v, keyFn) {
@@ -1406,10 +1408,10 @@ details.inner>summary{font:500 14px var(--font-ui)}
       order.forEach(function (p) {
         var days = buckets[p.key].days, sum = 0, w = 0, l = 0, ct = {};
         days.forEach(function (d) { var x = E[d].pnl; sum += x; if (x > 0) w++; else if (x < 0) l++; itemsOf(E[d]).forEach(function (it) { if (PCAT[it.cat]) ct[it.cat] = (ct[it.cat] || 0) + it.pnl; }); });
-        var open = state.gOpen[p.key] != null ? state.gOpen[p.key] : !!p.cur;
+        var open = state.gOpen[p.key] != null ? state.gOpen[p.key] : false;
         var first = days[days.length - 1];
         var label = p.none ? '目標なしの期間' : (p.from ? md(p.from) : md(first)) + '〜' + md(p.show);
-        body += '<button type="button" class="mhead gsec" data-gsec="' + esc(p.key) + '" aria-expanded="' + open + '"><span><span class="chev" aria-hidden="true" style="transform:rotate(' + (open ? 0 : -90) + 'deg)"></span>' + label + (p.cur ? '<em class="curtag">現在</em>' : '') +
+        body += '<button type="button" class="mhead gsec" data-gsec="' + esc(p.key) + '" aria-expanded="' + open + '"><span>' + label + (p.cur ? '<em class="curtag">現在</em>' : '') +
           '<small>' + (p.none ? '' : '結果 <b class="' + cls(sum) + '">' + sgn(sum) + '</b> ／ 目標 ' + yen(p.amount) + '（' + (p.amount > 0 ? (sum / p.amount * 100).toFixed(1) + '%・' : '') + (sum >= p.amount ? '達成' : p.cur ? '進行中' : '未達') + '）<br>') + days.length + '日・' + w + '勝' + l + '敗</small></span><span class="n ' + cls(sum) + '">' + sgn(sum) + '</span></button>';
         var ck = ['stock', 'p', 'other'].filter(function (k) { return k in ct; });
         if (ck.length) body += '<div class="mcat">' + ck.map(function (k) { return PCAT[k] + ' <b class="' + cls(ct[k]) + '">' + sgn(ct[k]) + '</b>'; }).join('<span aria-hidden="true">・</span>') + '</div>';
@@ -1443,7 +1445,8 @@ details.inner>summary{font:500 14px var(--font-ui)}
       return '<button type="button" role="tab" data-tab="' + x[0] + '" aria-selected="' + (state.tab === x[0]) + '">' + x[1] + '</button>';
     }).join('');
     if (!c.dates.length) body = '<p class="empty">まだ記録がありません。画面下の「＋記録」から入れた損益が、ここに日ごとに並びます。</p>';
-    $('history').innerHTML = '<div class="histhead"><h2>記録</h2><div class="seg" role="tablist" aria-label="集計単位">' + tabs + '</div></div>' + sumline + '<div class="table">' + body + '</div>';
+    $('history').innerHTML = '<div class="cfhead"><h2>' + foldBtn('hist', '記録') + '</h2></div><div class="histhead"><div class="seg" role="tablist" aria-label="集計単位">' + tabs + '</div></div>' + sumline + '<div class="table">' + body + '</div>';
+    $('history').classList.toggle('collapsed', !!state.fold.hist);
   }
 
   /* ---------- cash flow (daily) ---------- */
@@ -1726,7 +1729,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
           var sched = sch.length && lo ? '<div class="inner schbox">' +
             (cf.demo || !(L.payment > 0) ? '' : '<p class="hint" style="margin-top:8px">返済日か返済額をタップするとその月だけの返済日と返済額を、利息をタップするとその月の利息を直せます。直した金額は金色の文字で表示し、日別資金繰り表にも反映されます。</p>') +
             '<div class="cf-wrap sch"><table class="cf" aria-label="' + esc(L.name) + 'の月別返済残高"><thead><tr><th class="rl" scope="col">返済日</th><th scope="col">返済額（内訳）</th><th scope="col">返済後の残高</th></tr></thead><tbody>' + tr + '</tbody></table></div></div>' : '';
-          return '<div class="loanbox"><div class="row r3b"><div class="d">' + (sch.length ? '<button type="button" class="lname" data-lname="' + esc(L.id) + '" aria-expanded="' + lo + '">' + esc(L.name) + IC.chev + '</button>' : esc(L.name)) + '<small>' + sub + '</small><span class="pbar" title="返済済み ' + paid + '%"><i style="width:' + paid + '%"></i></span></div>' +
+          return '<div class="loanbox"><div class="row r3b"><div class="d">' + (sch.length ? '<button type="button" class="lname" data-lname="' + esc(L.id) + '" aria-expanded="' + lo + '">' + esc(L.name) + '</button>' : esc(L.name)) + '<small>' + sub + '</small><span class="pbar" title="返済済み ' + paid + '%"><i style="width:' + paid + '%"></i></span></div>' +
             '<div class="n">' + (now < 0 ? '貸し ' : '') + yen(now) + '<small>' + (+sm.slice(5)) + '月の返済後</small></div>' + cashBtns(cf.demo, 'data-el="' + esc(L.id) + '"', 'data-delloan="' + esc(L.id) + '"', 'l' + L.id) + '</div>' + sched + '</div>';
         }).join('') + '</div>' +
         '';
@@ -1957,7 +1960,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
   function endEdit() { state.cEdit = null; clearCashForms(); syncEditUI(); }
   function foldBtn(k, label) {
     var open = !state.fold[k];
-    return '<button type="button" class="fold" data-fold="' + k + '" aria-expanded="' + open + '">' + label + IC.chev + '</button>';
+    return '<button type="button" class="fold" data-fold="' + k + '" aria-expanded="' + open + '">' + label + '</button>';
   }
   function showForm(on, mode) {
     state.formOpen = on; if (mode) state.formMode = mode;
