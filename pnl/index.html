@@ -433,6 +433,8 @@ table.cf{border-collapse:separate;border-spacing:0;width:100%;min-width:max-cont
 .rsheet #form-card>h2,.rsheet #c-form-h,.rsheet #mode-sel,.rsheet .catfield{display:none!important}
 .rsheet #c-rec-box>h2{font-size:16px;margin-top:24px}
 html.lock,html.lock body{overflow:hidden}
+button:not(:disabled):active,summary:active,.chip:active{opacity:.64}
+button,summary,.chip{transition:opacity 120ms var(--ease)}
 .codebox{font:400 16px/1.5 var(--font-num);padding:16px;word-break:break-all;resize:vertical}
 
 /* ---------- bottom tab bar / FAB / toast ---------- */
@@ -714,7 +716,8 @@ details.inner>summary{font:500 14px var(--font-ui)}
           <div class="field" id="cr-eff-wrap" hidden>
             <label for="cr-eff">金額を変える月（任意）</label>
             <input type="month" id="cr-eff">
-            <p class="hint">月を選ぶと、上の金額をその月から使います（それより前の月は今までの金額のまま）。空欄なら、まだ来ていない回から新しい金額にします（すでに過ぎた日の分は変えません）。例：2万円の定期を、11月から3万円、1月から5万円にする場合は、11月・30,000円で更新したあと、もう一度編集して1月・50,000円で更新します。</p>
+            <p class="hint">空欄なら、まだ来ていない最初の回（今日の回を含む）から新しい金額にします。月を選ぶと、その月の回から変えます。どちらの場合も、今日より前の回は変えません（過ぎた月を選んだときは、まだ来ていない最初の回からになります）。毎月の日・区分・開始月を変えたときも、過ぎた回はそのまま残ります。過去の分も直したいときだけ「過去の分もまとめて直す」を選んでください。例：2万円の定期を11月から3万円、1月から5万円にするときは、11月・30,000円で更新し、もう一度編集して1月・50,000円で更新します。</p>
+            <label class="check"><input type="checkbox" id="cr-past">過去の分もまとめて直す</label>
             <div id="cr-steps"></div>
           </div>
           <div class="field">
@@ -796,19 +799,6 @@ details.inner>summary{font:500 14px var(--font-ui)}
     '2027-05-05 2027-07-19 2027-08-11 2027-09-20 2027-09-23 2027-10-11 2027-11-03 2027-11-23 2027-12-31'
   ).split(' '));
   var DEFAULTS = { targetAmount: 150000, targetDate: '2026-12-30', excludeHolidays: true }; /* 目標は月単位（今月1日〜月末）。日付は下で今月に合わせる */
-  var DEMO = {
-    '2026-10-01': { pnl: 12400, memo: '月初の押し目買いが成功' },
-    '2026-10-02': { pnl: -8200, memo: '' },
-    '2026-10-05': { pnl: 21600, memo: '決算後のギャップアップ' },
-    '2026-10-06': { pnl: 5300, memo: '' },
-    '2026-10-07': { pnl: -14800, memo: '損切りが遅れた' },
-    '2026-10-08': { pnl: 9700, memo: '' },
-    '2026-10-09': { pnl: 18200, memo: '' },
-    '2026-10-13': { pnl: -6500, memo: '' },
-    '2026-10-14': { pnl: 11900, memo: '' },
-    '2026-10-15': { pnl: -3100, memo: '' },
-    '2026-10-16': { pnl: 15800, memo: '週末前に一部利確' }
-  };
 
   var CATS = [['oout', '支出', 'out'], ['rep', '返済', 'out'], ['brw', '借入', 'in'], ['rak', '楽天カード', 'out'], ['amz', 'Amazonカード', 'out'], ['oin', '収入', 'in'], ['sal', '給与等', 'in']];
   var CASH_START = '2026-10-01';
@@ -881,10 +871,9 @@ details.inner>summary{font:500 14px var(--font-ui)}
   };
   var backend = null;
 
-  function view() {
-    var real = Object.keys(state.entries).length > 0;
-    return { demo: !real, entries: real ? state.entries : DEMO };
-  }
+  /* 記録がないときもサンプルは出さず、空の状態として表示する */
+  function view() { return { demo: false, entries: state.entries }; }
+  function periodLab() { var s = state.settings; return (s.targetFrom ? md(s.targetFrom) : '最初の記録') + '〜' + md(s.targetDate); }
   function compute(entries) {
     var dates = Object.keys(entries).sort(), run = 0, cum = {};
     dates.forEach(function (d) { run += entries[d].pnl; cum[d] = run; });
@@ -1008,8 +997,8 @@ details.inner>summary{font:500 14px var(--font-ui)}
         o.recurring = v.recurring.map(function (r, i) {
           if (r && LEGACY[r.cat]) r = Object.assign({}, r, { cat: LEGACY[r.cat] });
           if (!r || !CAT_LABEL[r.cat] || typeof r.amount !== 'number' || !(r.amount > 0) || !Number.isInteger(r.day) || r.day < 1 || r.day > 31) return null;
-          return { id: typeof r.id === 'string' && r.id ? r.id : 'r' + i, name: (typeof r.name === 'string' && r.name.trim() ? r.name.trim() : CAT_LABEL[r.cat]).slice(0, 30), cat: r.cat, amount: r.amount, day: r.day, from: typeof r.from === 'string' && rm.test(r.from) ? r.from : '', ovr: (function () { var o = {}; if (r.ovr && typeof r.ovr === 'object') Object.keys(r.ovr).slice(0, 240).forEach(function (k) { var x = r.ovr[k]; if (rm.test(k) && typeof x === 'number' && isFinite(x) && x >= 0) o[k] = Math.round(x); }); return o; })(), dov: (function (src) { var o = {}; if (src && typeof src === 'object') Object.keys(src).slice(0, 240).forEach(function (k) { var x = src[k]; if (rm.test(k) && typeof x === 'string' && re.test(x)) o[k] = x; }); return o; })(r.dov), steps: (function (src) { var o = [], seen = {}; if (Array.isArray(src)) src.slice(0, 36).forEach(function (st) { if (st && typeof st.from === 'string' && rm.test(st.from) && !seen[st.from] && typeof st.amount === 'number' && isFinite(st.amount) && st.amount > 0) { seen[st.from] = 1; o.push({ from: st.from, amount: Math.round(st.amount) }); } }); return o.sort(function (a, b) { return a.from < b.from ? -1 : 1; }); })(r.steps) };
-        }).filter(Boolean).slice(0, 30);
+          return { id: typeof r.id === 'string' && r.id ? r.id : 'r' + i, name: (typeof r.name === 'string' && r.name.trim() ? r.name.trim() : CAT_LABEL[r.cat]).slice(0, 30), cat: r.cat, amount: r.amount, day: r.day, from: typeof r.from === 'string' && rm.test(r.from) ? r.from : '', ovr: (function () { var o = {}; if (r.ovr && typeof r.ovr === 'object') Object.keys(r.ovr).slice(0, 240).forEach(function (k) { var x = r.ovr[k]; if (rm.test(k) && typeof x === 'number' && isFinite(x) && x >= 0) o[k] = Math.round(x); }); return o; })(), dov: (function (src) { var o = {}; if (src && typeof src === 'object') Object.keys(src).slice(0, 240).forEach(function (k) { var x = src[k]; if (rm.test(k) && typeof x === 'string' && re.test(x)) o[k] = x; }); return o; })(r.dov), steps: (function (src) { var o = [], seen = {}; if (Array.isArray(src)) src.slice(0, 36).forEach(function (st) { if (st && typeof st.from === 'string' && rm.test(st.from) && !seen[st.from] && typeof st.amount === 'number' && isFinite(st.amount) && st.amount > 0) { seen[st.from] = 1; o.push({ from: st.from, amount: Math.round(st.amount) }); } }); return o.sort(function (a, b) { return a.from < b.from ? -1 : 1; }); })(r.steps), to: typeof r.to === 'string' && rm.test(r.to) ? r.to : '' };
+        }).filter(Boolean).slice(0, 60);
       }
       if (Array.isArray(v.loans)) {
         o.loans = v.loans.map(function (l, i) {
@@ -1129,7 +1118,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var z = String(raw).replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).replace(/[，,\s¥￥円]/g, '');
     var neg = /^[-−ー‐▲△]/.test(z);
     var digits = z.replace(/[^0-9]/g, '');
-    return { neg: neg, value: digits ? parseInt(digits, 10) : NaN };
+    return { neg: neg, value: digits && digits.length <= 12 ? parseInt(digits, 10) : NaN };
   }
 
   /* ---------- chart helpers ---------- */
@@ -1153,11 +1142,12 @@ details.inner>summary{font:500 14px var(--font-ui)}
   function chartCum(c, w) {
     var s = state.settings, t = todayStr();
     var W = w, H = 250, ml = W < 360 ? 44 : 54, mr = 16, mt = 20, mb = 30, pw = W - ml - mr, ph = H - mt - mb;
-    var d0 = c.dates[0], last = c.dates[c.dates.length - 1];
+    var d0 = s.targetFrom && s.targetFrom < c.dates[0] ? s.targetFrom : c.dates[0], last = c.dates[c.dates.length - 1];
     var dEnd = pd(s.targetDate) > pd(last) ? s.targetDate : last;
     var span = Math.max(1, daysBetween(d0, dEnd));
     var vals = c.dates.map(function (d) { return c.cum[d]; });
     var yt = yTicks(Math.min.apply(null, [0].concat(vals)), Math.max.apply(null, [s.targetAmount].concat(vals)));
+    var axW = Math.max.apply(null, yt.ticks.map(function (tv) { return axis(tv).length; })) * 7.5 + 14; if (axW > ml) { ml = Math.ceil(axW); pw = W - ml - mr; } /* 「−100万」などの軸ラベルが切れないように */
     var X = function (d) { return ml + daysBetween(d0, d) / span * pw; };
     var Y = function (v) { return mt + (1 - (v - yt.min) / (yt.max - yt.min)) * ph; };
     var g = '';
@@ -1172,22 +1162,24 @@ details.inner>summary{font:500 14px var(--font-ui)}
       if (seen[dd]) continue; seen[dd] = 1;
       g += '<text class="ax" x="' + X(dd) + '" y="' + (H - 8) + '" text-anchor="' + (i === 0 ? 'start' : i === 4 ? 'end' : 'middle') + '">' + md(dd) + '</text>';
     }
+    var xT = X(s.targetDate), yT = Y(s.targetAmount), tgtBelow = false;
     if (pd(t) >= pd(d0) && pd(t) <= pd(dEnd)) {
       var tx = X(t);
+
       g += '<line class="todayline" x1="' + tx + '" x2="' + tx + '" y1="' + mt + '" y2="' + (H - mb) + '"/>' +
-           '<text class="lbl mut" x="' + tx + '" y="' + (mt - 6) + '" text-anchor="' + (tx > W - 40 ? 'end' : 'middle') + '">今日</text>';
+           '<text class="lbl mut" x="' + (tx + (tx > W - 48 ? -4 : 4)) + '" y="' + (H - mb - 6) + '" text-anchor="' + (tx > W - 48 ? 'end' : 'start') + '">今日</text>'; /* 「今日」は下に置き、上の目標ラベルと重ねない */
     }
-    var xT = X(s.targetDate), yT = Y(s.targetAmount);
+    var tgtY = tgtBelow ? yT + 20 : yT - 9;
     g += '<line class="pace" x1="' + X(d0) + '" y1="' + Y(0) + '" x2="' + xT + '" y2="' + yT + '"/>' +
          '<circle class="dot tgt" cx="' + xT + '" cy="' + yT + '" r="5"/>' +
-         '<text class="lbl gold" x="' + (xT - 8) + '" y="' + (yT - 9) + '" text-anchor="end">目標 ' + yen(s.targetAmount) + '</text>';
-    var pts = c.dates.map(function (d) { return X(d).toFixed(1) + ' ' + Y(c.cum[d]).toFixed(1); });
+         '<text class="lbl gold" x="' + (xT - 8) + '" y="' + tgtY + '" text-anchor="end">目標 ' + yen(s.targetAmount) + '</text>';
+    var pts = (d0 < c.dates[0] ? [X(d0).toFixed(1) + ' ' + Y(0).toFixed(1)] : []).concat(c.dates.map(function (d) { return X(d).toFixed(1) + ' ' + Y(c.cum[d]).toFixed(1); }));
     g += '<path class="cumarea" d="M' + X(d0).toFixed(1) + ' ' + Y(0).toFixed(1) + ' L' + pts.join(' L') + ' L' + X(last).toFixed(1) + ' ' + Y(0).toFixed(1) + ' Z"/>' +
          '<path class="cumline" d="M' + pts.join(' L') + '"/>';
     if (c.dates.length <= 40) c.dates.forEach(function (d) { g += '<circle class="dot" cx="' + X(d) + '" cy="' + Y(c.cum[d]) + '" r="2.5"/>'; });
     var ex = X(last), ey = Y(c.total);
     g += '<circle class="dot end ' + cls(c.total) + '" cx="' + ex + '" cy="' + ey + '" r="5.5"/>' +
-         '<text class="lbl" x="' + (ex + (ex > W - 90 ? -9 : 9)) + '" y="' + (ey + (ey < mt + 22 ? 20 : -10)) + '" text-anchor="' + (ex > W - 90 ? 'end' : 'start') + '">' + sgn(c.total) + '</text>';
+         '<text class="lbl" x="' + (ex + (ex > W - 90 ? -9 : 9)) + '" y="' + (ey + (ey < mt + 22 || (Math.abs(ey - tgtY) < 16 && Math.abs(ex - xT) < 120) ? 20 : -10)) + '" text-anchor="' + (ex > W - 90 ? 'end' : 'start') + '">' + sgn(c.total) + '</text>';
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="累積損益の推移。現在' + sgn(c.total) + '、目標' + yen(s.targetAmount) + '。">' + g + '</svg>';
   }
 
@@ -1198,6 +1190,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var lo = Math.min.apply(null, [0].concat(vals)), hi = Math.max.apply(null, [0].concat(vals));
     if (hi === lo) hi = lo + 1000;
     var yt = yTicks(lo, hi);
+    var axW = Math.max.apply(null, yt.ticks.map(function (tv) { return axis(tv).length; })) * 7.5 + 14; if (axW > ml) { ml = Math.ceil(axW); pw = W - ml - mr; } /* 「−100万」などの軸ラベルが切れないように */
     var Y = function (x) { return mt + (1 - (x - yt.min) / (yt.max - yt.min)) * ph; };
     var g = '';
     yt.ticks.forEach(function (tv) {
@@ -1261,16 +1254,15 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var g = goal.apply(null, (function (x) { return [x.c, x.v]; })(gset(c, v)));
     var eyebrow = g.done ? '目標達成・今回の利益' : g.daysLeft < 0 ? '目標日を過ぎました・未達' : '目標利益まで残り';
     var big = g.done ? yb(g.total) + '<small class="ov">目標を ' + yen(-g.remaining) + ' 超過</small>' : yb(g.remaining);
-    var mk = todayStr().slice(0, 7), mSum = 0;
-    c.dates.forEach(function (d) { if (d.slice(0, 7) === mk) mSum += v.entries[d].pnl; });
-    var tf = state.settings.targetFrom;
+    var tf = state.settings.targetFrom, none = !c.dates.length;
     $('hero').innerHTML =
-      '<div class="eyebrow"><span>' + eyebrow + '</span><span class="num">' + (tf ? md(tf) + '〜' : '') + md(state.settings.targetDate) + '</span></div>' +
+      '<div class="eyebrow"><span>' + eyebrow + '</span><span class="num">今回の目標 ' + periodLab() + '</span></div>' +
       '<div class="big">' + big + '</div>' +
       '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + g.pct.toFixed(1) + '" aria-label="目標達成率"><i style="width:' + g.pct.toFixed(1) + '%"></i></div>' +
       '<dl class="kpis"><div><dt>達成率</dt><dd>' + g.pct.toFixed(1) + '%<small>目標 ' + yen(g.target) + '</small></dd></div>' +
-      '<div><dt>必要ペース</dt><dd>' + (g.need !== null ? yen(g.need) + '/日<small>残り' + g.biz + '日</small>' : '—<small>' + (g.done ? '達成済み' : '残り' + g.biz + '日') + '</small>') + '</dd></div>' +
-      '<div><dt>今回の収支</dt><dd class="' + cls(g.total) + '">' + sgn(g.total) + '<small>' + (tf ? md(tf) + '〜' : 'すべての記録') + '</small></dd></div></dl>';
+      '<div><dt>必要ペース</dt><dd>' + (g.need !== null ? yen(g.need) + '/日<small>残り' + g.biz + '日（土日祝を含む）</small>' : '—<small>' + (g.done ? '達成済み' : g.daysLeft < 0 ? '期間が終わりました' : '残り' + g.biz + '日') + '</small>') + '</dd></div>' +
+      '<div><dt>今回の収支</dt><dd class="' + cls(g.total) + '">' + sgn(g.total) + '<small>' + periodLab() + '</small></dd></div></dl>' +
+      (none ? '<div class="proj">まだ記録がありません。画面下の「＋記録」から、最初の損益を入れてください。</div>' : '');
   }
 
   function renderStats(c, v) {
@@ -1290,7 +1282,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
       tile('今日', te ? te.pnl : null, md(t) + '（' + WD[dow(t)] + '）' + (te ? '・記録済み' : isBiz(t, state.settings.excludeHolidays) ? '・未記入' : '・休場日')) +
       tile('今週', wN ? wSum : null, md(wk) + '〜' + md(addDays(wk, 6)) + '・' + wN + '日') +
       tile('今月', mN ? mSum : null, (+mk.slice(5)) + '月・' + mN + '日') +
-      tile('累積', c.total, win + '勝' + lose + '敗・' + c.dates.length + '日');
+      tile('全期間の累積', c.total, win + '勝' + lose + '敗・' + c.dates.length + '日');
   }
 
   /* グラフの区分（全体／株式のみ／Pのみ） */
@@ -1321,20 +1313,21 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var gs = gset(c, v), g = goal(gs.c, gs.v), s = state.settings;
     var gc = GCATS.some(function (x) { return x[0] === state.gcat; }) ? state.gcat : 'all', glab = gc === 'all' ? '' : '（' + (gc === 'p' ? 'P' : '株式') + 'のみ）';
     var ge = catEntries(gs.v.entries, gc), gcc = compute(ge);
-    var de = catEntries(v.entries, gc), dc = compute(de);
+    var de = ge, dc = gcc; /* 日々の損益も、今回の目標期間で表示する */
+    var pw = { w: 0, l: 0 }; gs.c.dates.forEach(function (d) { var x = gs.v.entries[d].pnl; if (x > 0) pw.w++; else if (x < 0) pw.l++; });
     el.innerHTML =
-      '<h2>ペース</h2>' +
+      '<div class="charthead"><h2>ペース</h2><span class="sub">今回の目標 ' + periodLab() + '</span></div>' +
       '<dl class="pace-meta">' +
-        '<div><dt>必要ペース</dt><dd>' + (g.need !== null ? yen(g.need) + '/日' : '—') + '<small>残り' + g.biz + '日</small></dd></div>' +
-        '<div><dt>平均損益</dt><dd class="' + (g.avg !== null ? cls(g.avg) : '') + '">' + (g.avg !== null ? sgn(g.avg) + '/日' : '—') + '<small>記録' + g.n + '日の平均</small></dd></div>' +
+        '<div><dt>平均損益</dt><dd class="' + (g.avg !== null ? cls(g.avg) : '') + '">' + (g.avg !== null ? sgn(g.avg) : '—') + '<small>記録した日の平均</small></dd></div>' +
+        '<div><dt>勝ち負け</dt><dd>' + pw.w + '勝' + pw.l + '敗<small>記録' + g.n + '日</small></dd></div>' +
         '<div><dt>目標日</dt><dd>' + md(s.targetDate) + '<small>' + (g.daysLeft >= 0 ? 'あと' + g.daysLeft + '日' : (-g.daysLeft) + '日経過') + '</small></dd></div>' +
       '</dl>' +
       '<div class="charthead"><h2>累積損益と目標ペース</h2></div>' + gcatSeg() +
       '<div class="legend"><span><i class="sw"></i>累積損益' + glab + '</span><span><i class="sw dash"></i>目標ペース（全体の目標）</span></div>' +
-      '<div class="chartbox">' + (gcc.dates.length ? chartCum(gcc, w) : '<p class="empty">' + (gc !== 'all' ? (s.targetFrom ? md(s.targetFrom) + ' 以降の' : '') + (gc === 'p' ? 'P' : '株式') + 'の記録がまだありません。' : md(s.targetFrom) + ' 以降の記録がまだありません。') + '</p>') + '</div>';
+      '<div class="chartbox">' + (gcc.dates.length ? chartCum(gcc, w) : '<p class="empty">' + (gc !== 'all' ? (s.targetFrom ? md(s.targetFrom) + ' 以降の' : '') + (gc === 'p' ? 'P' : '株式') + 'の記録がまだありません。' : periodLab() + ' の記録はまだありません。') + '</p>') + '</div>';
     $('chart-daily').innerHTML =
-      '<div class="charthead"><h2>日々の損益' + glab + '</h2><span class="sub">直近' + Math.min(30, dc.dates.length) + '日</span></div>' + gcatSeg() +
-      '<div class="chartbox">' + (dc.dates.length ? chartDaily(dc, { entries: de }, w) : '<p class="empty">' + (gc === 'p' ? 'P' : '株式') + 'の記録がまだありません。</p>') + '</div>';
+      '<div class="charthead"><h2>日々の損益' + glab + '</h2><span class="sub">' + periodLab() + (dc.dates.length > 30 ? '・直近30日' : '') + '</span></div>' + gcatSeg() +
+      '<div class="chartbox">' + (dc.dates.length ? chartDaily(dc, { entries: de }, w) : '<p class="empty">' + periodLab() + ' の' + (gc === 'all' ? '' : gc === 'p' ? 'P の' : '株式の') + '記録はまだありません。</p>') + '</div>';
   }
 
   function group(c, v, keyFn) {
@@ -1353,9 +1346,9 @@ details.inner>summary{font:500 14px var(--font-ui)}
     c.dates.forEach(function (d) { var p = E[d].pnl; if (p > 0) { wins++; sw += p; } else if (p < 0) { losses++; sl += p; } });
     var rate = wins + losses ? Math.round(wins / (wins + losses) * 100) : null;
     var sumline = '<dl class="sumline">' +
-      '<div><dt>勝率（' + wins + '勝' + losses + '敗）</dt><dd>' + (rate === null ? '—' : rate + '%') + '</dd></div>' +
-      '<div><dt>平均利益</dt><dd class="' + (wins ? 'pos' : 'flat') + '">' + (wins ? sgn(Math.round(sw / wins)) : '—') + '</dd></div>' +
-      '<div><dt>平均損失</dt><dd class="' + (losses ? 'neg' : 'flat') + '">' + (losses ? sgn(Math.round(sl / losses)) : '—') + '</dd></div>' +
+      '<div><dt>全期間の勝率（' + wins + '勝' + losses + '敗）</dt><dd>' + (rate === null ? '—' : rate + '%') + '</dd></div>' +
+      '<div><dt>全期間の平均利益</dt><dd class="' + (wins ? 'pos' : 'flat') + '">' + (wins ? sgn(Math.round(sw / wins)) : '—') + '</dd></div>' +
+      '<div><dt>全期間の平均損失</dt><dd class="' + (losses ? 'neg' : 'flat') + '">' + (losses ? sgn(Math.round(sl / losses)) : '—') + '</dd></div>' +
       '</dl>';
     var bar = function (p, mx) { return p ? '<i class="mag ' + cls(p) + '" style="width:' + Math.max(4, Math.round(Math.abs(p) / mx * 100)) + '%"></i>' : ''; };
 
@@ -1376,7 +1369,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
       order.forEach(function (p) {
         var days = buckets[p.key].days, sum = 0, w = 0, l = 0, ct = {};
         days.forEach(function (d) { var x = E[d].pnl; sum += x; if (x > 0) w++; else if (x < 0) l++; itemsOf(E[d]).forEach(function (it) { if (PCAT[it.cat]) ct[it.cat] = (ct[it.cat] || 0) + it.pnl; }); });
-        var open = state.gOpen[p.key] != null ? state.gOpen[p.key] : false;
+        var open = state.gOpen[p.key] != null ? state.gOpen[p.key] : !!p.cur;
         var first = days[days.length - 1];
         var label = p.none ? '目標なしの期間' : (p.from ? md(p.from) : md(first)) + '〜' + md(p.show);
         body += '<button type="button" class="mhead gsec" data-gsec="' + esc(p.key) + '" aria-expanded="' + open + '"><span><span class="chev" aria-hidden="true" style="transform:rotate(' + (open ? 0 : -90) + 'deg)"></span>' + label + (p.cur ? '<em class="curtag">現在</em>' : '') +
@@ -1412,6 +1405,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var tabs = [['daily', '日次'], ['weekly', '週次'], ['monthly', '月次']].map(function (x) {
       return '<button type="button" role="tab" data-tab="' + x[0] + '" aria-selected="' + (state.tab === x[0]) + '">' + x[1] + '</button>';
     }).join('');
+    if (!c.dates.length) body = '<p class="empty">まだ記録がありません。画面下の「＋記録」から入れた損益が、ここに日ごとに並びます。</p>';
     $('history').innerHTML = '<div class="histhead"><h2>記録</h2><div class="seg" role="tablist" aria-label="集計単位">' + tabs + '</div></div>' + sumline + '<div class="table">' + body + '</div>';
   }
 
@@ -1457,6 +1451,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var m0 = d.slice(0, 7), ms = [addMonths(m0, -1), m0, addMonths(m0, 1)];
     for (var i = 0; i < ms.length; i++) {
       if (r.from && ms[i] < r.from) continue;
+      if (r.to && ms[i] > r.to) continue;
       if ((r.dov && r.dov[ms[i]] ? r.dov[ms[i]] : adjDay(nomDate(r, ms[i]), mode)) === d) return ms[i];
     }
     return '';
@@ -1464,6 +1459,23 @@ details.inner>summary{font:500 14px var(--font-ui)}
   /* 定期の金額：「○月から」の変更（steps）があれば、その月以降はその金額 */
   function recBase(r, m) { var a = r.amount; (r.steps || []).forEach(function (st) { if (st.from <= m) a = st.amount; }); return a; }
   function stepsTxt(r) { return (r.steps || []).map(function (st) { return (st.from.slice(0, 4) === curMonth().slice(0, 4) ? (+st.from.slice(5)) + '月' : st.from.slice(0, 4) + '年' + (+st.from.slice(5)) + '月') + '〜' + yen(st.amount); }).join('・'); }
+  /* 定期の回の日付（月 m の分） */
+  function occDate(r, m) { return r.dov && r.dov[m] ? r.dov[m] : adjDay(nomDate(r, m), recMode(r, false)); }
+  function cashStartD() { return state.cash.startDate || defaultStart(); }
+  /* 資金繰り表に実際に入る回か（開始日・開始月・終了月の範囲内） */
+  function occCounts(r, m) { return !(r.from && m < r.from) && !(r.to && m > r.to) && occDate(r, m) >= cashStartD(); }
+  /* まだ来ていない最初の回の月（今日の回は「まだ来ていない」に含める） */
+  function nextOccM(r) {
+    var t = todayStr(), m = addMonths(curMonth(), -1);
+    for (var i = 0; i < 40; i++, m = addMonths(m, 1)) { if (r.from && m < r.from) continue; if (occDate(r, m) >= t) return m; }
+    return addMonths(curMonth(), 1);
+  }
+  /* 月 start より前に、資金繰り表に入った回があるか */
+  function hasPastOcc(r, start) {
+    for (var m = addMonths(cashStartD().slice(0, 7), -1); m < start; m = addMonths(m, 1)) if (occCounts(r, m)) return true;
+    return false;
+  }
+  function occLabel(r, m) { var d = occDate(r, m); return (+d.slice(5, 7)) + '月' + (+d.slice(8)) + '日'; }
   function recHits(r, d) { return !!hitM(r, d, recMode(r, false)); }
   function repayStep(L, bal, m, days) {
     var interest = L.ints && L.ints[m] != null ? L.ints[m] : Math.floor(bal * (L.rate || 0) / 100 / 365 * Math.max(0, days || 0));
@@ -1704,10 +1716,10 @@ details.inner>summary{font:500 14px var(--font-ui)}
           '<div class="d">' + esc(l.label) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' + amt + btns + '</div>' + recEd(l, x.d, 'list');
       }).join('') + '</div>' + (items.some(function (x) { return x.l.k === 'rec' || x.l.k === 'loan'; }) && !cf.demo ? '<p class="hint" style="margin-top:8px">定期や返済の金額をタップすると、その月だけ日付と金額を変えられます（カード払いの返済も同じです）。予定表では、返済日をタップしても変えられます。</p>' : '') : '<p class="empty">この月の記録はありません。</p>');
 
-    var rr = cf.src.recurring;
+    var rr = cf.src.recurring.filter(function (r) { return !r.to || r.to >= curMonth(); });
     $('c-rec-list').innerHTML = rr.length ? '<div class="table">' + rr.map(function (r) {
       var out = CAT_OUT[r.cat];
-      return '<div class="row r3b"><div class="d">' + esc(r.name) + '<small>毎月' + r.day + '日' + (r.from ? '・' + ym(r.from) + 'から' : '') + ((r.steps || []).length ? '・' + yen(r.amount) + '→' + stepsTxt(r) : '') + '</small></div>' +
+      return '<div class="row r3b"><div class="d">' + esc(r.name) + '<small>毎月' + r.day + '日' + (r.from ? '・' + ym(r.from) + 'から' : '') + (r.to ? '・' + ym(r.to) + 'まで' : '') + ((r.steps || []).length ? '・' + yen(r.amount) + '→' + stepsTxt(r) : '') + '</small></div>' +
         '<div class="n ' + (out ? 'neg' : 'pos') + '">' + (out ? '−' : '+') + yen(recBase(r, cf.selM)) + '<small>' + (+cf.selM.slice(5)) + '月の金額</small></div>' +
         cashBtns(cf.demo, 'data-er="' + esc(r.id) + '"', 'data-delrec="' + esc(r.id) + '"', 'r' + r.id) + '</div>';
     }).join('') + '</div>' : '<p class="hint">登録はありません。</p>';
@@ -1903,7 +1915,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
   }
   function clearCashForms() {
     ['ci-amount', 'ci-memo', 'cr-name', 'cr-amount', 'cr-day', 'cr-from', 'cl-name', 'cl-balance', 'cl-pay', 'cl-rate', 'cl-day', 'cl-from', 'ci-interest'].forEach(function (id) { $(id).value = ''; }); $('cl-incl').value = 'in'; syncClRate(); $('cl-via').value = ''; $('ci-incl').value = 'in';
-    ['ci-msg', 'cr-msg', 'cl-msg'].forEach(function (id) { msg(id, ''); }); syncTabSels(); $('cl-adv').open = false; $('cr-eff-wrap').hidden = true; $('cr-eff').value = ''; $('cr-steps').innerHTML = '';
+    ['ci-msg', 'cr-msg', 'cl-msg'].forEach(function (id) { msg(id, ''); }); syncTabSels(); $('cl-adv').open = false; $('cr-eff-wrap').hidden = true; $('cr-eff').value = ''; $('cr-past').checked = false; $('cr-steps').innerHTML = '';
   }
   function endEdit() { state.cEdit = null; clearCashForms(); syncEditUI(); }
   function foldBtn(k, label) {
@@ -1938,7 +1950,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     } else if (kind === 'r') {
       var r = c.recurring.filter(function (x) { return x.id === id; })[0]; if (!r) return;
       recShow(true);
-      $('cr-name').value = r.name; $('cr-cat').value = CAT_OUT[r.cat] ? 'oout' : 'oin'; editCat = r.cat; syncCrUI(); $('cr-amount').value = nf.format(r.amount); $('cr-eff-wrap').hidden = false; $('cr-eff').value = ''; renderSteps(r); $('cr-day').value = r.day; $('cr-from').value = r.from || '';
+      $('cr-name').value = r.name; $('cr-cat').value = CAT_OUT[r.cat] ? 'oout' : 'oin'; editCat = r.cat; syncCrUI(); $('cr-amount').value = nf.format(recBase(r, nextOccM(r))); $('cr-eff-wrap').hidden = false; $('cr-eff').value = ''; $('cr-past').checked = false; renderSteps(r); $('cr-day').value = r.day; $('cr-from').value = r.from || '';
       target = $('cr-form'); focusId = 'cr-amount';
     } else if (kind === 'x') {
       var xf = null, xl = null;
@@ -2045,8 +2057,10 @@ details.inner>summary{font:500 14px var(--font-ui)}
   function renderSteps(r) {
     var box = $('cr-steps'); if (!box) return;
     var st = r && r.steps || [];
-    box.innerHTML = st.length ? '<div class="table">' + '<div class="row r3b"><div class="d">はじめから<small>基本の金額</small></div><div class="n">' + yen(r.amount) + '</div><span></span></div>' + st.map(function (x) {
-      return '<div class="row r3b"><div class="d">' + x.from.slice(0, 4) + '年' + (+x.from.slice(5)) + '月から</div><div class="n">' + yen(x.amount) + '</div><span class="acts"><button type="button" class="lnk' + (state.armKey === 'st' + x.from ? ' armed' : '') + '" data-stepdel="' + esc(x.from) + '">' + (state.armKey === 'st' + x.from ? '本当に削除' : '削除') + '</button></span></div>';
+    var nm = nextOccM(r);
+    box.innerHTML = st.length ? '<h3 class="subh">金額が変わった時期</h3><div class="table">' + '<div class="row r3b"><div class="d">はじめから<small>基本の金額</small></div><div class="n">' + yen(r.amount) + '</div><span></span></div>' + st.map(function (x) {
+      if (x.from < nm) return '<div class="row r3b"><div class="d">' + x.from.slice(0, 4) + '年' + (+x.from.slice(5)) + '月の回から<small>適用済み（過ぎた回は変えられません）</small></div><div class="n">' + yen(x.amount) + '</div><span></span></div>';
+      return '<div class="row r3b"><div class="d">' + x.from.slice(0, 4) + '年' + (+x.from.slice(5)) + '月の回から<small>これから</small></div><div class="n">' + yen(x.amount) + '</div><span class="acts"><button type="button" class="lnk' + (state.armKey === 'st' + x.from ? ' armed' : '') + '" data-stepdel="' + esc(x.from) + '">' + (state.armKey === 'st' + x.from ? '本当に削除' : '削除') + '</button></span></div>';
     }).join('') + '</div>' : '';
   }
   document.addEventListener('click', function (e) {
@@ -2401,7 +2415,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     }
     state.armKey = ''; clearTimeout(state.armT2);
     var undoC = cashPayload({}), undoS = JSON.parse(JSON.stringify(state.settings)), isG = key.charAt(0) === 'g';
-    Promise.resolve().then(fn).then(function () { render(); showToast('削除しました', function () { return isG ? backend.saveSettings(undoS) : backend.saveCash(undoC); }); }, function () { msg('ci-msg', '削除できませんでした。', true); render(); showToast('削除できませんでした'); });
+    Promise.resolve().then(fn).then(function () { render(); var dn = state.delNote || '削除しました'; state.delNote = ''; showToast(dn, function () { return isG ? backend.saveSettings(undoS) : backend.saveCash(undoC); }); }, function () { msg('ci-msg', '削除できませんでした。', true); render(); showToast('削除できませんでした'); });
   }
   $('ci-form').addEventListener('submit', async function (e) {
     e.preventDefault(); msg('ci-msg', '');
@@ -2462,28 +2476,56 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var pl = cashPayload({});
     var robj = { id: ed ? ed.id : uid(), name: ($('cr-name').value.trim() || CAT_LABEL[cat]).slice(0, 30), cat: (ed && ed.cat && CAT_OUT[ed.cat] === CAT_OUT[cat]) ? ed.cat : cat, amount: amt, day: dp.value, from: from || '' };
     var rix = ed ? pl.recurring.findIndex(function (r) { return r.id === ed.id; }) : -1;
-    var eff = ed ? $('cr-eff').value : '', autoEff = false;
+    var eff = ed ? $('cr-eff').value : '', pastFix = ed && $('cr-past').checked, doneMsg = '';
     if (eff && !/^\d{4}-\d{2}$/.test(eff)) return msg('cr-msg', '金額を変える月は、年と月を選んでください。', true);
+    if (!ed && state.cash.recurring.filter(function (r) { return !r.to || r.to >= curMonth(); }).length >= 30) return msg('cr-msg', '定期は30件まで登録できます。', true);
     if (rix >= 0) {
       var prevR = pl.recurring[rix];
-      if (prevR.ovr) robj.ovr = prevR.ovr; if (prevR.dov) robj.dov = prevR.dov;
-      robj.steps = (prevR.steps || []).slice();
-      if (!eff) {
-        /* 月を選ばないとき：すでに過ぎた日の分は変えず、次に来る回から新しい金額にする */
-        var cm0 = curMonth(), od = prevR.dov && prevR.dov[cm0] ? prevR.dov[cm0] : adjDay(nomDate(prevR, cm0), recMode(prevR, false));
-        var effM = od < todayStr() ? addMonths(cm0, 1) : cm0, firstM = (prevR.from || '') > (state.cash.startDate || defaultStart()).slice(0, 7) ? prevR.from : (state.cash.startDate || defaultStart()).slice(0, 7);
-        if (amt === recBase(prevR, effM)) robj.amount = prevR.amount;
-        else if (effM > firstM) { eff = effM; autoEff = true; }
+      robj.ovr = Object.assign({}, prevR.ovr || {}); robj.dov = Object.assign({}, prevR.dov || {}); robj.steps = (prevR.steps || []).slice(); robj.to = prevR.to || '';
+      var addStep = function (o, from, a) { o.steps = o.steps.filter(function (st) { return st.from !== from; }); o.steps.push({ from: from, amount: a }); o.steps.sort(function (x, y) { return x.from < y.from ? -1 : 1; }); };
+      if (pastFix) {
+        /* 「過去の分もまとめて直す」を選んだときだけ、過ぎた回も変える */
+        if (eff) { robj.amount = prevR.amount; addStep(robj, eff, amt); doneMsg = (+eff.slice(5)) + '月の分から ' + yen(amt) + ' に変更しました（過去の分も含みます）。'; }
+        else { robj.steps = []; doneMsg = 'すべての月を ' + yen(amt) + ' に変更しました（過去の分も含みます）。'; }
+        pl.recurring[rix] = robj;
+      } else {
+        /* 変更は「まだ来ていない最初の回」から。過去の月を選んでも、過ぎた回は変えない */
+        var nm = nextOccM(prevR), start = eff && eff > nm ? eff : nm, clamped = !!eff && eff < nm;
+        var amtChanged = amt !== recBase(prevR, start);
+        var structural = robj.day !== prevR.day || robj.cat !== prevR.cat || (robj.from || '') !== (prevR.from || '');
+        var past = hasPastOcc(prevR, start);
+        if (structural && past) {
+          /* 日付・区分・開始月の変更：過ぎた回は元の定期に残し（start の前月で終了）、start から新しい定期にする */
+          var newR = { id: uid(), name: robj.name, cat: robj.cat, amount: amtChanged ? amt : recBase(prevR, start), day: robj.day, from: (robj.from || '') > start ? robj.from : start, ovr: {}, dov: {}, steps: (prevR.steps || []).filter(function (st) { return st.from > start; }), to: prevR.to || '' };
+          /* 新しい日付の回がまだ来ていない最初の月から切り替える（新しい日付が今月すでに過ぎていれば、今月は元の日付の回を残す） */
+          var tdy = todayStr(), ns = newR.from;
+          for (var k0 = 0; k0 < 14 && occDate(newR, ns) < tdy; k0++) ns = addMonths(ns, 1);
+          newR.from = ns;
+          var oldR = Object.assign({}, prevR, { to: addMonths(ns, -1), ovr: {}, dov: {}, steps: (prevR.steps || []).slice() });
+          if (amtChanged && start <= oldR.to) addStep(oldR, start, amt);
+          Object.keys(prevR.ovr || {}).forEach(function (k) { if (k >= ns) newR.ovr[k] = prevR.ovr[k]; else oldR.ovr[k] = prevR.ovr[k]; });
+          Object.keys(prevR.dov || {}).forEach(function (k) { if (k >= ns) { if (robj.day === prevR.day) newR.dov[k] = prevR.dov[k]; } else oldR.dov[k] = prevR.dov[k]; });
+          newR.steps = newR.steps.filter(function (st) { return st.from > ns; });
+          pl.recurring[rix] = oldR; pl.recurring.push(newR);
+          doneMsg = (amtChanged && start < ns ? occLabel(oldR, start) + 'の回から ' + yen(amt) + ' に、' : '') + occLabel(newR, ns) + 'の回から新しい設定' + (amtChanged ? '（' + yen(amt) + '）' : '') + 'に変更しました。それより前の分は今までのままです。';
+        } else {
+          robj.amount = prevR.amount;
+          if (amtChanged) {
+            if (past) addStep(robj, start, amt);
+            else { robj.amount = amt; robj.steps = robj.steps.filter(function (st) { return st.from > start; }); }
+          }
+          pl.recurring[rix] = robj;
+          doneMsg = amtChanged ? occLabel(robj, start) + 'の回から ' + yen(amt) + ' に変更しました。' + (past ? 'それより前の分は今までのままです。' : '') : '更新しました。' + (past && structural ? '' : '');
+        }
+        if (clamped) doneMsg += (+eff.slice(5)) + '月はすでに過ぎた回があるため、' + (+start.slice(5)) + '月の回からにしました。過去の分も直すときは「過去の分もまとめて直す」を選んでください。';
       }
-      if (eff) { robj.amount = prevR.amount; robj.steps = robj.steps.filter(function (st) { return st.from !== eff; }); robj.steps.push({ from: eff, amount: amt }); robj.steps.sort(function (a, b) { return a.from < b.from ? -1 : 1; }); }
-      pl.recurring[rix] = robj;
     } else pl.recurring.push(robj);
     $('cr-submit').dataset.busy = '1'; var undoR = cashPayload({});
     try {
       await backend.saveCash(pl);
       $('cr-name').value = ''; $('cr-amount').value = ''; $('cr-day').value = '';
-      endEdit(); msg('cr-msg', ed ? (eff ? (+eff.slice(5)) + '月から ' + yen(amt) + ' に変更しました。' + (autoEff ? 'すでに過ぎた分は今までの金額のままです。' : '') : '更新しました。') : '定期を登録しました。'); render();
-      showToast(ed ? '定期を更新しました' : '定期を登録しました', function () { return backend.saveCash(undoR); });
+      endEdit(); msg('cr-msg', ed ? doneMsg : '定期を登録しました。'); render();
+      showToast(ed ? doneMsg.split('。')[0] : '定期を登録しました', function () { return backend.saveCash(undoR); });
     } catch (err) { msg('cr-msg', '登録できませんでした。', true); }
     delete $('cr-submit').dataset.busy;
   });
@@ -2506,13 +2548,24 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var prior = ed ? pl.loans.filter(function (l) { return l.id === ed.id; })[0] : null;
     var lobj = { extras: prior && prior.extras ? prior.extras : [], ints: prior && prior.ints ? prior.ints : {}, pays: prior && prior.pays ? prior.pays : {}, dov: prior && prior.dov ? prior.dov : {}, id: ed ? ed.id : uid(), name: ($('cl-name').value.trim() || '借入').slice(0, 30), balance: bal, rate: rate, payment: pay, excl: $('cl-incl').value === 'ex', via: $('cl-via').value, day: dp.value, from: from || '' };
     var lix = ed ? pl.loans.findIndex(function (l) { return l.id === ed.id; }) : -1;
+    var loanMsg = ed ? '更新しました。' : '借入を登録しました。';
+    if (lix >= 0 && prior) {
+      /* 返済額・年利・返済日・利息の扱いを変えても、過ぎた返済の行と借入残高は変えない：過ぎた回の金額・利息・日付をその月の値として残す */
+      lobj.pays = Object.assign({}, prior.pays || {}); lobj.ints = Object.assign({}, prior.ints || {}); lobj.dov = Object.assign({}, prior.dov || {});
+      if (prior.payment !== lobj.payment || prior.rate !== lobj.rate || prior.day !== lobj.day || !!prior.excl !== !!lobj.excl) {
+        var tday = todayStr(), pastRows = loanSchedule(prior, cashStartD()).filter(function (r) { return !r.x && !r.b && r.d < tday; });
+        pastRows.forEach(function (r) { if (lobj.pays[r.m] == null) lobj.pays[r.m] = r.pay; if (lobj.ints[r.m] == null) lobj.ints[r.m] = r.interest; if (!lobj.dov[r.m]) lobj.dov[r.m] = r.d; });
+        var nxt = loanSchedule(lobj, cashStartD()).filter(function (r) { return !r.x && !r.b && r.d >= tday; })[0];
+        if (pastRows.length) loanMsg = (nxt ? (+nxt.d.slice(5, 7)) + '月' + (+nxt.d.slice(8)) + '日の返済から変更しました。' : '変更しました。') + 'それより前の返済と借入残高は今までのままです。';
+      }
+    }
     if (lix >= 0) pl.loans[lix] = lobj; else pl.loans.push(lobj);
     $('cl-submit').dataset.busy = '1'; var undoL = cashPayload({});
     try {
       await backend.saveCash(pl);
       ['cl-name', 'cl-balance', 'cl-pay', 'cl-rate', 'cl-day'].forEach(function (id) { $(id).value = ''; }); $('cl-incl').value = 'in'; syncClRate(); $('cl-via').value = '';
-      endEdit(); msg('cl-msg', ed ? '更新しました。' : '借入を登録しました。'); state.crLoan = '__new'; render();
-      showToast(ed ? '借入を更新しました' : '借入を登録しました', function () { return backend.saveCash(undoL); });
+      endEdit(); msg('cl-msg', loanMsg); state.crLoan = '__new'; render();
+      showToast(ed ? loanMsg.split('。')[0] : '借入を登録しました', function () { return backend.saveCash(undoL); });
     } catch (err) { msg('cl-msg', '登録できませんでした。', true); }
     delete $('cl-submit').dataset.busy;
   });
@@ -2630,8 +2683,8 @@ details.inner>summary{font:500 14px var(--font-ui)}
     else if (t.dataset.delrec) {
       var rid = t.dataset.delrec;
       armOrDo('r' + rid, function () {
-        var pl = cashPayload({});
-        pl.recurring = pl.recurring.filter(function (r) { return r.id !== rid; });
+        var pl = cashPayload({}), r0 = pl.recurring.filter(function (r) { return r.id === rid; })[0];
+        if (r0) { var nm0 = nextOccM(r0); if (hasPastOcc(r0, nm0)) { r0.to = addMonths(nm0, -1); state.delNote = occLabel(r0, nm0) + 'の回から後を削除しました（過ぎた分は残しています）'; } else pl.recurring = pl.recurring.filter(function (r) { return r.id !== rid; }); }
         return backend.saveCash(pl);
       });
     }
