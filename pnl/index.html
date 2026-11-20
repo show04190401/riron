@@ -456,8 +456,11 @@ html.lock .fab,html.daysheet .fab{opacity:0;pointer-events:none}
 #view-set{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
 @media (min-width:900px){#view-set{gap:24px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}}
 .sethead{margin:8px 0 16px}
-.theme-seg{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);width:100%;margin-top:16px}
-.theme-seg button{padding:0 4px;white-space:nowrap}
+#theme-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:16px;padding-bottom:16px}
+#theme-card h2{flex:none}
+.theme-seg{display:grid;grid-template-columns:auto auto auto;margin:0}
+.theme-seg button{padding:0 8px;white-space:nowrap}
+@media (max-width:359px){#theme-card{padding-left:16px;padding-right:16px;gap:8px}.theme-seg button{padding:0 4px;font-size:12px}}
 .sethead h2{font-size:20px}
 
 /* ---------- salary ---------- */
