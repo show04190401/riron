@@ -711,6 +711,12 @@ details.inner>summary{font:500 14px var(--font-ui)}
             <label for="cr-amount">金額（円）</label>
             <div class="amt"><span>¥</span><input id="cr-amount" type="text" inputmode="numeric" autocomplete="off"></div>
           </div>
+          <div class="field" id="cr-eff-wrap" hidden>
+            <label for="cr-eff">金額を変える月（任意）</label>
+            <input type="month" id="cr-eff">
+            <p class="hint">月を選ぶと、上の金額をその月から使います（それより前の月は今までの金額のまま）。空欄なら、すべての月の金額を変えます。例：2万円の定期を、11月から3万円、1月から5万円にする場合は、11月・30,000円で更新したあと、もう一度編集して1月・50,000円で更新します。</p>
+            <div id="cr-steps"></div>
+          </div>
           <div class="field">
             <label for="cr-day">毎月の日（1〜31）</label>
             <input id="cr-day" type="text" inputmode="numeric" autocomplete="off">
@@ -1002,7 +1008,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
         o.recurring = v.recurring.map(function (r, i) {
           if (r && LEGACY[r.cat]) r = Object.assign({}, r, { cat: LEGACY[r.cat] });
           if (!r || !CAT_LABEL[r.cat] || typeof r.amount !== 'number' || !(r.amount > 0) || !Number.isInteger(r.day) || r.day < 1 || r.day > 31) return null;
-          return { id: typeof r.id === 'string' && r.id ? r.id : 'r' + i, name: (typeof r.name === 'string' && r.name.trim() ? r.name.trim() : CAT_LABEL[r.cat]).slice(0, 30), cat: r.cat, amount: r.amount, day: r.day, from: typeof r.from === 'string' && rm.test(r.from) ? r.from : '', ovr: (function () { var o = {}; if (r.ovr && typeof r.ovr === 'object') Object.keys(r.ovr).slice(0, 240).forEach(function (k) { var x = r.ovr[k]; if (rm.test(k) && typeof x === 'number' && isFinite(x) && x >= 0) o[k] = Math.round(x); }); return o; })(), dov: (function (src) { var o = {}; if (src && typeof src === 'object') Object.keys(src).slice(0, 240).forEach(function (k) { var x = src[k]; if (rm.test(k) && typeof x === 'string' && re.test(x)) o[k] = x; }); return o; })(r.dov) };
+          return { id: typeof r.id === 'string' && r.id ? r.id : 'r' + i, name: (typeof r.name === 'string' && r.name.trim() ? r.name.trim() : CAT_LABEL[r.cat]).slice(0, 30), cat: r.cat, amount: r.amount, day: r.day, from: typeof r.from === 'string' && rm.test(r.from) ? r.from : '', ovr: (function () { var o = {}; if (r.ovr && typeof r.ovr === 'object') Object.keys(r.ovr).slice(0, 240).forEach(function (k) { var x = r.ovr[k]; if (rm.test(k) && typeof x === 'number' && isFinite(x) && x >= 0) o[k] = Math.round(x); }); return o; })(), dov: (function (src) { var o = {}; if (src && typeof src === 'object') Object.keys(src).slice(0, 240).forEach(function (k) { var x = src[k]; if (rm.test(k) && typeof x === 'string' && re.test(x)) o[k] = x; }); return o; })(r.dov), steps: (function (src) { var o = [], seen = {}; if (Array.isArray(src)) src.slice(0, 36).forEach(function (st) { if (st && typeof st.from === 'string' && rm.test(st.from) && !seen[st.from] && typeof st.amount === 'number' && isFinite(st.amount) && st.amount > 0) { seen[st.from] = 1; o.push({ from: st.from, amount: Math.round(st.amount) }); } }); return o.sort(function (a, b) { return a.from < b.from ? -1 : 1; }); })(r.steps) };
         }).filter(Boolean).slice(0, 30);
       }
       if (Array.isArray(v.loans)) {
@@ -1455,6 +1461,9 @@ details.inner>summary{font:500 14px var(--font-ui)}
     }
     return '';
   }
+  /* 定期の金額：「○月から」の変更（steps）があれば、その月以降はその金額 */
+  function recBase(r, m) { var a = r.amount; (r.steps || []).forEach(function (st) { if (st.from <= m) a = st.amount; }); return a; }
+  function stepsTxt(r) { return (r.steps || []).map(function (st) { return (st.from.slice(0, 4) === curMonth().slice(0, 4) ? (+st.from.slice(5)) + '月' : st.from.slice(0, 4) + '年' + (+st.from.slice(5)) + '月') + '〜' + yen(st.amount); }).join('・'); }
   function recHits(r, d) { return !!hitM(r, d, recMode(r, false)); }
   function repayStep(L, bal, m, days) {
     var interest = L.ints && L.ints[m] != null ? L.ints[m] : Math.floor(bal * (L.rate || 0) / 100 / 365 * Math.max(0, days || 0));
@@ -1520,7 +1529,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
       var f = { pnl: E[d] ? E[d].pnl : 0, sal: 0, oin: 0, oout: 0, rak: 0, amz: 0, repay: 0, brw: 0, inc: 0, exp: 0 }, notes = [], lines = [], loanOpen = loanTotal;
       if (E[d]) lines.push({ k: 'pnl', label: '損益', amt: E[d].pnl });
       (src.items[d] || []).forEach(function (it) { f[it.cat] += it.amount; notes.push(it.memo || CAT_LABEL[it.cat]); lines.push({ k: 'item', id: it.id, cat: it.cat, label: it.memo || CAT_LABEL[it.cat], memo: it.memo ? CAT_LABEL[it.cat] : '', amt: it.amount, out: CAT_OUT[it.cat] }); });
-      src.recurring.forEach(function (r) { var hm = hitM(r, d, recMode(r, false)); if (hm) { var ra = r.ovr && r.ovr[hm] != null ? r.ovr[hm] : r.amount; f[r.cat] += ra; notes.push(r.name); lines.push({ k: 'rec', id: r.id, cat: r.cat, day: r.day, label: r.name, m: hm, base: r.amount, ov: !!(r.ovr && r.ovr[hm] != null), dov: !!(r.dov && r.dov[hm]), amt: ra, out: CAT_OUT[r.cat] }); } });
+      src.recurring.forEach(function (r) { var hm = hitM(r, d, recMode(r, false)); if (hm) { var ra = r.ovr && r.ovr[hm] != null ? r.ovr[hm] : recBase(r, hm); f[r.cat] += ra; notes.push(r.name); lines.push({ k: 'rec', id: r.id, cat: r.cat, day: r.day, label: r.name, m: hm, base: recBase(r, hm), ov: !!(r.ovr && r.ovr[hm] != null), dov: !!(r.dov && r.dov[hm]), amt: ra, out: CAT_OUT[r.cat] }); } });
       src.loans.forEach(function (L) {
         (L.extras || []).forEach(function (x) {
           if (x.date === d && x.borrow) {
@@ -1698,8 +1707,8 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var rr = cf.src.recurring;
     $('c-rec-list').innerHTML = rr.length ? '<div class="table">' + rr.map(function (r) {
       var out = CAT_OUT[r.cat];
-      return '<div class="row r3b"><div class="d">' + esc(r.name) + '<small>毎月' + r.day + '日' + (r.from ? '・' + ym(r.from) + 'から' : '') + '</small></div>' +
-        '<div class="n ' + (out ? 'neg' : 'pos') + '">' + (out ? '−' : '+') + yen(r.amount) + '</div>' +
+      return '<div class="row r3b"><div class="d">' + esc(r.name) + '<small>毎月' + r.day + '日' + (r.from ? '・' + ym(r.from) + 'から' : '') + ((r.steps || []).length ? '・' + yen(r.amount) + '→' + stepsTxt(r) : '') + '</small></div>' +
+        '<div class="n ' + (out ? 'neg' : 'pos') + '">' + (out ? '−' : '+') + yen(recBase(r, cf.selM)) + '<small>' + (+cf.selM.slice(5)) + '月の金額</small></div>' +
         cashBtns(cf.demo, 'data-er="' + esc(r.id) + '"', 'data-delrec="' + esc(r.id) + '"', 'r' + r.id) + '</div>';
     }).join('') + '</div>' : '<p class="hint">登録はありません。</p>';
     var lrows = '';
@@ -1738,7 +1747,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
       var p = parseAmount($('rmon-in').value), nd = $('rmon-date').value, st = state.cash.startDate || defaultStart();
       if (isNaN(p.value) || p.neg) { state.rMsg = '金額は0以上の数字で入力してください。'; render(); var a = $('rmon-in'); if (a) a.focus(); return; }
       if (!/^\d{4}-\d{2}-\d{2}$/.test(nd) || nd.slice(0, 7) < addMonths(mm, -1) || nd.slice(0, 7) > addMonths(mm, 1) || nd < st) { state.rMsg = '日付は、' + (+mm.slice(5)) + '月の前後1か月の中で選んでください。'; render(); return; }
-      if (p.value === r.amount) delete r.ovr[mm]; else r.ovr[mm] = p.value;
+      if (p.value === recBase(r, mm)) delete r.ovr[mm]; else r.ovr[mm] = p.value;
       if (nd === adjDay(nomDate(r, mm), recMode(r, false))) delete r.dov[mm]; else r.dov[mm] = nd;
     }
     state.rEdit = ''; state.rMsg = '';
@@ -1894,7 +1903,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
   }
   function clearCashForms() {
     ['ci-amount', 'ci-memo', 'cr-name', 'cr-amount', 'cr-day', 'cr-from', 'cl-name', 'cl-balance', 'cl-pay', 'cl-rate', 'cl-day', 'cl-from', 'ci-interest'].forEach(function (id) { $(id).value = ''; }); $('cl-incl').value = 'in'; syncClRate(); $('cl-via').value = ''; $('ci-incl').value = 'in';
-    ['ci-msg', 'cr-msg', 'cl-msg'].forEach(function (id) { msg(id, ''); }); syncTabSels(); $('cl-adv').open = false;
+    ['ci-msg', 'cr-msg', 'cl-msg'].forEach(function (id) { msg(id, ''); }); syncTabSels(); $('cl-adv').open = false; $('cr-eff-wrap').hidden = true; $('cr-eff').value = ''; $('cr-steps').innerHTML = '';
   }
   function endEdit() { state.cEdit = null; clearCashForms(); syncEditUI(); }
   function foldBtn(k, label) {
@@ -1929,7 +1938,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     } else if (kind === 'r') {
       var r = c.recurring.filter(function (x) { return x.id === id; })[0]; if (!r) return;
       recShow(true);
-      $('cr-name').value = r.name; $('cr-cat').value = CAT_OUT[r.cat] ? 'oout' : 'oin'; editCat = r.cat; syncCrUI(); $('cr-amount').value = nf.format(r.amount); $('cr-day').value = r.day; $('cr-from').value = r.from || '';
+      $('cr-name').value = r.name; $('cr-cat').value = CAT_OUT[r.cat] ? 'oout' : 'oin'; editCat = r.cat; syncCrUI(); $('cr-amount').value = nf.format(r.amount); $('cr-eff-wrap').hidden = false; $('cr-eff').value = ''; renderSteps(r); $('cr-day').value = r.day; $('cr-from').value = r.from || '';
       target = $('cr-form'); focusId = 'cr-amount';
     } else if (kind === 'x') {
       var xf = null, xl = null;
@@ -2032,6 +2041,23 @@ details.inner>summary{font:500 14px var(--font-ui)}
     Promise.resolve(backend.saveSettings({ targetAmount: DEFAULTS.targetAmount, targetDate: endOfMonth(cm), targetFrom: first, history: hist, excludeHolidays: s.excludeHolidays })).then(null, function () { state.rolled = false; });
   }
   function v0demo() { return !Object.keys(state.entries).length; }
+
+  function renderSteps(r) {
+    var box = $('cr-steps'); if (!box) return;
+    var st = r && r.steps || [];
+    box.innerHTML = st.length ? '<div class="table">' + '<div class="row r3b"><div class="d">はじめから<small>基本の金額</small></div><div class="n">' + yen(r.amount) + '</div><span></span></div>' + st.map(function (x) {
+      return '<div class="row r3b"><div class="d">' + x.from.slice(0, 4) + '年' + (+x.from.slice(5)) + '月から</div><div class="n">' + yen(x.amount) + '</div><span class="acts"><button type="button" class="lnk' + (state.armKey === 'st' + x.from ? ' armed' : '') + '" data-stepdel="' + esc(x.from) + '">' + (state.armKey === 'st' + x.from ? '本当に削除' : '削除') + '</button></span></div>';
+    }).join('') + '</div>' : '';
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest('[data-stepdel]'); if (!t || !state.cEdit || state.cEdit.kind !== 'r' || !backend) return;
+    var from = t.dataset.stepdel, rid = state.cEdit.id, key = 'st' + from;
+    if (state.armKey !== key) { state.armKey = key; clearTimeout(state.armT2); state.armT2 = setTimeout(function () { state.armKey = ''; var r0 = state.cash.recurring.filter(function (x) { return x.id === rid; })[0]; renderSteps(r0); }, 4000); renderSteps(state.cash.recurring.filter(function (x) { return x.id === rid; })[0]); return; }
+    state.armKey = ''; clearTimeout(state.armT2);
+    var undo = cashPayload({}), pl = cashPayload({}), r = pl.recurring.filter(function (x) { return x.id === rid; })[0]; if (!r) return;
+    r.steps = (r.steps || []).filter(function (st) { return st.from !== from; });
+    Promise.resolve(backend.saveCash(pl)).then(function () { render(); renderSteps(state.cash.recurring.filter(function (x) { return x.id === rid; })[0]); showToast((+from.slice(5)) + '月からの変更を削除しました', function () { return backend.saveCash(undo); }); }, function () { msg('cr-msg', '削除できませんでした。', true); });
+  });
 
   /* ---------- form handlers ---------- */
   function msg(id, text, err) { var m = $(id); m.textContent = text; m.className = 'msg' + (err ? ' err' : ''); }
@@ -2436,12 +2462,20 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var pl = cashPayload({});
     var robj = { id: ed ? ed.id : uid(), name: ($('cr-name').value.trim() || CAT_LABEL[cat]).slice(0, 30), cat: (ed && ed.cat && CAT_OUT[ed.cat] === CAT_OUT[cat]) ? ed.cat : cat, amount: amt, day: dp.value, from: from || '' };
     var rix = ed ? pl.recurring.findIndex(function (r) { return r.id === ed.id; }) : -1;
-    if (rix >= 0) { if (pl.recurring[rix].ovr) robj.ovr = pl.recurring[rix].ovr; if (pl.recurring[rix].dov) robj.dov = pl.recurring[rix].dov; pl.recurring[rix] = robj; } else pl.recurring.push(robj);
+    var eff = ed ? $('cr-eff').value : '';
+    if (eff && !/^\d{4}-\d{2}$/.test(eff)) return msg('cr-msg', '金額を変える月は、年と月を選んでください。', true);
+    if (rix >= 0) {
+      var prevR = pl.recurring[rix];
+      if (prevR.ovr) robj.ovr = prevR.ovr; if (prevR.dov) robj.dov = prevR.dov;
+      robj.steps = (prevR.steps || []).slice();
+      if (eff) { robj.amount = prevR.amount; robj.steps = robj.steps.filter(function (st) { return st.from !== eff; }); robj.steps.push({ from: eff, amount: amt }); robj.steps.sort(function (a, b) { return a.from < b.from ? -1 : 1; }); }
+      pl.recurring[rix] = robj;
+    } else pl.recurring.push(robj);
     $('cr-submit').dataset.busy = '1'; var undoR = cashPayload({});
     try {
       await backend.saveCash(pl);
       $('cr-name').value = ''; $('cr-amount').value = ''; $('cr-day').value = '';
-      endEdit(); msg('cr-msg', ed ? '更新しました。' : '定期を登録しました。'); render();
+      endEdit(); msg('cr-msg', ed ? (eff ? (+eff.slice(5)) + '月から ' + yen(amt) + ' に変更しました。' : '更新しました。') : '定期を登録しました。'); render();
       showToast(ed ? '定期を更新しました' : '定期を登録しました', function () { return backend.saveCash(undoR); });
     } catch (err) { msg('cr-msg', '登録できませんでした。', true); }
     delete $('cr-submit').dataset.busy;
