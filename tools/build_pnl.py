@@ -10,8 +10,10 @@ for ln in ['<link rel="preconnect" href="https://fonts.googleapis.com">\n', '<li
     src = src.replace(ln, '')
 src = re.sub(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com/[^"]*">\n', '', src)
 assert 'fonts.googleapis' not in src and 'fonts.gstatic' not in src
-src = src.replace('--font-ui:"Noto Sans JP","Hiragino Kaku Gothic ProN"', '--font-ui:"Hiragino Sans","Hiragino Kaku Gothic ProN"')
-src = src.replace('--font-num:"IBM Plex Mono",ui-monospace', '--font-num:ui-monospace')
+src = src.replace('--font-ui:"Noto Sans JP","Hiragino Kaku Gothic ProN","Hiragino Sans"', '--font-ui:"Hiragino Sans","Hiragino Kaku Gothic ProN"')
+src = src.replace('--font-head:"Shippori Mincho","Noto Serif JP",', '--font-head:')
+src = src.replace('--font-num:"Inter","Noto Sans JP",', '--font-num:')
+assert '"Inter"' not in src and '"Shippori Mincho"' not in src
 i = src.index('<div class="wrap">')
 head, body = src[:i], src[i:]
 head = re.sub(r'<title>.*?</title>\n', '', head)
@@ -26,8 +28,8 @@ skel = '''<!doctype html>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="収支note">
-<meta name="theme-color" content="#EDF0F3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0D141C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F7F4EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1118" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon4-180.png">
 <link rel="icon" href="icon4-192.png">
