@@ -69,7 +69,7 @@
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;background:var(--bg)}
 body{
-  background:var(--bg); color:var(--fg);
+  margin:0; background:var(--bg); color:var(--fg);
   font-family:var(--font-ui); font-size:14px; line-height:1.7; letter-spacing:.02em;
   -webkit-font-smoothing:antialiased;
   padding-top:max(16px, env(safe-area-inset-top, 0px));
@@ -477,6 +477,19 @@ html.lock .fab,html.daysheet .fab{opacity:0;pointer-events:none}
 details.inner{margin-top:24px;border-top:1px solid var(--line);padding-top:8px}
 details.inner>summary{font:500 14px var(--font-ui)}
 
+/* 狭い画面：日別資金繰り表は「日付・損益・支出・収入」までをスクロールなしで見せる（残高・借入残高は横スクロール） */
+.cf .mth .wd{font-size:12px;color:var(--muted);margin-left:4px}
+@media (max-width:720px){
+  #c-table .cf-wrap{margin-left:-16px;margin-right:-16px}
+  #c-table .cf-wrap{container-type:inline-size}
+  table.cfd{table-layout:fixed;width:calc(100cqw + 198px);min-width:0}
+  table.cfd:not(:has(th:nth-child(6))){width:calc(100cqw + 94px)}
+  table.cfd th:nth-child(1){width:80px}
+  table.cfd th:nth-child(2),table.cfd th:nth-child(3),table.cfd th:nth-child(4){width:calc((100cqw - 82px) / 3)}
+  table.cfd th:nth-child(5){width:96px}table.cfd th:nth-child(6){width:104px}
+  table.cfd th,table.cfd td{padding-left:8px;padding-right:8px}
+  table.cfd td:not(.rl),table.cfd th:not(.rl){padding-left:4px}
+}
 /* 狭い画面：編集・削除は金額の下に置き、項目名の幅を確保する */
 @media (max-width:720px){
   .r5{grid-template-columns:3.5rem minmax(0,1fr) auto;grid-template-areas:"a b c" "a b d";row-gap:0}
@@ -1602,7 +1615,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     rows.forEach(function (day) {
       var x = days[day], w = dow(day);
       body += '<tr class="' + (w === 0 || w === 6 ? 'wkend ' : '') + (day === today ? 'today' : '') + '" data-cday="' + day + '">' +
-        '<td class="rl"><button type="button" class="mth" aria-label="' + md(day) + 'の詳細を開く">' + md(day) + '（' + WD[w] + '）</button></td>' +
+        '<td class="rl"><button type="button" class="mth" aria-label="' + md(day) + 'の詳細を開く">' + md(day) + '<span class="wd">' + WD[w] + '</span></button></td>' +
         cols.map(function (c) { return numCell(x.f[c[0]], c[2]); }).join('') +
         closeCell(x.close) + loanCell(x.loan) + '</tr>';
     });
