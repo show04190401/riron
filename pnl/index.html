@@ -714,7 +714,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
           <div class="field" id="cr-eff-wrap" hidden>
             <label for="cr-eff">金額を変える月（任意）</label>
             <input type="month" id="cr-eff">
-            <p class="hint">月を選ぶと、上の金額をその月から使います（それより前の月は今までの金額のまま）。空欄なら、すべての月の金額を変えます。例：2万円の定期を、11月から3万円、1月から5万円にする場合は、11月・30,000円で更新したあと、もう一度編集して1月・50,000円で更新します。</p>
+            <p class="hint">月を選ぶと、上の金額をその月から使います（それより前の月は今までの金額のまま）。空欄なら、まだ来ていない回から新しい金額にします（すでに過ぎた日の分は変えません）。例：2万円の定期を、11月から3万円、1月から5万円にする場合は、11月・30,000円で更新したあと、もう一度編集して1月・50,000円で更新します。</p>
             <div id="cr-steps"></div>
           </div>
           <div class="field">
@@ -2462,12 +2462,19 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var pl = cashPayload({});
     var robj = { id: ed ? ed.id : uid(), name: ($('cr-name').value.trim() || CAT_LABEL[cat]).slice(0, 30), cat: (ed && ed.cat && CAT_OUT[ed.cat] === CAT_OUT[cat]) ? ed.cat : cat, amount: amt, day: dp.value, from: from || '' };
     var rix = ed ? pl.recurring.findIndex(function (r) { return r.id === ed.id; }) : -1;
-    var eff = ed ? $('cr-eff').value : '';
+    var eff = ed ? $('cr-eff').value : '', autoEff = false;
     if (eff && !/^\d{4}-\d{2}$/.test(eff)) return msg('cr-msg', '金額を変える月は、年と月を選んでください。', true);
     if (rix >= 0) {
       var prevR = pl.recurring[rix];
       if (prevR.ovr) robj.ovr = prevR.ovr; if (prevR.dov) robj.dov = prevR.dov;
       robj.steps = (prevR.steps || []).slice();
+      if (!eff) {
+        /* 月を選ばないとき：すでに過ぎた日の分は変えず、次に来る回から新しい金額にする */
+        var cm0 = curMonth(), od = prevR.dov && prevR.dov[cm0] ? prevR.dov[cm0] : adjDay(nomDate(prevR, cm0), recMode(prevR, false));
+        var effM = od < todayStr() ? addMonths(cm0, 1) : cm0, firstM = (prevR.from || '') > (state.cash.startDate || defaultStart()).slice(0, 7) ? prevR.from : (state.cash.startDate || defaultStart()).slice(0, 7);
+        if (amt === recBase(prevR, effM)) robj.amount = prevR.amount;
+        else if (effM > firstM) { eff = effM; autoEff = true; }
+      }
       if (eff) { robj.amount = prevR.amount; robj.steps = robj.steps.filter(function (st) { return st.from !== eff; }); robj.steps.push({ from: eff, amount: amt }); robj.steps.sort(function (a, b) { return a.from < b.from ? -1 : 1; }); }
       pl.recurring[rix] = robj;
     } else pl.recurring.push(robj);
@@ -2475,7 +2482,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     try {
       await backend.saveCash(pl);
       $('cr-name').value = ''; $('cr-amount').value = ''; $('cr-day').value = '';
-      endEdit(); msg('cr-msg', ed ? (eff ? (+eff.slice(5)) + '月から ' + yen(amt) + ' に変更しました。' : '更新しました。') : '定期を登録しました。'); render();
+      endEdit(); msg('cr-msg', ed ? (eff ? (+eff.slice(5)) + '月から ' + yen(amt) + ' に変更しました。' + (autoEff ? 'すでに過ぎた分は今までの金額のままです。' : '') : '更新しました。') : '定期を登録しました。'); render();
       showToast(ed ? '定期を更新しました' : '定期を登録しました', function () { return backend.saveCash(undoR); });
     } catch (err) { msg('cr-msg', '登録できませんでした。', true); }
     delete $('cr-submit').dataset.busy;
