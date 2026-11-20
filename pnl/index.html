@@ -323,6 +323,10 @@ svg{display:block;max-width:100%}
 .mnav button{min-width:44px;min-height:44px;border:0;background:transparent;color:var(--fg);border-radius:var(--rs);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none;padding:0}
 .mnav button:disabled{opacity:.3;cursor:default}
 .mnav .mlab{font:500 16px var(--font-head);letter-spacing:.06em;flex:none;width:8em;text-align:center;white-space:nowrap}
+.mnav .mpick{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:44px;cursor:pointer;border-radius:var(--rs)}
+.mnav .mpick .chev{width:12px;height:12px;-webkit-mask-size:12px;mask-size:12px}
+.mnav .mpick input{position:absolute;inset:0;width:100%;height:100%;min-height:0;opacity:0;padding:0;border:0;cursor:pointer;font-size:16px;-webkit-appearance:none;appearance:none}
+.mnav .mpick:focus-within{outline:2px solid var(--gold-fill);outline-offset:2px}
 .mnav .tdy{width:56px;font-size:12px;color:var(--gold);letter-spacing:.04em}
 .mnav .tdy:disabled{color:var(--muted)}
 table.cfd{table-layout:fixed;width:600px;min-width:600px}
@@ -1607,7 +1611,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var navBtns = '<div class="mnav">' +
         '<button type="button" class="tdy" data-cm="0"' + (sm === cm ? ' disabled' : '') + '>今月</button>' +
         '<button type="button" data-cm="-1"' + (sm <= cf.minM ? ' disabled' : '') + ' aria-label="前の月">' + IC.left + '</button>' +
-        '<span class="mlab">' + monthLabel + '</span>' +
+        '<label class="mlab mpick">' + monthLabel + '<span class="chev" aria-hidden="true"></span><input type="month" id="c-mpick" value="' + sm + '" min="' + cf.minM + '" max="' + cf.maxM + '" aria-label="年と月を選ぶ"></label>' +
         '<button type="button" data-cm="1"' + (sm >= cf.maxM ? ' disabled' : '') + ' aria-label="次の月">' + IC.right + '</button>' +
       '</div>';
     $('c-nav').innerHTML = navBtns;
@@ -2752,6 +2756,15 @@ details.inner>summary{font:500 14px var(--font-ui)}
     else if (t.dataset.rsmode === 'one') rsPick(state.rsLast || (state.view === 'pnl' ? 'stock' : 'oout'));
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('rec-sheet').hidden) rsClose(); });
+  /* 資金繰り：年月をタップして選ぶ */
+  document.addEventListener('click', function (e) { var t = e.target; if (t && t.id === 'c-mpick') { try { if (t.showPicker) t.showPicker(); } catch (er) {} } });
+  document.addEventListener('change', function (e) {
+    var t = e.target; if (!t || t.id !== 'c-mpick' || !/^\d{4}-\d{2}$/.test(t.value)) return;
+    var cf = computeCash(view()), m = t.value;
+    if (m < cf.minM) m = cf.minM;
+    if (m > cf.maxM) m = cf.maxM;
+    state.cMonth = m; render(); if (state.formOpen && !state.cEdit && !$('ci-form').hidden) setFormMonth();
+  });
 
   /* ---------- boot ---------- */
   var t0 = todayStr();
