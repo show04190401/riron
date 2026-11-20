@@ -296,10 +296,10 @@ svg{display:block;max-width:100%}
 .top:has(>div>.sr){margin:0;min-height:0}
 
 /* ---------- cash flow ---------- */
-#cash-grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"chero" "ctable" "cloans" "clist"}
-#c-hero{grid-area:chero} #c-table{grid-area:ctable} #c-loans{grid-area:cloans} #c-list{grid-area:clist}
+#cash-grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"cloans" "ctable" "clist"}
+#c-table{grid-area:ctable} #c-hero{margin-bottom:16px} #c-loans{grid-area:cloans} #c-list{grid-area:clist}
 @media (min-width:900px){
-  #cash-grid{gap:24px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"chero chero" "ctable ctable" "cloans clist";align-items:start}
+  #cash-grid{gap:24px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"cloans clist" "ctable ctable";align-items:start}
 }
 .cfhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .cfhead .sub{font-family:var(--font-num);font-variant-numeric:tabular-nums}
@@ -525,7 +525,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
   <div id="banner" class="note" hidden></div>
   <div id="warn" class="note warn" role="alert" hidden></div>
 
-  <div class="layout view" id="view-pnl" hidden>
+  <div class="layout view" id="view-pnl">
 
 
     <section class="card hero" id="hero" aria-live="polite"></section>
@@ -559,13 +559,13 @@ details.inner>summary{font:500 14px var(--font-ui)}
       </details>
   </div>
 
-  <div id="view-cash" class="view">
+  <div id="view-cash" class="view" hidden>
     <section class="card hero" id="c-hero" aria-live="polite"></section>
     <div class="cfnav" id="c-nav"></div>
     <div class="actrow" id="c-acts"></div>
     <div id="cash-grid">
-    <section class="card" id="c-table"></section>
     <section class="card" id="c-loans" hidden></section>
+    <section class="card" id="c-table"></section>
     <section class="card" id="c-list"></section>
 
     </div>
@@ -605,8 +605,8 @@ details.inner>summary{font:500 14px var(--font-ui)}
 
 <div id="c-day" hidden></div>
 <nav class="tabbar" id="tabbar" aria-label="表示の切り替え"><div class="tb-in" role="tablist">
-  <button type="button" role="tab" id="tab-cash" data-view="cash" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M16 14.5h2"/></svg><span>資金繰り</span></button>
-  <button type="button" role="tab" id="tab-pnl" data-view="pnl" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="M5 15l4.5-4.5 3.5 3 6-6.5"/><path d="M15 7h4v4"/></svg><span>損益</span></button>
+  <button type="button" role="tab" id="tab-cash" data-view="cash" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M16 14.5h2"/></svg><span>資金繰り</span></button>
+  <button type="button" role="tab" id="tab-pnl" data-view="pnl" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="M5 15l4.5-4.5 3.5 3 6-6.5"/><path d="M15 7h4v4"/></svg><span>損益</span></button>
   <button type="button" role="tab" id="tab-set" data-view="set" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>設定</span></button>
 </div></nav>
 <button type="button" class="fab" id="fab" data-rsopen aria-haspopup="dialog" aria-controls="rec-sheet"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>記録</span></button>
@@ -867,7 +867,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
   /* ---------- state ---------- */
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', history: [], excludeHolidays: true, saved: false },
-    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'cash', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gOpen: {}, dOpen: {}, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
+    cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'pnl', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gOpen: {}, dOpen: {}, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
     gcat: (function () { try { return localStorage.getItem('pnl-notebook-gcat') || 'all'; } catch (e) { return 'all'; } })(),
     salary: { rows: [] }, sal: { open: false, edit: '', msg: '', arm: '' },
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
@@ -1582,12 +1582,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     }
     var bl = function (n) { return (n < 0 ? '−' : '') + yen(n); };
     var heroHtml =
-      '<div class="eyebrow"><span>今日の残高</span><span>' + md(tKey) + '（' + WD[dow(tKey)] + '）</span></div>' +
-      '<div class="big' + (tDay.close < 0 ? ' neg' : '') + '">' + (tDay.close < 0 ? '−' : '') + yb(tDay.close) + '</div>' +
-      '<dl class="kpis k2"><div><dt>今月末の見込み</dt><dd class="' + (mEndDay.close < 0 ? 'neg' : '') + '">' + bl(mEndDay.close) + '<small>' + md(mLast) + '（' + WD[dow(mLast)] + '）時点</small></dd></div>' +
-      '<div><dt>今後120日の最低残高</dt><dd class="' + (low && low.c < 0 ? 'neg' : '') + '">' + (low ? bl(low.c) + '<small>' + md(low.d) + '（' + WD[dow(low.d)] + '）</small>' : '—') + '</dd></div></dl>' +
-      (short ? '<div class="alert" role="alert">' + IC.warn + '<span><b>' + short.d.slice(0, 4) + '/' + md(short.d) + '（' + WD[dow(short.d)] + '）に残高が不足します</b>（' + bl(short.c) + '）</span></div>' : '') +
-      (!cf.demo && !state.cash.saved ? '<div class="proj">開始残高が未設定のため、0円から計算しています。</div>' : '');
+      (!cf.demo && !state.cash.saved ? '<div class="proj" style="margin-top:0">開始残高が未設定のため、0円から計算しています。</div>' : '');
     $('c-hero').innerHTML = heroHtml; $('c-hero').hidden = !heroHtml;
 
     var sm = cf.selM, first = sm + '-01', last = endOfMonth(sm), from = first < cf.start ? cf.start : first;
