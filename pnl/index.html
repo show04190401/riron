@@ -455,6 +455,8 @@ html.lock .fab,html.daysheet .fab{opacity:0;pointer-events:none}
 #view-set{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
 @media (min-width:900px){#view-set{gap:24px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}}
 .sethead{margin:8px 0 16px}
+.theme-seg{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);width:100%;margin-top:16px}
+.theme-seg button{padding:0 4px;white-space:nowrap}
 .sethead h2{font-size:20px}
 
 /* ---------- salary ---------- */
@@ -574,6 +576,14 @@ details.inner>summary{font:500 14px var(--font-ui)}
   </div>
   <div id="view-set" class="view" hidden>
   <div class="sethead" style="grid-column:1/-1"><h2>設定・データ</h2></div>
+  <section class="card" id="theme-card">
+    <h2>表示</h2>
+    <div class="seg theme-seg" role="radiogroup" aria-label="表示の色">
+      <button type="button" role="radio" data-theme-pick="auto" aria-selected="true" aria-checked="true">端末に合わせる</button>
+      <button type="button" role="radio" data-theme-pick="light" aria-selected="false" aria-checked="false">ライト</button>
+      <button type="button" role="radio" data-theme-pick="dark" aria-selected="false" aria-checked="false">ダーク</button>
+    </div>
+  </section>
   <details class="card" id="sal-card">
     <summary>給与履歴</summary>
     <div id="sal-body"></div>
@@ -791,6 +801,25 @@ details.inner>summary{font:500 14px var(--font-ui)}
 <script>
 (function () {
   'use strict';
+  /* 表示の色：端末に合わせる／ライト／ダーク（この端末だけの設定） */
+  var THEME_KEY = 'pnl-notebook-theme', hostTheme = document.documentElement.getAttribute('data-theme');
+  function applyTheme(t) {
+    var el = document.documentElement;
+    if (t === 'light' || t === 'dark') el.setAttribute('data-theme', t);
+    else if (hostTheme) el.setAttribute('data-theme', hostTheme); else el.removeAttribute('data-theme');
+    Array.prototype.forEach.call(document.querySelectorAll('meta[name="theme-color"]'), function (m) {
+      if (!m.dataset.orig) m.dataset.orig = m.getAttribute('content') || '';
+      m.setAttribute('content', t === 'light' ? '#F7F4EE' : t === 'dark' ? '#0B1118' : m.dataset.orig);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-theme-pick]'), function (b) { var on = b.dataset.themePick === (t === 'light' || t === 'dark' ? t : 'auto'); b.setAttribute('aria-selected', String(on)); b.setAttribute('aria-checked', String(on)); });
+  }
+  var savedTheme = 'auto'; try { savedTheme = localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) {}
+  applyTheme(savedTheme);
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-theme-pick]'); if (!b) return;
+    var t = b.dataset.themePick; try { localStorage.setItem(THEME_KEY, t); } catch (er) {}
+    applyTheme(t);
+  });
   var TZ = 'Asia/Tokyo', DAY = 86400000, WD = ['日', '月', '火', '水', '木', '金', '土'];
   var HOL = new Set((
     '2026-01-01 2026-01-12 2026-02-11 2026-02-23 2026-03-20 2026-04-29 2026-05-03 2026-05-04 2026-05-05 2026-05-06 ' +
@@ -1162,24 +1191,32 @@ details.inner>summary{font:500 14px var(--font-ui)}
       if (seen[dd]) continue; seen[dd] = 1;
       g += '<text class="ax" x="' + X(dd) + '" y="' + (H - 8) + '" text-anchor="' + (i === 0 ? 'start' : i === 4 ? 'end' : 'middle') + '">' + md(dd) + '</text>';
     }
-    var xT = X(s.targetDate), yT = Y(s.targetAmount), tgtBelow = false;
+    var xT = X(s.targetDate), yT = Y(s.targetAmount);
     if (pd(t) >= pd(d0) && pd(t) <= pd(dEnd)) {
       var tx = X(t);
 
       g += '<line class="todayline" x1="' + tx + '" x2="' + tx + '" y1="' + mt + '" y2="' + (H - mb) + '"/>' +
            '<text class="lbl mut" x="' + (tx + (tx > W - 48 ? -4 : 4)) + '" y="' + (H - mb - 6) + '" text-anchor="' + (tx > W - 48 ? 'end' : 'start') + '">今日</text>'; /* 「今日」は下に置き、上の目標ラベルと重ねない */
     }
-    var tgtY = tgtBelow ? yT + 20 : yT - 9;
     g += '<line class="pace" x1="' + X(d0) + '" y1="' + Y(0) + '" x2="' + xT + '" y2="' + yT + '"/>' +
-         '<circle class="dot tgt" cx="' + xT + '" cy="' + yT + '" r="5"/>' +
-         '<text class="lbl gold" x="' + (xT - 8) + '" y="' + tgtY + '" text-anchor="end">目標 ' + yen(s.targetAmount) + '</text>';
+         '<circle class="dot tgt" cx="' + xT + '" cy="' + yT + '" r="5"/>';
     var pts = (d0 < c.dates[0] ? [X(d0).toFixed(1) + ' ' + Y(0).toFixed(1)] : []).concat(c.dates.map(function (d) { return X(d).toFixed(1) + ' ' + Y(c.cum[d]).toFixed(1); }));
     g += '<path class="cumarea" d="M' + X(d0).toFixed(1) + ' ' + Y(0).toFixed(1) + ' L' + pts.join(' L') + ' L' + X(last).toFixed(1) + ' ' + Y(0).toFixed(1) + ' Z"/>' +
          '<path class="cumline" d="M' + pts.join(' L') + '"/>';
     if (c.dates.length <= 40) c.dates.forEach(function (d) { g += '<circle class="dot" cx="' + X(d) + '" cy="' + Y(c.cum[d]) + '" r="2.5"/>'; });
     var ex = X(last), ey = Y(c.total);
-    g += '<circle class="dot end ' + cls(c.total) + '" cx="' + ex + '" cy="' + ey + '" r="5.5"/>' +
-         '<text class="lbl" x="' + (ex + (ex > W - 90 ? -9 : 9)) + '" y="' + (ey + (ey < mt + 22 || (Math.abs(ey - tgtY) < 16 && Math.abs(ex - xT) < 120) ? 20 : -10)) + '" text-anchor="' + (ex > W - 90 ? 'end' : 'start') + '">' + sgn(c.total) + '</text>';
+    /* 目標のラベルと今の累積のラベルが重ならない置き方を選ぶ */
+    var tLab = '目標 ' + yen(s.targetAmount), eLab = sgn(c.total), tw = tLab.length * 7.4 + 4, ew = eLab.length * 7.4 + 4;
+    var box = function (x0, x1, y) { return { l: Math.min(x0, x1), r: Math.max(x0, x1), t: y - 12, b: y + 3 }; };
+    var hit = function (a, b2) { return a.l < b2.r && b2.l < a.r && a.t < b2.b && b2.t < a.b; };
+    var tBox = function (y) { return box(xT - 8 - tw, xT - 8, y); };
+    var eBox = function (side, y) { return side > 0 ? box(ex + 9, ex + 9 + ew, y) : box(ex - 9 - ew, ex - 9, y); };
+    var sides = ex > W - 90 ? [-1] : [1, -1], tys = [yT - 10, yT + 20], eys = [ey < mt + 22 ? ey + 20 : ey - 10, ey + 20, ey - 10], pick = null;
+    sides.forEach(function (sd) { tys.forEach(function (ty) { eys.forEach(function (eyy) { if (!pick && !hit(tBox(ty), eBox(sd, eyy)) && !hit(tBox(ty), box(ex - 6, ex + 6, ey + 6))) pick = [sd, ty, eyy]; }); }); });
+    if (!pick) pick = [sides[0], yT - 10, ey + 20];
+    g += '<text class="lbl gold" x="' + (xT - 8) + '" y="' + pick[1] + '" text-anchor="end">' + tLab + '</text>' +
+         '<circle class="dot end ' + cls(c.total) + '" cx="' + ex + '" cy="' + ey + '" r="5.5"/>' +
+         '<text class="lbl" x="' + (ex + (pick[0] > 0 ? 9 : -9)) + '" y="' + pick[2] + '" text-anchor="' + (pick[0] > 0 ? 'start' : 'end') + '">' + eLab + '</text>';
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="累積損益の推移。現在' + sgn(c.total) + '、目標' + yen(s.targetAmount) + '。">' + g + '</svg>';
   }
 
