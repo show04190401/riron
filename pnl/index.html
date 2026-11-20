@@ -605,8 +605,8 @@ details.inner>summary{font:500 14px var(--font-ui)}
 
 <div id="c-day" hidden></div>
 <nav class="tabbar" id="tabbar" aria-label="表示の切り替え"><div class="tb-in" role="tablist">
-  <button type="button" role="tab" id="tab-cash" data-view="cash" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M16 14.5h2"/></svg><span>資金繰り</span></button>
   <button type="button" role="tab" id="tab-pnl" data-view="pnl" aria-selected="true"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="M5 15l4.5-4.5 3.5 3 6-6.5"/><path d="M15 7h4v4"/></svg><span>損益</span></button>
+  <button type="button" role="tab" id="tab-cash" data-view="cash" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M16 14.5h2"/></svg><span>管理</span></button>
   <button type="button" role="tab" id="tab-set" data-view="set" aria-selected="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>設定</span></button>
 </div></nav>
 <button type="button" class="fab" id="fab" data-rsopen aria-haspopup="dialog" aria-controls="rec-sheet"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>記録</span></button>
@@ -789,7 +789,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     '2027-01-01 2027-01-02 2027-01-03 2027-01-11 2027-02-11 2027-02-23 2027-03-22 2027-04-29 2027-05-03 2027-05-04 ' +
     '2027-05-05 2027-07-19 2027-08-11 2027-09-20 2027-09-23 2027-10-11 2027-11-03 2027-11-23 2027-12-31'
   ).split(' '));
-  var DEFAULTS = { targetAmount: 300000, targetDate: '2026-12-30', excludeHolidays: true };
+  var DEFAULTS = { targetAmount: 150000, targetDate: '2026-12-30', excludeHolidays: true }; /* 目標は月単位（今月1日〜月末）。日付は下で今月に合わせる */
   var DEMO = {
     '2026-10-01': { pnl: 12400, memo: '月初の押し目買いが成功' },
     '2026-10-02': { pnl: -8200, memo: '' },
@@ -864,9 +864,10 @@ details.inner>summary{font:500 14px var(--font-ui)}
   var daysInMonth = function (m) { return new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate(); };
   var endOfMonth = function (m) { return m + '-' + String(daysInMonth(m)).padStart(2, '0'); };
 
+  DEFAULTS.targetDate = endOfMonth(curMonth()); DEFAULTS.targetFrom = curMonth() + '-01';
   /* ---------- state ---------- */
   var state = {
-    entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: '', history: [], excludeHolidays: true, saved: false },
+    entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: DEFAULTS.targetFrom, history: [], excludeHolidays: true, saved: false },
     cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'pnl', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gOpen: {}, dOpen: {}, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
     gcat: (function () { try { return localStorage.getItem('pnl-notebook-gcat') || 'all'; } catch (e) { return 'all'; } })(),
     salary: { rows: [] }, sal: { open: false, edit: '', msg: '', arm: '' },
@@ -1369,7 +1370,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
       order.forEach(function (p) {
         var days = buckets[p.key].days, sum = 0, w = 0, l = 0, ct = {};
         days.forEach(function (d) { var x = E[d].pnl; sum += x; if (x > 0) w++; else if (x < 0) l++; itemsOf(E[d]).forEach(function (it) { if (PCAT[it.cat]) ct[it.cat] = (ct[it.cat] || 0) + it.pnl; }); });
-        var open = state.gOpen[p.key] != null ? state.gOpen[p.key] : p.cur || order.length === 1;
+        var open = state.gOpen[p.key] != null ? state.gOpen[p.key] : false;
         var first = days[days.length - 1];
         var label = p.none ? '目標なしの期間' : (p.from ? md(p.from) : md(first)) + '〜' + md(p.show);
         body += '<button type="button" class="mhead gsec" data-gsec="' + esc(p.key) + '" aria-expanded="' + open + '"><span><span class="chev" aria-hidden="true" style="transform:rotate(' + (open ? 0 : -90) + 'deg)"></span>' + label + (p.cur ? '<em class="curtag">現在</em>' : '') +
@@ -2017,9 +2018,20 @@ details.inner>summary{font:500 14px var(--font-ui)}
     banner.hidden = !showDemo || state.view === 'set';
     if (showDemo) banner.textContent = onCash ? 'いまはサンプルの資金繰りを表示しています。日別表の前月繰越の残高をタップして入力すると、あなたのデータに切り替わります。' : 'いまはサンプルデータを表示しています。最初の記録を保存すると、あなたのデータに切り替わります。';
     renderHero(c, v); renderStats(c, v); renderCharts(c, v); renderHistory(c, v); renderCash(v); renderSal(false);
-    fillSettings(); updateFormButtons(); syncRepUI(); syncFormCard(); syncTabSels(); wrapBackend();
+    fillSettings(); updateFormButtons(); syncRepUI(); syncFormCard(); syncTabSels(); wrapBackend(); rollGoal();
     if (!state.initDone) { state.initDone = true; $('settings').open = false; }
   }
+
+  /* 目標は月単位：前の目標の期間が終わって新しい月に入ったら、今月の目標（150,000円）を自動で始める。前の目標は履歴に残す */
+  function rollGoal() {
+    var s = state.settings, cm = curMonth(), first = cm + '-01';
+    if (state.rolled || !state.loaded || !backend || !s.saved || v0demo() || !(s.targetDate < first)) return;
+    state.rolled = true;
+    var hist = (s.history || []).slice();
+    hist.push({ id: uid(), from: s.targetFrom || '', end: s.targetDate, date: s.targetDate, amount: s.targetAmount });
+    Promise.resolve(backend.saveSettings({ targetAmount: DEFAULTS.targetAmount, targetDate: endOfMonth(cm), targetFrom: first, history: hist, excludeHolidays: s.excludeHolidays })).then(null, function () { state.rolled = false; });
+  }
+  function v0demo() { return !Object.keys(state.entries).length; }
 
   /* ---------- form handlers ---------- */
   function msg(id, text, err) { var m = $(id); m.textContent = text; m.className = 'msg' + (err ? ' err' : ''); }
