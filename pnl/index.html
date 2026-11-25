@@ -94,10 +94,10 @@ h1{font:600 20px var(--font-head);letter-spacing:.06em}
 .autobk{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 
 /* ---------- layout ---------- */
-.layout{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"hero" "stats" "pace" "daily" "history" "settings"}
-#hero{grid-area:hero} #stats{grid-area:stats} #pace{grid-area:pace} #chart-daily{grid-area:daily} #history{grid-area:history} #settings{grid-area:settings}
+.layout{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"hero" "stats" "pace" "daily" "pcal" "history" "settings"}
+#hero{grid-area:hero} #stats{grid-area:stats} #pace{grid-area:pace} #chart-daily{grid-area:daily} #history{grid-area:history} #p-cal{grid-area:pcal} #settings{grid-area:settings}
 @media (min-width:900px){
-  .layout{gap:24px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"hero stats" "pace daily" "history settings";align-items:start}
+  .layout{gap:24px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"hero stats" "pace daily" "pcal history" "settings history";align-items:start}
 }
 .card{background:var(--surface);border-radius:var(--r);padding:24px;min-width:0;overflow:hidden;box-shadow:var(--shadow);border:1px solid transparent}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .card{border-color:var(--line)}}
@@ -307,6 +307,7 @@ svg{display:block;max-width:100%}
 .actrow{display:flex;gap:8px;margin-bottom:16px;justify-content:flex-end}
 .actrow:empty{display:none}
 .addbtn{min-height:44px;padding:0 24px;border-radius:var(--rs);border:0;background:var(--btn-bg);color:var(--btn-fg);font:500 14px var(--font-ui);letter-spacing:.08em;cursor:pointer;white-space:nowrap}
+.cfhead:has(.fold){cursor:pointer;min-height:44px}
 .fold{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font:inherit;color:inherit;min-height:44px}
 .fold .chev{color:var(--muted)}
 .cfhead:has(>h2>.fold){position:relative}
@@ -458,7 +459,6 @@ html.lock .fab,html.daysheet .fab{opacity:0;pointer-events:none}
 .sethead{margin:8px 0 16px}
 #theme-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:16px;padding-bottom:16px}
 #theme-card h2{flex:none}
-.seg.cview{display:grid;grid-template-columns:1fr 1fr;width:100%;max-width:320px;margin-top:16px}
 .cal-sum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 0}
 .cal-sum div{background:var(--surface-2);border-radius:var(--rs);padding:8px 16px;min-width:0}
 .cal-sum dt{font-size:12px;color:var(--muted)}
@@ -471,6 +471,10 @@ html.lock .fab,html.daysheet .fab{opacity:0;pointer-events:none}
 .cal-d{all:unset;box-sizing:border-box;min-height:56px;padding:4px 0 8px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-width:0}
 .cal-d.cal-x{cursor:default;opacity:.4}
 .cal-d.today{background:var(--gold-soft);border-radius:var(--rs)}
+.cal-d.sel{box-shadow:inset 0 0 0 1.5px var(--gold-fill);border-radius:var(--rs)}
+.pcnav{margin:16px auto 0;width:max-content;max-width:100%;box-shadow:none;background:var(--surface-2)}
+.pcal-day{margin-top:16px;padding-top:8px;border-top:1px solid var(--line)}
+.cal-sum dd small{font:400 12px var(--font-ui)}
 .cal-d.short .cal-n::after{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--neg);margin-left:2px;vertical-align:4px}
 .cal-d:focus-visible{outline:2px solid var(--gold-fill);outline-offset:-2px}
 .cal-n{font:400 14px var(--font-num);color:var(--fg)}
@@ -559,6 +563,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     <section class="stats" id="stats" aria-label="期間別の損益"></section>
     <section class="card" id="pace"></section>
     <section class="card" id="chart-daily"></section>
+    <section class="card" id="p-cal"></section>
 
     <section class="card" id="history"></section>
       <details class="card" id="settings">
@@ -917,7 +922,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: DEFAULTS.targetFrom, history: [], excludeHolidays: true, saved: false },
     cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'pnl', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gOpen: {}, dOpen: {}, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
-    gcat: 'all', cview: (function () { try { return localStorage.getItem('pnl-notebook-cview') === 'cal' ? 'cal' : 'table'; } catch (e) { return 'table'; } })(), /* 開き直したときは、グラフはいつも「全体」から */
+    gcat: 'all', pcM: '', pcSel: '', /* 開き直したときは、グラフはいつも「全体」から */
     salary: { rows: [] }, sal: { open: false, edit: '', msg: '', arm: '' },
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
   };
@@ -1401,6 +1406,44 @@ details.inner>summary{font:500 14px var(--font-ui)}
     return Object.keys(g).sort().reverse().map(function (k) { return { k: k, sum: g[k].sum, n: g[k].n, w: g[k].w, l: g[k].l, cum: c.cum[g[k].last] }; });
   }
 
+  /* 開閉できるカードは、見出しの行のどこを押しても開閉する（右側の件数や金額の部分も） */
+  document.addEventListener('click', function (e) {
+    var h = e.target.closest && e.target.closest('.cfhead'); if (!h || e.target.closest('button,a,input,select,label')) return;
+    var f = h.querySelector('.fold'); if (f) f.click();
+  });
+  /* 損益カレンダー：日ごとの損益（株式・P・その他の合計）。日付をタップすると、その日の内訳を下に出す */
+  function renderPCal(v) {
+    var el = $('p-cal'); if (!el) return;
+    var cm = curMonth(), m = state.pcM || cm, first = m + '-01', last = endOfMonth(m), t = todayStr();
+    var cmp = function (n) { var a = Math.abs(Math.round(n)), x = a >= 10000 ? (Math.floor(a / 1000) / 10) + '万' : nf.format(a); return (n < 0 ? '−' : n > 0 ? '+' : '') + x; };
+    var tot = 0, w = 0, l = 0, n = 0, cells = '';
+    for (var k = 0; k < dow(first); k++) cells += '<div class="cal-d cal-x"></div>';
+    for (var d = first; d <= last; d = addDays(d, 1)) {
+      var e = v.entries[d], wd = dow(d), has = !!e;
+      if (has) { tot += e.pnl; n++; if (e.pnl > 0) w++; else if (e.pnl < 0) l++; }
+      cells += '<button type="button" class="cal-d' + (wd === 0 ? ' sun' : wd === 6 ? ' sat' : '') + (d === t ? ' today' : '') + (d === state.pcSel ? ' sel' : '') + '" data-pcday="' + d + '" aria-pressed="' + (d === state.pcSel) + '" aria-label="' + md(d) + '（' + WD[wd] + '）' + (has ? ' 損益 ' + sgn(e.pnl) : ' 記録なし') + '"><span class="cal-n">' + (+d.slice(8)) + '</span><span class="cal-v ' + (has ? cls(e.pnl) : '') + '">' + (has ? cmp(e.pnl) : '') + '</span></button>';
+    }
+    var sel = state.pcSel && state.pcSel.slice(0, 7) === m ? state.pcSel : '', detail = '';
+    if (sel) {
+      var se = v.entries[sel], its = itemsOf(se);
+      detail = '<div class="pcal-day"><div class="mhead"><span>' + dateJp(sel) + '</span><span class="n ' + (se ? cls(se.pnl) : '') + '">' + (se ? sgn(se.pnl) : '記録なし') + '</span></div>' +
+        its.map(function (it) { return '<div class="row r3b"><div class="d">' + esc(PCAT[it.cat] || '区分なし') + (it.memo ? '<small>' + esc(it.memo) + '</small>' : '') + '</div><div class="n ' + cls(it.pnl) + '">' + sgn(it.pnl) + '</div><span class="acts"><button type="button" class="lnk" data-edit="' + esc(sel + '|' + it.id) + '">編集</button></span></div>'; }).join('') +
+        '<button type="button" class="btn ghost" data-pcadd="' + sel + '">この日に記録する</button></div>';
+    }
+    var mLab = m.slice(0, 4) + '年' + (+m.slice(5)) + '月';
+    el.innerHTML = '<div class="cfhead"><h2>' + foldBtn('pcal', '損益カレンダー') + '</h2></div>' +
+      '<div class="mnav pcnav"><button type="button" class="tdy" data-pcm="0"' + (m === cm ? ' disabled' : '') + '>今月</button><button type="button" data-pcm="-1" aria-label="前の月">' + IC.left + '</button><span class="mlab">' + mLab + '</span><button type="button" data-pcm="1" aria-label="次の月">' + IC.right + '</button></div>' +
+      '<dl class="cal-sum"><div><dt>' + (+m.slice(5)) + '月の損益</dt><dd class="' + cls(tot) + '">' + (n ? sgn(tot) : '—') + '</dd></div><div><dt>勝ち負け</dt><dd>' + w + '勝' + l + '敗<small class="muted"> 記録' + n + '日</small></dd></div></dl>' +
+      '<div class="cal" role="grid" aria-label="' + mLab + 'の損益カレンダー"><div class="cal-h">' + WD.map(function (x, i) { return '<span class="' + (i === 0 ? 'sun' : i === 6 ? 'sat' : '') + '">' + x + '</span>'; }).join('') + '</div><div class="cal-g">' + cells + '</div></div>' +
+      detail + '<p class="cal-note">1万円以上は「万」で表示します。日付をタップすると、その日の内訳を表示します。</p>';
+    el.classList.toggle('collapsed', !!state.fold.pcal);
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-pcm],[data-pcday],[data-pcadd]'); if (!b) return;
+    if (b.dataset.pcm != null) { var cm = curMonth(), m = state.pcM || cm; state.pcM = b.dataset.pcm === '0' ? cm : addMonths(m, +b.dataset.pcm); state.pcSel = ''; renderPCal(view()); }
+    else if (b.dataset.pcday) { state.pcSel = state.pcSel === b.dataset.pcday ? '' : b.dataset.pcday; renderPCal(view()); }
+    else if (b.dataset.pcadd) { var dd = b.dataset.pcadd; rsOpen(); rsPick(state.rsLast && PCAT[state.rsLast] ? state.rsLast : 'stock'); $('f-date').value = dd; updateFormButtons(); }
+  });
   function renderHistory(c, v) {
     var t = todayStr(), body = '', E = v.entries;
     var wins = 0, losses = 0, sw = 0, sl = 0;
@@ -1708,27 +1751,10 @@ details.inner>summary{font:500 14px var(--font-ui)}
       '</div>';
     $('c-nav').innerHTML = navBtns;
     $('c-acts').innerHTML = ''; /* 記録は画面下の「＋記録」から */
-    /* カレンダー形式：その日の増減（損益＋収入−支出）を日ごとに表示。タップでその日の詳細 */
-    var calMode = state.cview === 'cal';
-    var cmp = function (n) { if (!n) return ''; var a = Math.abs(Math.round(n)), t = a >= 10000 ? (Math.floor(a / 1000) / 10) + '万' : nf.format(a); return (n < 0 ? '−' : '+') + t; };
-    var calHtml = '';
-    if (calMode) {
-      var lead = dow(first), cells = '';
-      for (var k = 0; k < lead; k++) cells += '<div class="cal-d cal-x"></div>';
-      for (d = first; d <= last; d = addDays(d, 1)) {
-        var w2 = dow(d), inRange = d >= cf.start && days[d], net = inRange ? days[d].net : 0;
-        cells += inRange
-          ? '<button type="button" class="cal-d' + (w2 === 0 ? ' sun' : w2 === 6 ? ' sat' : '') + (d === today ? ' today' : '') + (days[d].close < 0 ? ' short' : '') + '" data-cday="' + d + '" aria-label="' + md(d) + '（' + WD[w2] + '） 増減 ' + (net ? sgn(net) : 'なし') + '・残高 ' + bal(days[d].close) + '"><span class="cal-n">' + (+d.slice(8)) + '</span><span class="cal-v ' + cls(net) + '">' + cmp(net) + '</span></button>'
-          : '<div class="cal-d cal-x"><span class="cal-n">' + (+d.slice(8)) + '</span></div>';
-      }
-      calHtml = '<dl class="cal-sum"><div><dt>収入</dt><dd class="pos">' + (tot.inc ? '+' + nf.format(Math.round(tot.inc)) : '—') + '</dd></div><div><dt>支出</dt><dd class="neg">' + (tot.exp ? '−' + nf.format(Math.round(tot.exp)) : '—') + '</dd></div><div><dt>損益</dt><dd class="' + cls(tot.pnl) + '">' + (tot.pnl ? cell(tot.pnl, true) : '—') + '</dd></div><div><dt>月末残高</dt><dd class="' + (days[last].close < 0 ? 'neg' : '') + '">' + bal(days[last].close) + '</dd></div></dl>' +
-        '<div class="cal" role="grid" aria-label="' + monthLabel + 'のカレンダー"><div class="cal-h">' + WD.map(function (x, i) { return '<span class="' + (i === 0 ? 'sun' : i === 6 ? 'sat' : '') + '">' + x + '</span>'; }).join('') + '</div><div class="cal-g">' + cells + '</div></div>' +
-        '<p class="cal-note">日ごとの数字は、その日の増減（損益＋収入−支出）です。1万円以上は「万」で表示します。日付をタップすると内訳を表示します。</p>';
-    }
     $('c-table').innerHTML =
-      '<div class="cfhead"><h2>' + foldBtn('table', calMode ? '収支カレンダー' : '日別資金繰り表') + '</h2></div>' +
-      '<div class="seg cview" role="tablist" aria-label="表示の形式"><button type="button" role="tab" data-cview="table" aria-selected="' + !calMode + '">表</button><button type="button" role="tab" data-cview="cal" aria-selected="' + calMode + '">カレンダー</button></div>' +
-      (calMode ? calHtml : '<div class="cf-wrap"><table class="cf cfd" aria-label="' + monthLabel + 'の日別資金繰り表">' + head + '<tbody>' + body + '</tbody></table></div>');
+      '<div class="cfhead"><h2>' + foldBtn('table', '日別資金繰り表') + '</h2></div>' +
+      '<div class="cf-wrap"><table class="cf cfd" aria-label="' + monthLabel + 'の日別資金繰り表">' + head + '<tbody>' + body + '</tbody></table></div>' +
+      '';
 
     $('c-loans').hidden = !hasLoan;
     if (hasLoan) {
@@ -2117,7 +2143,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var onCash = state.view === 'cash', showDemo = onCash ? (v.demo && !state.cash.saved) : v.demo;
     banner.hidden = !showDemo || state.view === 'set';
     if (showDemo) banner.textContent = onCash ? 'いまはサンプルの資金繰りを表示しています。日別表の前月繰越の残高をタップして入力すると、あなたのデータに切り替わります。' : 'いまはサンプルデータを表示しています。最初の記録を保存すると、あなたのデータに切り替わります。';
-    renderHero(c, v); renderStats(c, v); renderCharts(c, v); renderHistory(c, v); renderCash(v); renderSal(false);
+    renderHero(c, v); renderStats(c, v); renderCharts(c, v); renderHistory(c, v); renderPCal(v); renderCash(v); renderSal(false);
     fillSettings(); updateFormButtons(); syncRepUI(); syncFormCard(); syncTabSels(); wrapBackend(); rollGoal();
     if (!state.initDone) { state.initDone = true; $('settings').open = false; }
   }
@@ -2949,7 +2975,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     else if (t.dataset.rsmode === 'one') rsPick(state.rsLast || (state.view === 'pnl' ? 'stock' : 'oout'));
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('rec-sheet').hidden) rsClose(); });
-  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-cview]'); if (!b) return; state.cview = b.dataset.cview; try { localStorage.setItem('pnl-notebook-cview', state.cview); } catch (er) {} render(); });
+
   /* 資金繰り：年月をタップして選ぶ */
   document.addEventListener('click', function (e) { var t = e.target; if (t && t.id === 'c-mpick') { try { if (t.showPicker) t.showPicker(); } catch (er) {} } });
   document.addEventListener('change', function (e) {
