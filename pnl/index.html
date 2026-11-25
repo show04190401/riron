@@ -47,7 +47,7 @@
     --neg:#E39C92; --neg-soft:#33201D;
     --area:rgba(238,233,223,.06);
     --hero-bg:#152130; --hero-fg:#EEE9DF; --hero-muted:#A8B1BC; --hero-line:rgba(238,233,223,.12); --hero-gold:#DCC293;
-    --btn-bg:#EEE9DF; --btn-fg:#0E1620; --seg-on:#2A3747;
+    --btn-bg:#EEE9DF; --btn-fg:#0E1620; --seg-on:#2A3747; --sat:#93B3E0;
     --shadow:0 8px 32px rgba(0,0,0,.32);
     color-scheme:dark;
   }
@@ -60,7 +60,7 @@
   --neg:#E39C92; --neg-soft:#33201D;
   --area:rgba(238,233,223,.06);
   --hero-bg:#152130; --hero-fg:#EEE9DF; --hero-muted:#A8B1BC; --hero-line:rgba(238,233,223,.12); --hero-gold:#DCC293;
-  --btn-bg:#EEE9DF; --btn-fg:#0E1620; --seg-on:#2A3747;
+  --btn-bg:#EEE9DF; --btn-fg:#0E1620; --seg-on:#2A3747; --sat:#93B3E0;
   --shadow:0 8px 32px rgba(0,0,0,.32);
   color-scheme:dark;
 }
@@ -458,6 +458,25 @@ html.lock .fab,html.daysheet .fab{opacity:0;pointer-events:none}
 .sethead{margin:8px 0 16px}
 #theme-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:16px;padding-bottom:16px}
 #theme-card h2{flex:none}
+.seg.cview{display:grid;grid-template-columns:1fr 1fr;width:100%;max-width:320px;margin-top:16px}
+.cal-sum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 0}
+.cal-sum div{background:var(--surface-2);border-radius:var(--rs);padding:8px 16px;min-width:0}
+.cal-sum dt{font-size:12px;color:var(--muted)}
+.cal-sum dd{margin:0;font:400 16px var(--font-num);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal{margin:16px -16px 0}
+.cal-h,.cal-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.cal-h span{text-align:center;font-size:12px;color:var(--muted);padding:4px 0 8px}
+.cal-h .sun,.cal-d.sun .cal-n{color:var(--neg)} .cal-h .sat,.cal-d.sat .cal-n{color:var(--sat,#3F64A0)}
+.cal-g{border-top:1px solid var(--line)}
+.cal-d{all:unset;box-sizing:border-box;min-height:56px;padding:4px 0 8px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-width:0}
+.cal-d.cal-x{cursor:default;opacity:.4}
+.cal-d.today{background:var(--gold-soft);border-radius:var(--rs)}
+.cal-d.short .cal-n::after{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--neg);margin-left:2px;vertical-align:4px}
+.cal-d:focus-visible{outline:2px solid var(--gold-fill);outline-offset:-2px}
+.cal-n{font:400 14px var(--font-num);color:var(--fg)}
+.cal-v{font:400 12px var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.04em;white-space:nowrap;max-width:100%;overflow:hidden}
+.cal-note{font-size:12px;color:var(--muted);margin-top:8px}
+@media (min-width:721px){.cal{margin:16px 0 0}.cal-d{min-height:72px}.cal-sum{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .theme-seg{display:grid;grid-template-columns:auto auto auto;margin:0}
 .theme-seg button{padding:0 8px;white-space:nowrap}
 @media (max-width:359px){#theme-card{padding-left:16px;padding-right:16px;gap:8px}.theme-seg button{padding:0 4px;font-size:12px}}
@@ -898,7 +917,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: DEFAULTS.targetFrom, history: [], excludeHolidays: true, saved: false },
     cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'pnl', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gOpen: {}, dOpen: {}, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
-    gcat: 'all', /* 開き直したときは、グラフはいつも「全体」から */
+    gcat: 'all', cview: (function () { try { return localStorage.getItem('pnl-notebook-cview') === 'cal' ? 'cal' : 'table'; } catch (e) { return 'table'; } })(), /* 開き直したときは、グラフはいつも「全体」から */
     salary: { rows: [] }, sal: { open: false, edit: '', msg: '', arm: '' },
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
   };
@@ -1689,10 +1708,27 @@ details.inner>summary{font:500 14px var(--font-ui)}
       '</div>';
     $('c-nav').innerHTML = navBtns;
     $('c-acts').innerHTML = ''; /* 記録は画面下の「＋記録」から */
+    /* カレンダー形式：その日の増減（損益＋収入−支出）を日ごとに表示。タップでその日の詳細 */
+    var calMode = state.cview === 'cal';
+    var cmp = function (n) { if (!n) return ''; var a = Math.abs(Math.round(n)), t = a >= 10000 ? (Math.floor(a / 1000) / 10) + '万' : nf.format(a); return (n < 0 ? '−' : '+') + t; };
+    var calHtml = '';
+    if (calMode) {
+      var lead = dow(first), cells = '';
+      for (var k = 0; k < lead; k++) cells += '<div class="cal-d cal-x"></div>';
+      for (d = first; d <= last; d = addDays(d, 1)) {
+        var w2 = dow(d), inRange = d >= cf.start && days[d], net = inRange ? days[d].net : 0;
+        cells += inRange
+          ? '<button type="button" class="cal-d' + (w2 === 0 ? ' sun' : w2 === 6 ? ' sat' : '') + (d === today ? ' today' : '') + (days[d].close < 0 ? ' short' : '') + '" data-cday="' + d + '" aria-label="' + md(d) + '（' + WD[w2] + '） 増減 ' + (net ? sgn(net) : 'なし') + '・残高 ' + bal(days[d].close) + '"><span class="cal-n">' + (+d.slice(8)) + '</span><span class="cal-v ' + cls(net) + '">' + cmp(net) + '</span></button>'
+          : '<div class="cal-d cal-x"><span class="cal-n">' + (+d.slice(8)) + '</span></div>';
+      }
+      calHtml = '<dl class="cal-sum"><div><dt>収入</dt><dd class="pos">' + (tot.inc ? '+' + nf.format(Math.round(tot.inc)) : '—') + '</dd></div><div><dt>支出</dt><dd class="neg">' + (tot.exp ? '−' + nf.format(Math.round(tot.exp)) : '—') + '</dd></div><div><dt>損益</dt><dd class="' + cls(tot.pnl) + '">' + (tot.pnl ? cell(tot.pnl, true) : '—') + '</dd></div><div><dt>月末残高</dt><dd class="' + (days[last].close < 0 ? 'neg' : '') + '">' + bal(days[last].close) + '</dd></div></dl>' +
+        '<div class="cal" role="grid" aria-label="' + monthLabel + 'のカレンダー"><div class="cal-h">' + WD.map(function (x, i) { return '<span class="' + (i === 0 ? 'sun' : i === 6 ? 'sat' : '') + '">' + x + '</span>'; }).join('') + '</div><div class="cal-g">' + cells + '</div></div>' +
+        '<p class="cal-note">日ごとの数字は、その日の増減（損益＋収入−支出）です。1万円以上は「万」で表示します。日付をタップすると内訳を表示します。</p>';
+    }
     $('c-table').innerHTML =
-      '<div class="cfhead"><h2>' + foldBtn('table', '日別資金繰り表') + '</h2></div>' +
-      '<div class="cf-wrap"><table class="cf cfd" aria-label="' + monthLabel + 'の日別資金繰り表">' + head + '<tbody>' + body + '</tbody></table></div>' +
-      '';
+      '<div class="cfhead"><h2>' + foldBtn('table', calMode ? '収支カレンダー' : '日別資金繰り表') + '</h2></div>' +
+      '<div class="seg cview" role="tablist" aria-label="表示の形式"><button type="button" role="tab" data-cview="table" aria-selected="' + !calMode + '">表</button><button type="button" role="tab" data-cview="cal" aria-selected="' + calMode + '">カレンダー</button></div>' +
+      (calMode ? calHtml : '<div class="cf-wrap"><table class="cf cfd" aria-label="' + monthLabel + 'の日別資金繰り表">' + head + '<tbody>' + body + '</tbody></table></div>');
 
     $('c-loans').hidden = !hasLoan;
     if (hasLoan) {
@@ -2913,6 +2949,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
     else if (t.dataset.rsmode === 'one') rsPick(state.rsLast || (state.view === 'pnl' ? 'stock' : 'oout'));
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('rec-sheet').hidden) rsClose(); });
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-cview]'); if (!b) return; state.cview = b.dataset.cview; try { localStorage.setItem('pnl-notebook-cview', state.cview); } catch (er) {} render(); });
   /* 資金繰り：年月をタップして選ぶ */
   document.addEventListener('click', function (e) { var t = e.target; if (t && t.id === 'c-mpick') { try { if (t.showPicker) t.showPicker(); } catch (er) {} } });
   document.addEventListener('change', function (e) {
