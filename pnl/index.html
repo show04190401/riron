@@ -922,7 +922,7 @@ details.inner>summary{font:500 14px var(--font-ui)}
   var state = {
     entries: {}, settings: { targetAmount: DEFAULTS.targetAmount, targetDate: DEFAULTS.targetDate, targetFrom: DEFAULTS.targetFrom, history: [], excludeHolidays: true, saved: false },
     cash: { startDate: null, opening: 0, items: {}, recurring: [], loans: [], saved: false }, view: 'pnl', cMonth: null, cDay: '', cEdit: null, lEdit: '', lMsg: '', lOpen: {}, oEdit: false, oMsg: '', fold: { loans: true, list: true }, gOpen: {}, dOpen: {}, gEdit: '', gMsg: '', pOpen: {}, pEdit: null, rEdit: '', rMsg: '', formOpen: false, formMode: 'one', crLoan: '__new', ciLoan: '', armKey: '', armT2: 0,
-    gcat: 'all', pcM: '', pcSel: '', /* 開き直したときは、グラフはいつも「全体」から */
+    gcat: 'all', pcM: '', pcSel: '', pcCat: 'all', /* 開き直したときは、グラフはいつも「全体」から */
     salary: { rows: [] }, sal: { open: false, edit: '', msg: '', arm: '' },
     kind: 'pending', loaded: false, tab: 'daily', limit: 31, armed: false, armT: 0, initDone: false, memOnly: false, dbError: false
   };
@@ -1416,16 +1416,17 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var el = $('p-cal'); if (!el) return;
     var cm = curMonth(), m = state.pcM || cm, first = m + '-01', last = endOfMonth(m), t = todayStr();
     var cmp = function (n) { var a = Math.abs(Math.round(n)), x = a >= 10000 ? (Math.floor(a / 1000) / 10) + '万' : nf.format(a); return (n < 0 ? '−' : n > 0 ? '+' : '') + x; };
+    var pc = state.pcCat || 'all', src = catEntries(v.entries, pc), cLab = pc === 'p' ? 'P' : pc === 'stock' ? '株式' : '';
     var tot = 0, w = 0, l = 0, n = 0, cells = '';
     for (var k = 0; k < dow(first); k++) cells += '<div class="cal-d cal-x"></div>';
     for (var d = first; d <= last; d = addDays(d, 1)) {
-      var e = v.entries[d], wd = dow(d), has = !!e;
+      var e = src[d], wd = dow(d), has = !!e;
       if (has) { tot += e.pnl; n++; if (e.pnl > 0) w++; else if (e.pnl < 0) l++; }
       cells += '<button type="button" class="cal-d' + (wd === 0 ? ' sun' : wd === 6 ? ' sat' : '') + (d === t ? ' today' : '') + (d === state.pcSel ? ' sel' : '') + '" data-pcday="' + d + '" aria-pressed="' + (d === state.pcSel) + '" aria-label="' + md(d) + '（' + WD[wd] + '）' + (has ? ' 損益 ' + sgn(e.pnl) : ' 記録なし') + '"><span class="cal-n">' + (+d.slice(8)) + '</span><span class="cal-v ' + (has ? cls(e.pnl) : '') + '">' + (has ? cmp(e.pnl) : '') + '</span></button>';
     }
     var sel = state.pcSel && state.pcSel.slice(0, 7) === m ? state.pcSel : '', detail = '';
     if (sel) {
-      var se = v.entries[sel], its = itemsOf(se);
+      var se = src[sel], its = itemsOf(se);
       detail = '<div class="pcal-day"><div class="mhead"><span>' + dateJp(sel) + '</span><span class="n ' + (se ? cls(se.pnl) : '') + '">' + (se ? sgn(se.pnl) : '記録なし') + '</span></div>' +
         its.map(function (it) { return '<div class="row r3b"><div class="d">' + esc(PCAT[it.cat] || '区分なし') + (it.memo ? '<small>' + esc(it.memo) + '</small>' : '') + '</div><div class="n ' + cls(it.pnl) + '">' + sgn(it.pnl) + '</div><span class="acts"><button type="button" class="lnk" data-edit="' + esc(sel + '|' + it.id) + '">編集</button></span></div>'; }).join('') +
         '<button type="button" class="btn ghost" data-pcadd="' + sel + '">この日に記録する</button></div>';
@@ -1433,13 +1434,15 @@ details.inner>summary{font:500 14px var(--font-ui)}
     var mLab = m.slice(0, 4) + '年' + (+m.slice(5)) + '月';
     el.innerHTML = '<div class="cfhead"><h2>' + foldBtn('pcal', '損益カレンダー') + '</h2></div>' +
       '<div class="mnav pcnav"><button type="button" class="tdy" data-pcm="0"' + (m === cm ? ' disabled' : '') + '>今月</button><button type="button" data-pcm="-1" aria-label="前の月">' + IC.left + '</button><span class="mlab">' + mLab + '</span><button type="button" data-pcm="1" aria-label="次の月">' + IC.right + '</button></div>' +
-      '<dl class="cal-sum"><div><dt>' + (+m.slice(5)) + '月の損益</dt><dd class="' + cls(tot) + '">' + (n ? sgn(tot) : '—') + '</dd></div><div><dt>勝ち負け</dt><dd>' + w + '勝' + l + '敗<small class="muted"> 記録' + n + '日</small></dd></div></dl>' +
+      '<div class="seg gcat" role="group" aria-label="カレンダーの区分">' + GCATS.map(function (g) { return '<button type="button" data-pccat="' + g[0] + '" aria-pressed="' + (pc === g[0]) + '" aria-selected="' + (pc === g[0]) + '">' + g[1] + '</button>'; }).join('') + '</div>' +
+      '<dl class="cal-sum"><div><dt>' + (+m.slice(5)) + '月の損益' + (cLab ? '（' + cLab + '）' : '') + '</dt><dd class="' + cls(tot) + '">' + (n ? sgn(tot) : '—') + '</dd></div><div><dt>勝ち負け</dt><dd>' + w + '勝' + l + '敗<small class="muted"> 記録' + n + '日</small></dd></div></dl>' +
       '<div class="cal" role="grid" aria-label="' + mLab + 'の損益カレンダー"><div class="cal-h">' + WD.map(function (x, i) { return '<span class="' + (i === 0 ? 'sun' : i === 6 ? 'sat' : '') + '">' + x + '</span>'; }).join('') + '</div><div class="cal-g">' + cells + '</div></div>' +
       detail + '<p class="cal-note">1万円以上は「万」で表示します。日付をタップすると、その日の内訳を表示します。</p>';
     el.classList.toggle('collapsed', !!state.fold.pcal);
   }
   document.addEventListener('click', function (e) {
-    var b = e.target.closest && e.target.closest('[data-pcm],[data-pcday],[data-pcadd]'); if (!b) return;
+    var b = e.target.closest && e.target.closest('[data-pcm],[data-pcday],[data-pcadd],[data-pccat]'); if (!b) return;
+    if (b.dataset.pccat) { state.pcCat = b.dataset.pccat; renderPCal(view()); return; }
     if (b.dataset.pcm != null) { var cm = curMonth(), m = state.pcM || cm; state.pcM = b.dataset.pcm === '0' ? cm : addMonths(m, +b.dataset.pcm); state.pcSel = ''; renderPCal(view()); }
     else if (b.dataset.pcday) { state.pcSel = state.pcSel === b.dataset.pcday ? '' : b.dataset.pcday; renderPCal(view()); }
     else if (b.dataset.pcadd) { var dd = b.dataset.pcadd; rsOpen(); rsPick(state.rsLast && PCAT[state.rsLast] ? state.rsLast : 'stock'); $('f-date').value = dd; updateFormButtons(); }
@@ -3078,6 +3081,8 @@ details.inner>summary{font:500 14px var(--font-ui)}
   initStorage();
 })();
 </script>
+
+
 
 <script>if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }</script>
 </body>
