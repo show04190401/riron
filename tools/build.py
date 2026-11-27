@@ -32,6 +32,14 @@ APPS = {
     "hojin": {"name": "法人税 理論", "short": "法人税", "id": "hojin-riron", "key": "hojin-drill-v1", "rec": False, "light": "#C36A65", "icon": "icon4"},
 }
 THEME_LIGHT, THEME_DARK = "#28A000", "#0F141B"
+
+# 録音の声（2026-11-27〜。VOICEVOX で作った読み上げ。作り方は tools/voice/README.md）
+#   tools/voices/<app>.json があるアプリだけ入れる。中身は {声: {問題の rk: [ファイル名, ハッシュ, 開始秒の一覧]}}。
+#   音声ファイルは <app>/voice/<声>/<ファイル名>（暗号化してある。形式は app.bin と同じ考えで先頭が RIA1）。
+VOICE_INFO = {  # 声: (設定に出す名前, クレジット)
+    "no7": ("No.7（女性）", "VOICEVOX:No.7"),
+    "aoyama": ("青山龍星（男性）", "VOICEVOX:青山龍星"),
+}
 STATIC = ["icon3-180.png", "icon3-192.png", "icon3-512.png"]
 
 
@@ -54,6 +62,8 @@ def offline_patch(html, app):
         html = must_sub(r"^const REC=\{.*\};?$", "const REC={};", html, flags=re.M, what="const REC")
         html = must_sub(r'row\("読み上げの音声",.*?opt\("tts",\[\["device","端末の音声"\],\["rec","録音の音声"\]\]\)\)\+', "", html, what="読み上げの音声の設定")
     # tts の初期値はアプリ側で "device"。録音を外した以上 recOK も成り立たないため、ここでの差し替えは不要
+    # 2b) 録音の声（VOICEVOX）を入れる。目録がなければ何もしない
+    html = voice_patch(html, app)
     # 3) 画面上部には「オフライン版」を出さない（設定の「記録の管理」に説明を置く）
     html = must_sub(r'<span class="sync" id="sync"></span>', '<span class="sync" id="sync"></span>', html, what="sync 表示")
     html = must_sub(r'const secC=sec\("記録の管理",\n', 'const secC=sec("記録の管理",\n    row("オフライン版","通信がなくても使えるよう、この端末に保存しているアプリです。記録はこの端末だけに保存されます。claude.ai版と記録を移すときは、下の「記録の書き出し」と「記録の読み込み」を使います。","")+\n', html, what="記録の管理")
@@ -78,6 +88,111 @@ def offline_patch(html, app):
 
 
 VIEWPORT_META = '<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">'
+
+
+def load_voices(app):
+    """tools/voices/<app>.json を読み、音声ファイルがそろっているか確かめる。"""
+    p = os.path.join(TOOLS, "voices", f"{app}.json")
+    if not os.path.exists(p):
+        return {}
+    vs = json.load(open(p, encoding="utf-8"))
+    for v, recs in vs.items():
+        if v not in VOICE_INFO:
+            sys.exit(f"build: 声 {v} が VOICE_INFO にありません")
+        for rk, (f, h, st) in recs.items():
+            if not os.path.exists(os.path.join(ROOT, app, "voice", v, f)):
+                sys.exit(f"build: {app}/voice/{v}/{f} がありません")
+    return vs
+
+
+VOICE_JS = r"""/*VOICE1*/
+// 録音の声（VOICEVOX。オフライン版だけ）：設定の「読み上げの声」で選んだ声の目録を使う。ファイルは暗号化してある
+const VREC=__VREC__;
+const VCACHE="riron-__APP__-voice";
+const REC=new Proxy({},{get:(_,k)=>{ const v=VREC.v[setting("tts")]; const r=v&&typeof k==="string"&&v.r[k]; return r?{f:setting("tts")+"/"+r[0],h:r[1],st:r[2]}:undefined; }});
+let vKeyP=null;
+function vKey(){ if(!vKeyP){ vKeyP=(async()=>{ const s=localStorage.getItem("riron-offline-key"); if(!s) throw new Error("key");
+    const b=Uint8Array.from(atob(s),c=>c.charCodeAt(0)); return crypto.subtle.importKey("pkcs8",b,{name:"RSA-OAEP",hash:"SHA-256"},false,["decrypt"]); })();
+  vKeyP.catch(()=>{ vKeyP=null; }); } return vKeyP; }
+async function recDecrypt(ab){
+  const u=new Uint8Array(ab);
+  if(u.length<20||String.fromCharCode(u[0],u[1],u[2],u[3])!=="RIA1") throw new Error("format");
+  const n=(u[4]<<8)|u[5];
+  const raw=await crypto.subtle.decrypt({name:"RSA-OAEP"},await vKey(),u.subarray(6,6+n));
+  const cek=await crypto.subtle.importKey("raw",raw,"AES-GCM",false,["decrypt"]);
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:u.subarray(6+n,18+n)},cek,u.subarray(18+n));
+  return new Blob([pt],{type:"audio/mp4"});
+}
+// 「この端末に保存」：選んだ声のファイルを全部、端末の保存場所（VCACHE）に入れる。使わなくなったファイルは消す
+const vSave={k:"",run:false,n:-1,tot:0,err:0};
+function vFiles(k){ const v=VREC.v[k]; return v?Object.values(v.r).map(r=>REC_DIR+k+"/"+r[0]):[]; }
+function vMB(k){ const v=VREC.v[k]; return v?Math.max(1,Math.round(v.mb)):0; }
+function vPaint(){ const el=document.querySelector("#vsave-st"), b=document.querySelector("#vsave-go"); const k=setting("tts");
+  if(!el) return;
+  if(!window.caches){ el.textContent="この端末では保存できません。"; if(b) b.hidden=true; return; }
+  if(vSave.k!==k||vSave.n<0){ el.textContent="確認しています…"; return; }
+  if(vSave.run){ el.textContent=`保存しています… ${vSave.n} / ${vSave.tot}`; if(b){ b.disabled=true; b.textContent="保存中"; } return; }
+  if(vSave.n>=vSave.tot){ el.textContent=`保存済みです（${vSave.tot}件・約${vMB(k)}MB）。通信がなくても、この声で聞けます。`; if(b) b.hidden=true; return; }
+  el.textContent=(vSave.err?`保存できなかったファイルがあります（${vSave.err}件）。通信できる場所で、もう一度押してください。`:"")+`${vSave.n} / ${vSave.tot}件を保存済み（全部で約${vMB(k)}MB）。保存すると、通信がなくてもこの声で聞けます。`;
+  if(b){ b.hidden=false; b.disabled=false; b.textContent="保存する"; } }
+async function vCheck(k){
+  if(!window.caches||!VREC.v[k]) return;
+  const c=await caches.open(VCACHE); const keys=await c.keys();
+  const all=new Set(Object.keys(VREC.v).flatMap(vFiles).map(f=>f.split("voice/")[1]));
+  // 今の目録にないファイル（作り直す前の古い音声）は消す
+  for(const r of keys){ const p=new URL(r.url).pathname.split("/voice/")[1]; if(p&&!all.has(p)) c.delete(r); }
+  const have=new Set(keys.map(r=>new URL(r.url).pathname.split("/voice/")[1]));
+  if(vSave.run&&vSave.k===k) return;
+  vSave.k=k; vSave.tot=vFiles(k).length; vSave.n=vFiles(k).filter(f=>have.has(f.split("voice/")[1])).length; vPaint();
+}
+async function vSaveStart(k){
+  if(vSave.run||!window.caches||!VREC.v[k]) return;
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  const c=await caches.open(VCACHE); const have=new Set((await c.keys()).map(r=>new URL(r.url).pathname));
+  const fs=vFiles(k); vSave.k=k; vSave.run=true; vSave.tot=fs.length; vSave.err=0; vSave.n=0; vPaint();
+  for(const f of fs){
+    const url=new URL(f,location.href);
+    if(!have.has(url.pathname)){ try{ const r=await fetch(url,{cache:"reload"}); if(!r.ok) throw new Error(r.status); await c.put(url,r); }catch(e){ vSave.err++; vSave.n--; } }
+    vSave.n++; if(vSave.n%5===0) vPaint();
+  }
+  vSave.run=false; vSave.n=Math.max(0,vSave.n); await vCheck(k); vPaint();
+}
+function vSaveLabel(){ setTimeout(()=>vCheck(setting("tts")).catch(()=>{}),0); return "確認しています…"; }
+document.addEventListener("click",e=>{ const b=e.target&&e.target.closest&&e.target.closest("#vsave-go"); if(b) vSaveStart(setting("tts")).catch(()=>{ vSave.run=false; vPaint(); }); });
+/*VOICE1-END*/"""
+
+
+def voice_patch(html, app):
+    vs = load_voices(app)
+    if not vs:
+        return html
+    order = [v for v in VOICE_INFO if v in vs]
+    mb = {}
+    for v in order:
+        tot = sum(os.path.getsize(os.path.join(ROOT, app, "voice", v, f)) for f, _, _ in vs[v].values())
+        mb[v] = round(tot / 1e6, 1)
+    vrec = {"v": {v: {"name": VOICE_INFO[v][0], "mb": mb[v], "r": vs[v]} for v in order}}
+    js = VOICE_JS.replace("__VREC__", json.dumps(vrec, ensure_ascii=False, separators=(",", ":"))).replace("__APP__", app)
+    # 目録（REC）を、選んだ声の目録に置きかえる（入れ済みなら差し替える）
+    if "/*VOICE1*/" in html:
+        html = must_sub(r"/\*VOICE1\*/.*?/\*VOICE1-END\*/", lambda m: js, html, flags=re.S, what="VOICE1 の範囲")
+    else:
+        html = must_sub(r"^const REC=\{.*\};?$", lambda m: js, html, flags=re.M, what="const REC（録音の声）")
+    # 音声ファイルは暗号化してあるので、読み込んだら復号してから鳴らす
+    if "then(recDecrypt)" not in html:
+      html = must_sub(re.escape('const pr=fetch(url).then(r=>{ if(!r.ok) throw new Error(r.status); return r.blob(); }).then(b=>URL.createObjectURL(b));'),
+                    lambda m: 'const pr=fetch(url).then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(recDecrypt).then(b=>URL.createObjectURL(b));',
+                      html, what="recBlob（復号）")
+    # 設定の「音声」に、声の選択と「この端末に保存」を出す
+    credit = "、".join(VOICE_INFO[v][1] for v in order)
+    choices = json.dumps([["device", "端末の音声"]] + [[v, VOICE_INFO[v][0]] for v in order], ensure_ascii=False)
+    rows = ('    (TTS_OK?row("読み上げの声","暗記の本文と規定の名前を、あらかじめ作った自然な声で読みます（ほかの形式と、あとから文を直した問題は端末の声）。「端末の音声」はこの端末の声で読みます。音声：' + credit + '",opt("tts",' + choices + '))'
+            '+(VREC.v[setting("tts")]?row("この声を端末に保存",`<span id="vsave-st">${vSaveLabel()}</span>`,`<button class="btn" id="vsave-go" hidden>保存する</button>`):""):"")+\n')
+    if 'row("読み上げの声"' in html:
+        html = must_sub(r'    \(TTS_OK\?row\("読み上げの声".*\n', lambda m: rows, html, what="設定の音声（読み上げの声・差し替え）")
+    else:
+        html = must_sub(r'const secM=sec\("読み上げ・効果音",\n', lambda m: m.group(0) + rows, html, what="設定の音声（読み上げの声）")
+    return html
 
 
 def encrypt(plain_bytes):
@@ -277,12 +392,13 @@ SW = r"""// オフライン用：アプリのファイルを端末に保存し�
 const VERSION="__VERSION__";
 const PREFIX="riron-__APP__-";
 const CACHE=PREFIX+VERSION;
+const VCACHE=PREFIX+"voice";  // 録音の声（版が変わっても残す。古いファイルはアプリの側で消す）
 const FILES=["./","index.html","app.bin","key.json","manifest.webmanifest","icon3-180.png","icon3-192.png","icon3-512.png"];
 self.addEventListener("install",e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:"reload"})))).then(()=>self.skipWaiting()));
 });
 self.addEventListener("activate",e=>{
-  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith(PREFIX)&&k!==CACHE&&k!==VCACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
 self.addEventListener("fetch",e=>{
   const r=e.request;
@@ -291,6 +407,10 @@ self.addEventListener("fetch",e=>{
   if(u.origin!==location.origin) return;
   if(r.mode==="navigate"){
     e.respondWith(caches.open(CACHE).then(c=>c.match("./")).then(m=>m||fetch(r)).catch(()=>fetch(r)));
+    return;
+  }
+  if(u.pathname.includes("/voice/")){
+    e.respondWith(caches.open(VCACHE).then(c=>c.match(r,{ignoreSearch:true}).then(m=>m||fetch(r).then(res=>{ if(res.ok) c.put(r,res.clone()); return res; }))));
     return;
   }
   e.respondWith(caches.open(CACHE).then(c=>c.match(r,{ignoreSearch:true})).then(m=>m||fetch(r)));
@@ -305,7 +425,12 @@ def build(app, src):
     html = open(src, encoding="utf-8").read()
     if f'app:"{a["id"]}"' not in html:
         sys.exit(f"build: {src} は {a['name']} のアプリではないようです")
-    html = offline_patch(html, app)
+    if 'row("オフライン版"' in html:
+        # すでにオフライン用に直したHTML（app.bin を復号したもの）から作り直すとき：声だけ入れ直す
+        #   claude.ai 版のHTMLは約10MBあり、作業環境によっては取り出せないため（2026-11-27）
+        html = voice_patch(html, app)
+    else:
+        html = offline_patch(html, app)
     loader =(LOADER.replace("__NAME__", a["name"]).replace("__SHORT__", a["short"]).replace("__KEY__", a["key"])
               .replace("__LIGHT__", a.get("light", THEME_LIGHT)).replace("__DARK__", THEME_DARK))
     ic = a.get("icon", "icon3")
