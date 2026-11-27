@@ -1,8 +1,8 @@
 # 理論アプリ オフライン版
 
-税理士試験の理論学習アプリ（相続税・消費税）を、iPhone・iPadのホーム画面に追加して通信なしで使うための置き場所です。
+税理士試験の理論学習アプリ（相続税・消費税・法人税）を、iPhone・iPadのホーム画面に追加して通信なしで使うための置き場所です。
 
-- `sozoku/` 相続税 理論、`shohi/` 消費税 理論
+- `sozoku/` 相続税 理論、`shohi/` 消費税 理論、`hojin/` 法人税 理論（2026-11-27〜）
 - アプリ本体（`app.bin`）は暗号化してあり、パスワードがないと開けません。
 - 各アプリはサービスワーカー（`sw.js`）でファイルを端末に保存し、オフラインで開けるようにしています。
 
@@ -14,6 +14,7 @@ claude.ai 版のアプリのHTMLから作ります（パスワードは不要）
 pip install cryptography
 python3 tools/build.py sozoku 相続税アプリ.html
 python3 tools/build.py shohi  消費税アプリ.html
+python3 tools/build.py hojin  法人税アプリ.html
 ```
 
 `app.bin` と `sw.js` が更新され、端末では次に通信できるときに新しい版が届きます。
@@ -28,7 +29,7 @@ python3 tools/build.py sozoku 相続税アプリ.html
 python3 tools/build.py shohi  消費税アプリ.html
 ```
 
-鍵が変わるため、`build.py` は必ず両方のアプリで実行してください。すでに端末に入れてある
+鍵が変わるため、`build.py` は必ず3つのアプリ（相続税・消費税・法人税）で実行してください。すでに端末に入れてある
 アプリは、通信できるときに新しい版を受け取ったあと、もう一度パスワードを聞いてきます。
 
 ## 収支note（pnl/）

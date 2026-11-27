@@ -4,6 +4,7 @@
 使い方:
     python3 tools/build.py sozoku  path/to/相続税アプリ.html
     python3 tools/build.py shohi   path/to/消費税アプリ.html
+    python3 tools/build.py hojin   path/to/法人税アプリ.html
 
 入力は claude.ai で公開しているアプリのHTML（Artifact の index.html）。
 出力は <app>/ の index.html（起動用）・app.bin（暗号化した本体）・sw.js・manifest.webmanifest・key.json。
@@ -27,6 +28,8 @@ TOOLS = os.path.join(ROOT, "tools")
 APPS = {
     "sozoku": {"name": "相続税 理論", "short": "相続税", "id": "sozoku-riron", "key": "sozoku-drill-v1"},
     "shohi": {"name": "消費税 理論", "short": "消費税", "id": "shohi-riron", "key": "shohi-drill-v1"},
+    # 法人税（2026-11-27〜）：録音の音声はない（アプリの側で読み上げの音声の設定も外してある）
+    "hojin": {"name": "法人税 理論", "short": "法人税", "id": "hojin-riron", "key": "hojin-drill-v1", "rec": False},
 }
 THEME_LIGHT, THEME_DARK = "#28A000", "#0F141B"
 STATIC = ["icon3-180.png", "icon3-192.png", "icon3-512.png"]
@@ -47,8 +50,9 @@ def offline_patch(html, app):
     if n == 0:
         sys.exit("build: Google Fonts の読み込みが見つかりません")
     # 2) 録音した音声（自然な音声）は使わず、端末の音声で読み上げる
-    html = must_sub(r"^const REC=\{.*\};?$", "const REC={};", html, flags=re.M, what="const REC")
-    html = must_sub(r'row\("読み上げの音声",.*?opt\("tts",\[\["device","端末の音声"\],\["rec","録音の音声"\]\]\)\)\+', "", html, what="読み上げの音声の設定")
+    if a.get("rec", True):
+        html = must_sub(r"^const REC=\{.*\};?$", "const REC={};", html, flags=re.M, what="const REC")
+        html = must_sub(r'row\("読み上げの音声",.*?opt\("tts",\[\["device","端末の音声"\],\["rec","録音の音声"\]\]\)\)\+', "", html, what="読み上げの音声の設定")
     # tts の初期値はアプリ側で "device"。録音を外した以上 recOK も成り立たないため、ここでの差し替えは不要
     # 3) 画面上部には「オフライン版」を出さない（設定の「記録の管理」に説明を置く）
     html = must_sub(r'<span class="sync" id="sync"></span>', '<span class="sync" id="sync"></span>', html, what="sync 表示")
