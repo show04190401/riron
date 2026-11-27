@@ -37,8 +37,9 @@ THEME_LIGHT, THEME_DARK = "#28A000", "#0F141B"
 #   tools/voices/<app>.json があるアプリだけ入れる。中身は {声: {問題の rk: [ファイル名, ハッシュ, 開始秒の一覧]}}。
 #   音声ファイルは <app>/voice/<声>/<ファイル名>（暗号化してある。形式は app.bin と同じ考えで先頭が RIA1）。
 VOICE_INFO = {  # 声: (設定に出す名前, クレジット)
-    "no7": ("No.7（女性）", "VOICEVOX:No.7"),
-    "aoyama": ("青山龍星（男性）", "VOICEVOX:青山龍星"),
+    # 設定に出す名前は「No.1」「No.2」（2026-11-28 ユーザーの要望）。規約のクレジットは説明の文に残す
+    "no7": ("No.1（女性）", "VOICEVOX:No.7"),
+    "aoyama": ("No.2（男性）", "VOICEVOX:青山龍星"),
 }
 STATIC = ["icon3-180.png", "icon3-192.png", "icon3-512.png"]
 
