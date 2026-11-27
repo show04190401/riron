@@ -29,7 +29,7 @@ APPS = {
     "sozoku": {"name": "相続税 理論", "short": "相続税", "id": "sozoku-riron", "key": "sozoku-drill-v1"},
     "shohi": {"name": "消費税 理論", "short": "消費税", "id": "shohi-riron", "key": "shohi-drill-v1"},
     # 法人税（2026-11-27〜）：録音の音声はない（アプリの側で読み上げの音声の設定も外してある）
-    "hojin": {"name": "法人税 理論", "short": "法人税", "id": "hojin-riron", "key": "hojin-drill-v1", "rec": False},
+    "hojin": {"name": "法人税 理論", "short": "法人税", "id": "hojin-riron", "key": "hojin-drill-v1", "rec": False, "light": "#C36A65", "icon": "icon4"},
 }
 THEME_LIGHT, THEME_DARK = "#28A000", "#0F141B"
 STATIC = ["icon3-180.png", "icon3-192.png", "icon3-512.png"]
@@ -67,10 +67,11 @@ def offline_patch(html, app):
         # 2026-11-25：black-translucent はやめた。iOS 26.1 以降、時刻などの表示の下まで広げたホーム画面アプリには、
         # iOS が上部にぼかしをかける（ページからは止められない。Apple の回答は「この指定を外す」）。
         # 指定はホーム画面に追加したときに決まるので、効くのは入れ直したあと。入れ直す前のアプリは今までどおり動く。
-        f'<meta name="theme-color" content="{THEME_LIGHT}" media="(prefers-color-scheme: light)">'
+        f'<meta name="theme-color" content="{a.get("light", THEME_LIGHT)}" media="(prefers-color-scheme: light)">'
         f'<meta name="theme-color" content="{THEME_DARK}" media="(prefers-color-scheme: dark)">'
     )
     # ローダーと同じ画面の指定にそろえる（開いた直後に指定が変わると、iPadで一瞬だけ拡大して見えるため）
+    head = head.replace("icon3-", a.get("icon", "icon3") + "-")  # 法人税は色を変えたので名前を変える（iOS のアイコンのキャッシュ対策）
     html = must_sub(r'<meta name=viewport content="[^"]*">', lambda m_: VIEWPORT_META + head, html, what="viewport")
     html = html.replace("<html><head>", '<html lang="ja" class="vpwait"><head><style>html.vpwait{visibility:hidden;animation:vpshow 0s 1.2s forwards}@keyframes vpshow{to{visibility:visible}}</style>', 1)
     return html
@@ -306,24 +307,27 @@ def build(app, src):
         sys.exit(f"build: {src} は {a['name']} のアプリではないようです")
     html = offline_patch(html, app)
     loader =(LOADER.replace("__NAME__", a["name"]).replace("__SHORT__", a["short"]).replace("__KEY__", a["key"])
-              .replace("__LIGHT__", THEME_LIGHT).replace("__DARK__", THEME_DARK))
+              .replace("__LIGHT__", a.get("light", THEME_LIGHT)).replace("__DARK__", THEME_DARK))
+    ic = a.get("icon", "icon3")
+    static = [f.replace("icon3-", ic + "-") for f in STATIC]
+    loader = loader.replace("icon3-", ic + "-")
     open(os.path.join(out, "index.html"), "w", encoding="utf-8").write(loader)
     manifest = {
         "name": a["name"], "short_name": a["short"], "lang": "ja",
         "start_url": "./", "scope": "./", "display": "standalone",
-        "background_color": THEME_LIGHT, "theme_color": THEME_LIGHT,
-        "icons": [{"src": "icon3-192.png", "sizes": "192x192", "type": "image/png"},
-                  {"src": "icon3-512.png", "sizes": "512x512", "type": "image/png"}],
+        "background_color": a.get("light", THEME_LIGHT), "theme_color": a.get("light", THEME_LIGHT),
+        "icons": [{"src": ic + "-192.png", "sizes": "192x192", "type": "image/png"},
+                  {"src": ic + "-512.png", "sizes": "512x512", "type": "image/png"}],
     }
     json.dump(manifest, open(os.path.join(out, "manifest.webmanifest"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     shutil.copyfile(os.path.join(TOOLS, "key.json"), os.path.join(out, "key.json"))
-    for f in STATIC:
+    for f in static:
         if not os.path.exists(os.path.join(out, f)):
             sys.exit(f"build: {app}/{f} がありません")
     # 版の番号：本体の中身（暗号化前）と起動用ファイルから決める。中身が変わったときだけ端末に新しい版が届く
     h = hashlib.sha256()
     h.update(html.encode("utf-8"))
-    for f in ["index.html", "manifest.webmanifest", "key.json"] + STATIC:
+    for f in ["index.html", "manifest.webmanifest", "key.json"] + static:
         h.update(open(os.path.join(out, f), "rb").read())
     version = time.strftime("%Y%m%d") + "-" + h.hexdigest()[:10]
     old = open(os.path.join(out, "sw.js"), encoding="utf-8").read() if os.path.exists(os.path.join(out, "sw.js")) else ""
@@ -333,7 +337,7 @@ def build(app, src):
         version = m.group(1)  # 中身が同じなら、版の番号も app.bin もそのまま（暗号化は毎回結果が変わるため）
     else:
         open(os.path.join(out, "app.bin"), "wb").write(encrypt(html.encode("utf-8")))
-    open(os.path.join(out, "sw.js"), "w", encoding="utf-8").write(SW.replace("__VERSION__", version).replace("__APP__", app))
+    open(os.path.join(out, "sw.js"), "w", encoding="utf-8").write(SW.replace("__VERSION__", version).replace("__APP__", app).replace("icon3-", ic + "-"))
     print(f"{app}: version {version}, app.bin {os.path.getsize(os.path.join(out, 'app.bin')):,} bytes")
 
 
