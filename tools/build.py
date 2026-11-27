@@ -40,6 +40,7 @@ VOICE_INFO = {  # 声: (設定に出す名前, クレジット)
     # 設定に出す名前は「No.1」「No.2」（2026-11-28 ユーザーの要望）。規約のクレジットは説明の文に残す
     "no7": ("No.1（女性）", "VOICEVOX:No.7"),
     "aoyama": ("No.2（男性）", "VOICEVOX:青山龍星"),
+    "himari": ("No.3（女性）", "VOICEVOX:冥鳴ひまり"),
 }
 STATIC = ["icon3-180.png", "icon3-192.png", "icon3-512.png"]
 
