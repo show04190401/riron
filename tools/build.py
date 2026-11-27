@@ -26,7 +26,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS = os.path.join(ROOT, "tools")
 
 APPS = {
-    "sozoku": {"name": "相続税 理論", "short": "相続税", "id": "sozoku-riron", "key": "sozoku-drill-v1"},
+    "sozoku": {"name": "相続税 理論", "short": "相続税", "id": "sozoku-riron", "key": "sozoku-drill-v1", "light": "#1E4A90"},  # 2026-11-27 アイコンの紺色に
     "shohi": {"name": "消費税 理論", "short": "消費税", "id": "shohi-riron", "key": "shohi-drill-v1"},
     # 法人税（2026-11-27〜）：録音の音声はない（アプリの側で読み上げの音声の設定も外してある）
     "hojin": {"name": "法人税 理論", "short": "法人税", "id": "hojin-riron", "key": "hojin-drill-v1", "rec": False, "light": "#C36A65", "icon": "icon4"},
