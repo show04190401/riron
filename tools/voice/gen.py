@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from voicevox_core.blocking import Onnxruntime, OpenJtalk, Synthesizer, VoiceModelFile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from yomi import fix
+import tune
 
 TTS = "/home/claude/tts"
 ORT = f"{TTS}/vv/voicevox_onnxruntime-linux-x64-1.17.3/lib/libvoicevox_onnxruntime.so.1.17.3"
@@ -36,10 +37,14 @@ with VoiceModelFile.open(f"{TTS}/vv/vvms/{vvm}.vvm") as m:
     syn.load_voice_model(m)
 
 
+TOPT = tune.VOICE_TUNE.get(vkey, {})
+
+
 def say(text):
     q = syn.create_audio_query(text, sid)
     q.pre_phoneme_length = 0.05
     q.post_phoneme_length = 0.08
+    q = tune.apply(syn, q, sid, TOPT)
     wav = syn.synthesis(q, sid)
     with wave.open(io.BytesIO(wav)) as w:
         assert w.getframerate() == SR and w.getnchannels() == 1 and w.getsampwidth() == 2
@@ -57,6 +62,8 @@ t_start, secs, n_new = time.time(), 0.0, 0
 for k, it in enumerate(items):
     say_t = [fix(app, s["t"]) for s in it["segs"]]  # 読み間違いを直した文（音声を作るときだけ使う）
     kk = [vkey, vvm, sid, it["rk"], it["segs"], it["tail"]]
+    if TOPT:
+        kk.append(["tune", TOPT])  # 調子の手直しを変えたら作り直す
     if any(t != s["t"] for t, s in zip(say_t, it["segs"])):
         kk.append(say_t)  # 直した問題だけ名前が変わり、作り直される
     key = hashlib.sha256(json.dumps(kk, ensure_ascii=False).encode()).hexdigest()[:12]
