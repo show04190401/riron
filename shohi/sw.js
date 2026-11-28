@@ -1,5 +1,5 @@
 // オフライン用：アプリのファイルを端末に保存し、通信がなくても開けるようにする
-const VERSION="20261128-bd7e04c527";
+const VERSION="20261128-d09b819561";
 const PREFIX="riron-shohi-";
 const CACHE=PREFIX+VERSION;
 const VCACHE=PREFIX+"voice";  // 録音の声（版が変わっても残す。古いファイルはアプリの側で消す）
